@@ -1,0 +1,39 @@
+MenuBar Components:
+- File
+	- Save
+	- Quit
+- Import/Export
+	- Import JSON 
+	- Import txt
+	-------------------
+	- Export JSON
+	- Export txt
+- About
+	- Documentation
+	- Help
+
+ToolBar Components:
+- Quit - Icon
+- Import - Icon
+- Export - Icon
+- Settings - Icon
+
+Main Viewport:
+- Top Right
+	- Number of Particles
+	- FPS
+	- Unlit
+- Bottom
+	- Icon Buttons Left:
+		- Playback
+		- Stop
+		- Play Forward 
+	- Frame Bar
+	- Frame text
+	- Icon Buttons Right:
+		- Prev Frame
+		- Curr Frame LineEdit
+		- Next Frame
+
+
+
