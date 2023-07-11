@@ -3,6 +3,7 @@ Tab Bar Right:
 		- Particle
 			- Solver:
 			- Appearance
+				- No. of Particles
 				- Color
 				- Point size
 			- Motion
