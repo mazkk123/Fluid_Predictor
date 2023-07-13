@@ -1,8 +1,10 @@
 - solver combobox
-- particle number:
-	- spinbox, slider
-- particle size:
-	- spinbox, slider
+
+- appearance:
+	- particle number:
+		- spinbox, slider
+	- particle size:
+		- spinbox, slider
 - motion:
 	position:
 		- spinbox

@@ -401,20 +401,20 @@ class MainWindow(QMainWindow):
         self.particle_sep_h_layout = QHBoxLayout()
         self.particle_sep_lbl = QLabel("Particle Separation")
         self.particle_sep_spinBox = QDoubleSpinBox()
-        self.particle_sep_slider = QSlider(orientation=Qt.Horizontal)
+        self.particle_sep_slider_w = QSlider(orientation=Qt.Horizontal)
 
         self.particle_sep_h_layout.addWidget(self.particle_sep_lbl)
         self.particle_sep_h_layout.addWidget(self.particle_sep_spinBox)
-        self.particle_sep_h_layout.addWidget(self.particle_sep_slider)
+        self.particle_sep_h_layout.addWidget(self.particle_sep_slider_w)
 
         self.cell_size_h_layout = QHBoxLayout()
         self.cell_size_lbl = QLabel("Cell Size")
         self.cell_size_spinBox = QDoubleSpinBox()
-        self.cell_size_slider = QSlider(orientation=Qt.Horizontal)
+        self.cell_size_slider_w = QSlider(orientation=Qt.Horizontal)
 
         self.cell_size_h_layout.addWidget(self.cell_size_lbl)
         self.cell_size_h_layout.addWidget(self.cell_size_spinBox)
-        self.cell_size_h_layout.addWidget(self.cell_size_slider)
+        self.cell_size_h_layout.addWidget(self.cell_size_slider_w)
 
         self.distr_gBox.setLayout(self.distr_v_layout)
         self.distr_v_layout.addLayout(self.particle_distr_h_layout)
@@ -485,41 +485,141 @@ class MainWindow(QMainWindow):
                 path = "images/" + sub_menu + "/" + str(image_name)
                 icon.setIcon(QIcon(path))
 
+# ------------------------------ MAIN SLOT ACTIVATION ------------------------------
+
+    def activate_all_slots(self):
+        """
+            activates all slot widgets
+        """
+        pass
 
 
+    def activate_reset_slot(self):
+        """
+            activates the reset slot calls
+        """
+        self.reset_btn.clicked.connect(self.reset_btn_func)
+
+    def activate_appearance_slots(self):
+        """
+            activates appearance slot callbacks
+        """
+        self.nbr_of_particles_slider.valueChanged.connect(self.particle_num_slider)
+        self.nbr_of_particle_sBox.valueChanged.connect(self.particle_num_spin_box)
+
+        self.particle_size_sBox.valueChanged.connect(self.particle_size_spin_box)
+
+    def activate_motion_slots(self):
+        """
+            activates motion slot callbacks
+        """
+        self.position_x_sBox.valueChanged.connect(self.mPosition_spin_box)
+        self.position_y_sBox.valueChanged.connect(self.mPosition_spin_box)
+        self.position_z_sBox.valueChanged.connect(self.mPosition_spin_box)
+
+        self.velocity_x_sBox.valueChanged.connect(self.mVel_spin_box)
+        self.velocity_y_sBox.valueChanged.connect(self.mVel_spin_box)
+        self.velocity_z_sBox.valueChanged.connect(self.mVel_spin_box)
+
+        self.acc_x_sBox.valueChanged.connect(self.mAccel_spin_box)
+        self.acc_y_sBox.valueChanged.connect(self.mAccel_spin_box)
+        self.acc_z_sBox.valueChanged.connect(self.mAccel_spin_box)
+
+    def activate_physical_slots(self):
+        """
+            activates physical slot callbacks
+        """
+        self.physical_m_slider.valueChanged.connect(self.mass_slider)
+        self.physical_m_sBox.valueChanged.connect(self.mass_spin_box)
+
+        self.physical_g_sBox.valueChanged.connect(self.gravity_spin_box)
+        self.physical_g_slider.valueChanged.connect(self.gravity_slider)
+
+        self.physical_b_sBox.valueChanged.connect(self.buoyancy_spin_box)
+        self.physical_b_slider.valueChanged.connect(self.buoyancy_slider)
+
+        self.physical_v_sBox.valueChanged.connect(self.viscosity_spin_box)
+        self.physical_v_slider.valueChanged.connect(self.viscosity_slider)
+
+        self.physical_p_sBox.valueChanged.connect(self.pressure_spin_box)
+        self.physical_p_slider.valueChanged.connect(self.pressure_slider)
+
+        self.physical_md_sBox.valueChanged.connect(self.massD_spin_box)
+        self.physical_md_slider.valueChanged.connect(self.massD_slider)
+
+        self.physical_sL_sBox.valueChanged.connect(self.speed_loss_spin_box)
+        self.physical_sL_slider.valueChanged.connect(self.speed_loss_slider)
+
+    def activate_distr_slots(self):
+        """
+            activates distribution slot callbacks
+        """
+        self.particle_distr_comboBox.currentIndexChanged.connect(self.distr_combo_box)
+        self.neighbr_solver_comboBox.currentIndexChanged.connect(self.solver_combo_box)
+
+        self.particle_sep_spinBox.valueChanged.connect(self.particle_sep_spin_box)
+        self.particle_sep_slider_w.valueChanged.connect(self.particle_sep_slider)
+
+        self.cell_size_spinBox.valueChanged.connect(self.cell_size_spin_box)
+        self.cell_size_slider_w.valueChanged.connect(self.cell_size_slider)
+
+    def activate_tank_slots(self):
+        """
+            activates tank slot callbacks
+        """
+        self.tank_x_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
+        self.tank_y_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
+        self.tank_z_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
+
+        self.tank_combo_box.currentIndexChanged.connect(self.tank_type_combo_box)
+        
+        self.tank_x_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
+        self.tank_y_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
+        self.tank_z_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
+
+    def activate_time_slots(self):
+        """
+            activates time 
+        """
+        self.delta_t_sBox.valueChanged.connect(self.delta_time_spin_box)
+        self.delta_t_slider.valueChanged.connect(self.delta_time_slider)
+        
+        self.substep_comboBox.currentIndexChanged.connect(self.time_integrator_combo_box)
+
+        
 # ------------------------------- GROUPBOX SLOTS ------------------------------------
 
-    def control_appearance_slots(self):
+    def appearance_gBox(self):
         """
             sets appearance slot functions
         """
         pass
 
-    def control_motion_slots(self):
+    def motion_gBox(self):
         """
             sets motion slot functions
         """
         pass
 
-    def control_distribution_slots(self):
+    def distr_gBox(self):
         """
             sets distribution slot functions
         """
         pass
 
-    def control_physical_slots(self):
+    def physical_gBox(self):
         """
             sets physical slot functions
         """
         pass
 
-    def control_tank_slots(self):
+    def tank_gBox(self):
         """
             sets tank slot functions
         """
         pass
 
-    def control_time_slots(self):
+    def time_gBox(self):
         """
             sets time variation slot functions
         """
@@ -569,6 +669,12 @@ class MainWindow(QMainWindow):
         """
         pass
 
+    def pressure_slider(self):
+        """
+            slider template code
+        """
+        pass
+
     def viscosity_slider(self):
         """
             slider template code
@@ -602,6 +708,12 @@ class MainWindow(QMainWindow):
         pass
 
 # ---------------------------------- SPINBOX SLOTS ----------------------------------------
+    def particle_num_spin_box(self):
+        pass
+
+    def particle_size_spin_box(self):
+        pass
+    
     def mPosition_spin_box(self):
         """
             spin box template code...
@@ -701,6 +813,12 @@ class MainWindow(QMainWindow):
 
     
 # ---------------------------------- COMBOBOX SLOTS ---------------------------------------
+
+    def tank_type_combo_box(self):
+        """
+            combo box template code
+        """
+        pass
 
     def solver_combo_box(self):
         """
