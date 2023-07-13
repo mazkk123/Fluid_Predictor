@@ -18,13 +18,25 @@ class MainWindow(QMainWindow):
         self.add_menu_bars()
         self.add_tool_bars()
 
+        self.main_tabs_widget = QTabWidget()
+
         self.main_options_widget = QWidget()
         self.main_layout = QVBoxLayout()
 
+        self.fluid_pred_options_widget = QWidget()
+        self.tab_v_layout = QVBoxLayout()
+
+        self.main_tabs_widget.addTab(self.main_options_widget, "Fluid Simulation")
+        self.main_tabs_widget.addTab(self.fluid_pred_options_widget, "Fluid Prediction")
+        self.main_tabs_widget.setLayout(self.tab_v_layout)
+
+        # creates main group box widgets
+        self.create_reset_button()
         self.create_fluid_solver_widget()
         self.create_appearance_widgets()
-        self.create_motion_widget()
-        self.create_physical_widget()
+        """ self.create_motion_widget()
+        self.create_distribution_widgets()
+        self.create_physical_widget() """
         self.create_fluid_tank_widgets()
         self.create_system_widgets()
 
@@ -32,7 +44,7 @@ class MainWindow(QMainWindow):
 
         self.main_options_widget.setLayout(self.main_layout)
         self.horizontal_spacer_layout.addSpacerItem(QSpacerItem(1000, 400))
-        self.horizontal_spacer_layout.addWidget(self.main_options_widget)
+        self.horizontal_spacer_layout.addWidget(self.main_tabs_widget)
 
         self.main_window = QWidget()
         self.main_window.setLayout(self.horizontal_spacer_layout)
@@ -71,6 +83,13 @@ class MainWindow(QMainWindow):
         self.settings_tool_action = self.main_tool_bar.addAction("Settings")
         self.add_icons_to_actions(icon=self.settings_tool_action, image_name="settings.png")
 
+    def create_reset_button(self):
+        """
+            creates a reset to defaults button in main menu widget
+        """
+        self.reset_btn = QPushButton("Reset to Defaults")
+        self.main_layout.addWidget(self.reset_btn)
+
     def create_fluid_solver_widget(self):
         """
             creates the widget for fluid solvers
@@ -79,11 +98,14 @@ class MainWindow(QMainWindow):
         self.solver_horizontal_layout = QHBoxLayout()
 
         self.fluid_solver_group_box = QGroupBox("Solver Type")
+        self.fluid_solver_group_box.setCheckable(True)
 
         self.fluid_solver_label = QLabel("Choose Solver")
         self.fluid_solver_combo_box = QComboBox()
         self.fluid_solver_combo_box.addItem("SPH")
-        self.fluid_solver_combo_box.addItem("Eulerian")
+        self.fluid_solver_combo_box.addItem("IISPH")
+        self.fluid_solver_combo_box.addItem("WCSPH")
+        self.fluid_solver_combo_box.addItem("Multi SPH")
 
         self.solver_horizontal_layout.addWidget(self.fluid_solver_label)
         self.solver_horizontal_layout.addWidget(self.fluid_solver_combo_box)
@@ -99,6 +121,7 @@ class MainWindow(QMainWindow):
             creates widgets responsible for fluid appearance
         """
         self.appearance_group_box = QGroupBox("Appearance")
+        self.appearance_group_box.setCheckable(True)
         self.appearance_v_layout = QVBoxLayout()
 
         self.nbr_particles_h_layout = QHBoxLayout()
@@ -122,7 +145,7 @@ class MainWindow(QMainWindow):
         self.appearance_group_box.setLayout(self.appearance_v_layout)
         self.appearance_v_layout.addLayout(self.nbr_particles_h_layout)
         self.appearance_v_layout.addLayout(self.particle_size_h_layout)
-        #self.appearance_v_layout.addChildLayout(self.particle_colour_h_layout)
+
         self.main_layout.addWidget(self.appearance_group_box)
 
     def create_motion_widget(self):
@@ -130,7 +153,8 @@ class MainWindow(QMainWindow):
             creates the widget for the motion of the particles
         """
         self.motion_v_layout = QVBoxLayout()
-        self.motion_gBox = QGroupBox("Particle Motion")
+        self.motion_gBox = QGroupBox("Motion")
+        self.motion_gBox.setCheckable(True)
 
         self.position_h_layout = QHBoxLayout()
         self.position_lbl = QLabel("Position")
@@ -178,6 +202,7 @@ class MainWindow(QMainWindow):
         """
         self.physical_v_layout = QVBoxLayout()
         self.physical_gBox = QGroupBox("Physical Forces")
+        self.physical_gBox.setCheckable(True)
 
         self.gravity_h_layout = QHBoxLayout()
         self.physical_g_lbl = QLabel("Gravity")
@@ -215,6 +240,15 @@ class MainWindow(QMainWindow):
         self.pressure_h_layout.addWidget(self.physical_p_sBox)
         self.pressure_h_layout.addWidget(self.physical_p_slider)
 
+        self.mass_h_layout = QHBoxLayout()
+        self.physical_m_lbl = QLabel("Mass")
+        self.physical_m_sBox = QDoubleSpinBox()
+        self.physical_m_slider = QSlider(Qt.Horizontal)
+
+        self.mass_h_layout.addWidget(self.physical_m_lbl)
+        self.mass_h_layout.addWidget(self.physical_m_sBox)
+        self.mass_h_layout.addWidget(self.physical_m_slider)
+
         self.massD_h_layout = QHBoxLayout()
         self.physical_md_lbl = QLabel("Mass Density")
         self.physical_md_sBox = QDoubleSpinBox()
@@ -234,6 +268,7 @@ class MainWindow(QMainWindow):
         self.speedLoss_h_layout.addWidget(self.physical_sL_slider)
 
         self.physical_gBox.setLayout(self.physical_v_layout)
+        self.physical_v_layout.addLayout(self.mass_h_layout)
         self.physical_v_layout.addLayout(self.gravity_h_layout)
         self.physical_v_layout.addLayout(self.buoyancy_h_layout)
         self.physical_v_layout.addLayout(self.viscosity_h_layout)
@@ -251,6 +286,7 @@ class MainWindow(QMainWindow):
         """
         self.tank_v_layout = QVBoxLayout()
         self.tank_gBox = QGroupBox("Tank Control")
+        self.tank_gBox.setCheckable(True)
 
         self.tank_type_h_layout = QHBoxLayout()
         self.tank_type_lbl = QLabel("Tank Type")
@@ -266,26 +302,22 @@ class MainWindow(QMainWindow):
 
         self.tank_radius_h_layout = QHBoxLayout()
         self.tank_radius_lbl = QLabel("Tank Radius")
-        self.tank_radius_slider = QSlider(Qt.Horizontal)
         self.tank_x_radius_sBox = QDoubleSpinBox()
         self.tank_y_radius_sBox = QDoubleSpinBox()
         self.tank_z_radius_sBox = QDoubleSpinBox()
 
         self.tank_radius_h_layout.addWidget(self.tank_radius_lbl)
-        self.tank_radius_h_layout.addWidget(self.tank_radius_slider)
         self.tank_radius_h_layout.addWidget(self.tank_x_radius_sBox)
         self.tank_radius_h_layout.addWidget(self.tank_y_radius_sBox)
         self.tank_radius_h_layout.addWidget(self.tank_z_radius_sBox)
 
         self.tank_pos_h_layout = QHBoxLayout()
         self.tank_pos_lbl = QLabel("Tank Position")
-        self.tank_pos_slider = QSlider(Qt.Horizontal)
         self.tank_x_pos_sBox = QDoubleSpinBox()
         self.tank_y_pos_sBox = QDoubleSpinBox()
         self.tank_z_pos_sBox = QDoubleSpinBox()
 
         self.tank_pos_h_layout.addWidget(self.tank_pos_lbl)
-        self.tank_pos_h_layout.addWidget(self.tank_pos_slider)
         self.tank_pos_h_layout.addWidget(self.tank_x_pos_sBox)
         self.tank_pos_h_layout.addWidget(self.tank_y_pos_sBox)
         self.tank_pos_h_layout.addWidget(self.tank_z_pos_sBox)
@@ -305,6 +337,7 @@ class MainWindow(QMainWindow):
         """
         self.timeSteps_v_layout = QVBoxLayout()
         self.timeSteps_gBox = QGroupBox("Simulation Steps")
+        self.timeSteps_gBox.setCheckable(True)
 
         self.substep_type_h_layout = QHBoxLayout()
         self.substep_type_lbl = QLabel("Time Integrator")
@@ -332,14 +365,64 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.timeSteps_gBox)
     
-    def create_neighbour_widgets(self):
+    def create_distribution_widgets(self):
         """
             controls widgets for neighbouring between particle solver types
             as well as parameters to control particle separation and grid
             scale
         """
-        pass
+        self.distr_v_layout = QVBoxLayout()
+        self.distr_gBox = QGroupBox("Particle Distribution")
+        self.distr_gBox.setCheckable(True)
 
+        self.particle_distr_h_layout = QHBoxLayout()
+        self.particle_distr_lbl = QLabel("Particle Distribution")
+        self.particle_distr_comboBox = QComboBox()
+
+        self.particle_distr_comboBox.addItem("Uniform")
+        self.particle_distr_comboBox.addItem("Random")
+
+        self.particle_distr_h_layout.addWidget(self.particle_distr_lbl)
+        self.particle_distr_h_layout.addWidget(self.particle_distr_comboBox)
+
+        self.neighbr_solver_h_layout = QHBoxLayout()
+        self.neighbr_solver_lbl = QLabel("Neighbour Solver")
+        self.neighbr_solver_comboBox = QComboBox()
+
+        self.neighbr_solver_comboBox.addItem("Distance")
+        self.neighbr_solver_comboBox.addItem("K d trees")
+        self.neighbr_solver_comboBox.addItem("Octree")
+        self.neighbr_solver_comboBox.addItem("Quadtree")
+        self.neighbr_solver_comboBox.addItem("Spatial Hashing")
+
+        self.neighbr_solver_h_layout.addWidget(self.neighbr_solver_lbl)
+        self.neighbr_solver_h_layout.addWidget(self.neighbr_solver_comboBox)
+
+        self.particle_sep_h_layout = QHBoxLayout()
+        self.particle_sep_lbl = QLabel("Particle Separation")
+        self.particle_sep_spinBox = QDoubleSpinBox()
+        self.particle_sep_slider = QSlider(orientation=Qt.Horizontal)
+
+        self.particle_sep_h_layout.addWidget(self.particle_sep_lbl)
+        self.particle_sep_h_layout.addWidget(self.particle_sep_spinBox)
+        self.particle_sep_h_layout.addWidget(self.particle_sep_slider)
+
+        self.cell_size_h_layout = QHBoxLayout()
+        self.cell_size_lbl = QLabel("Cell Size")
+        self.cell_size_spinBox = QDoubleSpinBox()
+        self.cell_size_slider = QSlider(orientation=Qt.Horizontal)
+
+        self.cell_size_h_layout.addWidget(self.cell_size_lbl)
+        self.cell_size_h_layout.addWidget(self.cell_size_spinBox)
+        self.cell_size_h_layout.addWidget(self.cell_size_slider)
+
+        self.distr_gBox.setLayout(self.distr_v_layout)
+        self.distr_v_layout.addLayout(self.particle_distr_h_layout)
+        self.distr_v_layout.addLayout(self.neighbr_solver_h_layout)
+        self.distr_v_layout.addLayout(self.particle_sep_h_layout)
+        self.distr_v_layout.addLayout(self.cell_size_h_layout)
+
+        self.main_layout.addWidget(self.distr_gBox)
 #-----------------------------------------------------------------------------
 
     def add_menu_bars(self):
@@ -401,3 +484,239 @@ class MainWindow(QMainWindow):
             if image_name is not None:
                 path = "images/" + sub_menu + "/" + str(image_name)
                 icon.setIcon(QIcon(path))
+
+
+
+# ------------------------------- GROUPBOX SLOTS ------------------------------------
+
+    def control_appearance_slots(self):
+        """
+            sets appearance slot functions
+        """
+        pass
+
+    def control_motion_slots(self):
+        """
+            sets motion slot functions
+        """
+        pass
+
+    def control_distribution_slots(self):
+        """
+            sets distribution slot functions
+        """
+        pass
+
+    def control_physical_slots(self):
+        """
+            sets physical slot functions
+        """
+        pass
+
+    def control_tank_slots(self):
+        """
+            sets tank slot functions
+        """
+        pass
+
+    def control_time_slots(self):
+        """
+            sets time variation slot functions
+        """
+        pass
+
+# ---------------------------------- SLIDER SLOTS -----------------------------------------
+
+    def particle_num_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def particle_size_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def particle_sep_slider(self):
+        """
+            slider template code
+        """
+        pass
+    
+    def cell_size_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def mass_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def gravity_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def buoyancy_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def viscosity_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def massD_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def speed_loss_slider(self):
+        """
+            slider template code
+        """
+        pass
+
+    def delta_time_slider(self):
+        """
+            slider template code
+        """
+        pass
+        
+# ---------------------------------- BUTTON SLOTS -----------------------------------------
+
+    def reset_btn_func(self):
+        """
+            controls reset button functionality
+        """
+        pass
+
+# ---------------------------------- SPINBOX SLOTS ----------------------------------------
+    def mPosition_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def mVel_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def mAccel_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def particle_sep_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def cell_size_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def createSpinBox(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def mass_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def gravity_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+
+    def buoyancy_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def viscosity_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def massD_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def pressure_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def speed_loss_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def tank_radius_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def tank_position_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    def delta_time_spin_box(self):
+        """
+            spin box template code...
+        """
+        pass
+
+    
+# ---------------------------------- COMBOBOX SLOTS ---------------------------------------
+
+    def solver_combo_box(self):
+        """
+            combo box template code
+        """
+        pass
+
+    def distr_combo_box(self):
+        """
+            combo box template code
+        """
+        pass
+
+    def time_integrator_combo_box(self):
+        """
+            combo box template code
+        """
+        pass
+# ------------------------------------ TAB SLOTS ------------------------------------------

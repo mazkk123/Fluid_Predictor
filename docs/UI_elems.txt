@@ -1,0 +1,47 @@
+- solver combobox
+- particle number:
+	- spinbox, slider
+- particle size:
+	- spinbox, slider
+- motion:
+	position:
+		- spinbox
+	velocity:
+		- spinbox
+	accel:
+		- spinbox
+
+- distribution:
+	- distribution:
+		- combo box
+	- neighbour solver:
+		- combo box
+	- separation:
+		- spinbox, slider
+	- cell size:
+		- spinbox, slider
+- physical:
+	- mass:
+		- spinbox, slider
+	- gravity:
+		- spinbox, slider
+	- buoyancy:
+		- spinbox, slider
+	- viscosity:
+		- spinbox, slider
+	- pressure:
+		- spinbox, slider
+	- mass density:
+		- spinbox, slider
+	- speed loss:
+		- spinbox, slider
+- tank controls:
+	- radius:
+		- spinbox
+	- position:
+		- spinbox
+- simulation steps:
+	- time integrator:
+		- comboBox
+	- delta time:
+		- slider, spinBox
