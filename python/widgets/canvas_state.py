@@ -40,13 +40,13 @@ class DrawingCanvas(QWidget):
         self.main_painter.end()
     
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
-        return super().dragMoveEvent(event)
+        pass
     
     def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
-        return super().dragLeaveEvent(event)
+        pass
     
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        return super().mousePressEvent(event)
+        pass
     
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        return super().mouseReleaseEvent(event)
+        pass

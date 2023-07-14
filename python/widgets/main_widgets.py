@@ -4,14 +4,15 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, QPushButton, \
     QSpacerItem, QSizePolicy,  QScrollArea, QGraphicsScene, QGraphicsView
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage, QColor, QFont
-from fluid_window import DrawingCanvas
+from canvas_state import DrawingCanvas
+from utilities import Utilities
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Utilities):
 
     def __init__(self, app):
         super().__init__()
         self.app = app
-
+        
         self.setGeometry(QRect(100, 50, 1280, 720))
         self.setWindowTitle("Fluid Application")
         self.window_icon = QPixmap("images/Toolbar/fluid.png")
@@ -559,23 +560,6 @@ class MainWindow(QMainWindow):
         self.add_icons_to_actions(icon=display_particle_count, image_name="count.png")
         self.add_icons_to_actions(icon=reset_simulation, image_name="reset.png")
     
-    def add_icons_to_actions(self, icon=None, sub_menu="Toolbar", image_name=None):
-        """
-            adds icons based on their name to local list
-        """
-        if icon is not None:
-            if image_name is not None:
-                path = "images/" + sub_menu + "/" + str(image_name)
-                icon.setIcon(QIcon(path))
-
-    def add_icons_to_widgets(self, widget=None, sub_menu="Bottom_Bar", image_name=None):
-        """
-            adds icons based on their name to local list
-        """
-        if widget is not None:
-            if image_name is not None:
-                path = "images/" + sub_menu + "/" + str(image_name)
-                widget.setIcon(QIcon(path))
 
 # ------------------------------ MAIN SLOT ACTIVATION ------------------------------
 
@@ -603,11 +587,11 @@ class MainWindow(QMainWindow):
         """
         self.appearance_gBox.toggled.connect(self.appearance_group_box)
 
-        self.nbr_of_particles_slider.valueChanged.connect(self.particle_num_slider)
+        self.nbr_of_particles_slider.valueChanged.connect(self.particle_num_slider_valueChanged)
         self.nbr_of_particle_sBox.valueChanged.connect(self.particle_num_spin_box)
 
         self.particle_size_sBox.valueChanged.connect(self.particle_size_spin_box)
-        self.particle_size_slider_w.valueChanged.connect(self.particle_size_slider)
+        self.particle_size_slider_w.valueChanged.connect(self.particle_size_slider_valueChanged)
 
     def activate_motion_slots(self):
         """
@@ -633,26 +617,26 @@ class MainWindow(QMainWindow):
         """
         self.physical_gBox.toggled.connect(self.physical_group_box)
 
-        self.physical_m_slider.valueChanged.connect(self.mass_slider)
+        self.physical_m_slider.valueChanged.connect(self.mass_slider_valueChanged)
         self.physical_m_sBox.valueChanged.connect(self.mass_spin_box)
 
         self.physical_g_sBox.valueChanged.connect(self.gravity_spin_box)
-        self.physical_g_slider.valueChanged.connect(self.gravity_slider)
+        self.physical_g_slider.valueChanged.connect(self.gravity_slider_valueChanged)
 
         self.physical_b_sBox.valueChanged.connect(self.buoyancy_spin_box)
-        self.physical_b_slider.valueChanged.connect(self.buoyancy_slider)
+        self.physical_b_slider.valueChanged.connect(self.buoyancy_slider_valueChanged)
 
         self.physical_v_sBox.valueChanged.connect(self.viscosity_spin_box)
-        self.physical_v_slider.valueChanged.connect(self.viscosity_slider)
+        self.physical_v_slider.valueChanged.connect(self.viscosity_slider_valueChanged)
 
         self.physical_p_sBox.valueChanged.connect(self.pressure_spin_box)
-        self.physical_p_slider.valueChanged.connect(self.pressure_slider)
+        self.physical_p_slider.valueChanged.connect(self.pressure_slider_valueChanged)
 
         self.physical_md_sBox.valueChanged.connect(self.massD_spin_box)
-        self.physical_md_slider.valueChanged.connect(self.massD_slider)
+        self.physical_md_slider.valueChanged.connect(self.massD_slider_valueChanged)
 
         self.physical_sL_sBox.valueChanged.connect(self.speed_loss_spin_box)
-        self.physical_sL_slider.valueChanged.connect(self.speed_loss_slider)
+        self.physical_sL_slider.valueChanged.connect(self.speed_loss_slider_valueChanged)
 
     def activate_distr_slots(self):
         """
@@ -664,10 +648,10 @@ class MainWindow(QMainWindow):
         self.neighbr_solver_comboBox.currentIndexChanged.connect(self.solver_combo_box)
 
         self.particle_sep_spinBox.valueChanged.connect(self.particle_sep_spin_box)
-        self.particle_sep_slider_w.valueChanged.connect(self.particle_sep_slider)
+        self.particle_sep_slider_w.valueChanged.connect(self.particle_sep_slider_valueChanged)
 
         self.cell_size_spinBox.valueChanged.connect(self.cell_size_spin_box)
-        self.cell_size_slider_w.valueChanged.connect(self.cell_size_slider)
+        self.cell_size_slider_w.valueChanged.connect(self.cell_size_slider_valueChanged)
 
     def activate_tank_slots(self):
         """
@@ -692,42 +676,13 @@ class MainWindow(QMainWindow):
         self.timeSteps_gBox.toggled.connect(self.time_group_box)
 
         self.delta_t_sBox.valueChanged.connect(self.delta_time_spin_box)
-        self.delta_t_slider.valueChanged.connect(self.delta_time_slider)
+        self.delta_t_slider.valueChanged.connect(self.delta_time_slider_valueChanged)
         
         self.substep_comboBox.currentIndexChanged.connect(self.time_integrator_combo_box)
 
 
 # ------------------------------- GROUPBOX SLOTS ------------------------------------
 
-    def set_default_state(self, group_box=None):
-        """
-            set default group box children states
-        """
-        if group_box is not None:
-            for child in group_box.children():
-                if child.isWidgetType():
-                    child.setHidden(True)
-            group_box.setChecked(False)
-
-    def set_fixed_size_policy(self, group_box=None):
-        """
-            set all group size policies to expanding fixed.
-        """
-        if group_box is not None:
-            group_box.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, 
-                                                QSizePolicy.Policy.Fixed))
-
-    def hide_group_box_widgets(self, group_box=None):
-        """
-            generic hide function for group box widget children
-        """
-        if group_box is not None:
-            for child in group_box.children():
-                if child.isWidgetType():
-                    if group_box.isChecked():
-                        child.setHidden(False)
-                    else:
-                        child.setHidden(True)
 
     def appearance_group_box(self):
         """
@@ -767,73 +722,148 @@ class MainWindow(QMainWindow):
 
 # ---------------------------------- SLIDER SLOTS -----------------------------------------
 
-    def particle_num_slider(self):
+    def particle_num_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def particle_size_slider(self):
+    def particle_size_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def particle_sep_slider(self):
+    def particle_sep_slider_valueChanged(self):
         """
             slider template code
         """
         pass
     
-    def cell_size_slider(self):
+    def cell_size_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def mass_slider(self):
+    def mass_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def gravity_slider(self):
+    def gravity_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def buoyancy_slider(self):
+    def buoyancy_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def pressure_slider(self):
+    def pressure_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def viscosity_slider(self):
+    def viscosity_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def massD_slider(self):
+    def massD_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def speed_loss_slider(self):
+    def speed_loss_slider_valueChanged(self):
         """
             slider template code
         """
         pass
 
-    def delta_time_slider(self):
+    def delta_time_slider_valueChanged(self):
+        """
+            slider template code
+        """
+        pass
+
+
+    # ------------------------------ DYNAMIC SLIDER MOVED ----------------------------
+
+    def particle_num_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def particle_size_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def particle_sep_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+    
+    def cell_size_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def mass_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def gravity_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def buoyancy_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def pressure_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def viscosity_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def massD_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def speed_loss_slider_moved(self):
+        """
+            slider template code
+        """
+        pass
+
+    def delta_time_slider_moved(self):
         """
             slider template code
         """
@@ -901,7 +931,6 @@ class MainWindow(QMainWindow):
             spin box template code...
         """
         pass
-
 
     def buoyancy_spin_box(self):
         """
