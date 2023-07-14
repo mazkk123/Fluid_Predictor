@@ -1,8 +1,10 @@
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, QPushButton, \
-    QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox, QGroupBox, \
-    QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap, QRadioButton, QSpacerItem
+    QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
+    QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
+    QSpacerItem, QSizePolicy,  QScrollArea, QGraphicsScene, QGraphicsView
 from PySide6.QtCore import QSize, QRect , Qt
-from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtGui import QPixmap, QIcon, QImage, QColor, QFont
+from fluid_window import DrawingCanvas
 
 class MainWindow(QMainWindow):
 
@@ -10,7 +12,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.app = app
 
-        self.setGeometry(QRect(0, 0, 1280, 720))
+        self.setGeometry(QRect(100, 50, 1280, 720))
         self.setWindowTitle("Fluid Application")
         self.window_icon = QPixmap("images/Toolbar/fluid.png")
         self.setWindowIcon(self.window_icon)
@@ -21,29 +23,43 @@ class MainWindow(QMainWindow):
         self.main_tabs_widget = QTabWidget()
 
         self.main_options_widget = QWidget()
+        self.main_options_widget.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding,
+                                                           QSizePolicy.Policy.Fixed))
         self.main_layout = QVBoxLayout()
 
         self.fluid_pred_options_widget = QWidget()
         self.tab_v_layout = QVBoxLayout()
 
-        self.main_tabs_widget.addTab(self.main_options_widget, "Fluid Simulation")
+        self.fluid_sim_scroll_area = QScrollArea()
+        self.fluid_sim_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.fluid_sim_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.fluid_sim_scroll_area.setWidgetResizable(True)
+
+        self.fluid_sim_scroll_area.setWidget(self.main_options_widget)
+        self.main_tabs_widget.addTab(self.fluid_sim_scroll_area, "Fluid Simulation")
         self.main_tabs_widget.addTab(self.fluid_pred_options_widget, "Fluid Prediction")
         self.main_tabs_widget.setLayout(self.tab_v_layout)
+
 
         # creates main group box widgets
         self.create_reset_button()
         self.create_fluid_solver_widget()
         self.create_appearance_widgets()
-        """ self.create_motion_widget()
+        self.create_motion_widget()
         self.create_distribution_widgets()
-        self.create_physical_widget() """
+        self.create_physical_widget()
         self.create_fluid_tank_widgets()
         self.create_system_widgets()
+        self.main_layout.addSpacerItem(QSpacerItem(0,250))
+
+        self.activate_all_slots()
 
         self.horizontal_spacer_layout = QHBoxLayout()
 
         self.main_options_widget.setLayout(self.main_layout)
-        self.horizontal_spacer_layout.addSpacerItem(QSpacerItem(1000, 400))
+        self.create_bottom_toolbar()
+
+        self.horizontal_spacer_layout.addLayout(self.graphics_view_v_layout)
         self.horizontal_spacer_layout.addWidget(self.main_tabs_widget)
 
         self.main_window = QWidget()
@@ -58,13 +74,11 @@ class MainWindow(QMainWindow):
         
         self.main_tool_bar = QToolBar()
         self.addToolBar(self.main_tool_bar)
-        self.main_tool_bar.setMovable(False)
+        self.main_tool_bar.setMovable(True)
 
-        self.quit_tool_action = self.main_tool_bar.addAction("Quit")
         self.undo_tool_action = self.main_tool_bar.addAction("Undo")
         self.redo_tool_action = self.main_tool_bar.addAction("Redo")
 
-        self.add_icons_to_actions(icon=self.quit_tool_action, image_name="quit.png")
         self.add_icons_to_actions(icon=self.undo_tool_action, image_name="undo.png")
         self.add_icons_to_actions(icon=self.redo_tool_action, image_name="redo.png")
 
@@ -83,6 +97,62 @@ class MainWindow(QMainWindow):
         self.settings_tool_action = self.main_tool_bar.addAction("Settings")
         self.add_icons_to_actions(icon=self.settings_tool_action, image_name="settings.png")
 
+    def create_bottom_toolbar(self):
+        """
+            creates and attaches the bottom toolbar to the main window
+            widget
+        """
+        self.graphics_view_v_layout = QVBoxLayout()
+        self.main_canvas = DrawingCanvas(QRect(0, 0, 900, 400), 
+                                         QColor(255,0,0), 
+                                         QFont("Arial"), 14)
+
+        self.play_bar_h_layout = QHBoxLayout()
+        self.play_simulation_btn = QPushButton()
+        self.add_icons_to_widgets(widget=self.play_simulation_btn, image_name="play_backward.png")
+        self.stop_simulation_btn = QPushButton()
+        self.add_icons_to_widgets(widget=self.stop_simulation_btn, image_name="stop.png")
+        self.play_back_simulation_btn = QPushButton()
+        self.add_icons_to_widgets(widget=self.play_back_simulation_btn, image_name="play_forward.png")
+
+        self.frame_spacing_item = QSpacerItem(700, 0)
+        self.prev_frame_btn = QPushButton()
+        self.add_icons_to_widgets(widget=self.prev_frame_btn, image_name="frame_backward.png")
+        self.curr_frame_lbl = QLineEdit()
+        self.curr_frame_lbl.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                        QSizePolicy.Policy.Fixed))
+        self.curr_frame_lbl.setFixedSize(QSize(40,20))
+        self.next_frame_btn = QPushButton()
+        self.add_icons_to_widgets(widget=self.next_frame_btn, image_name="frame_forward.png")
+
+        self.play_bar_h_layout.addWidget(self.play_simulation_btn)
+        self.play_bar_h_layout.addWidget(self.stop_simulation_btn)
+        self.play_bar_h_layout.addWidget(self.play_back_simulation_btn)
+
+        self.play_bar_h_layout.addSpacerItem(self.frame_spacing_item)
+
+        self.play_bar_h_layout.addWidget(self.prev_frame_btn)
+        self.play_bar_h_layout.addWidget(self.curr_frame_lbl)
+        self.play_bar_h_layout.addWidget(self.next_frame_btn)
+
+        self.frame_range_h_layout = QHBoxLayout()
+        self.start_frame_field = QLineEdit()
+        self.start_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                         QSizePolicy.Policy.Fixed))
+        self.start_frame_field.setFixedSize(QSize(40,20))
+        self.end_frame_field = QLineEdit()
+        self.end_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                        QSizePolicy.Policy.Fixed))
+        self.end_frame_field.setFixedSize(QSize(40,20))
+
+        self.frame_range_h_layout.addSpacerItem(QSpacerItem(850,0))
+        self.frame_range_h_layout.addWidget(self.start_frame_field)
+        self.frame_range_h_layout.addWidget(self.end_frame_field)
+
+        self.graphics_view_v_layout.addWidget(self.main_canvas)
+        self.graphics_view_v_layout.addLayout(self.frame_range_h_layout)
+        self.graphics_view_v_layout.addLayout(self.play_bar_h_layout)
+   
     def create_reset_button(self):
         """
             creates a reset to defaults button in main menu widget
@@ -98,7 +168,7 @@ class MainWindow(QMainWindow):
         self.solver_horizontal_layout = QHBoxLayout()
 
         self.fluid_solver_group_box = QGroupBox("Solver Type")
-        self.fluid_solver_group_box.setCheckable(True)
+        self.set_fixed_size_policy(self.fluid_solver_group_box)
 
         self.fluid_solver_label = QLabel("Choose Solver")
         self.fluid_solver_combo_box = QComboBox()
@@ -120,8 +190,10 @@ class MainWindow(QMainWindow):
         """
             creates widgets responsible for fluid appearance
         """
-        self.appearance_group_box = QGroupBox("Appearance")
-        self.appearance_group_box.setCheckable(True)
+        self.appearance_gBox = QGroupBox("Appearance")
+        self.set_fixed_size_policy(self.appearance_gBox)
+        self.appearance_gBox.setCheckable(True)
+        self.set_default_state(self.appearance_gBox)
         self.appearance_v_layout = QVBoxLayout()
 
         self.nbr_particles_h_layout = QHBoxLayout()
@@ -136,17 +208,18 @@ class MainWindow(QMainWindow):
         self.particle_size_h_layout = QHBoxLayout()
         self.particle_size_lbl = QLabel("Particle Size")
         self.particle_size_sBox = QDoubleSpinBox()
-        self.particle_size_slider = QSlider(Qt.Horizontal)
+        self.particle_size_slider_w = QSlider(Qt.Horizontal)
         
         self.particle_size_h_layout.addWidget(self.particle_size_lbl)
         self.particle_size_h_layout.addWidget(self.particle_size_sBox)
-        self.particle_size_h_layout.addWidget(self.particle_size_slider)
+        self.particle_size_h_layout.addWidget(self.particle_size_slider_w)
 
-        self.appearance_group_box.setLayout(self.appearance_v_layout)
+        self.appearance_gBox.setLayout(self.appearance_v_layout)
         self.appearance_v_layout.addLayout(self.nbr_particles_h_layout)
         self.appearance_v_layout.addLayout(self.particle_size_h_layout)
+        self.set_default_state(self.appearance_gBox)
 
-        self.main_layout.addWidget(self.appearance_group_box)
+        self.main_layout.addWidget(self.appearance_gBox)
 
     def create_motion_widget(self):
         """
@@ -154,6 +227,7 @@ class MainWindow(QMainWindow):
         """
         self.motion_v_layout = QVBoxLayout()
         self.motion_gBox = QGroupBox("Motion")
+        self.set_fixed_size_policy(self.motion_gBox)
         self.motion_gBox.setCheckable(True)
 
         self.position_h_layout = QHBoxLayout()
@@ -193,6 +267,7 @@ class MainWindow(QMainWindow):
         self.motion_v_layout.addLayout(self.position_h_layout)
         self.motion_v_layout.addLayout(self.velocity_h_layout)
         self.motion_v_layout.addLayout(self.acc_h_layout)
+        self.set_default_state(self.motion_gBox)
 
         self.main_layout.addWidget(self.motion_gBox)
 
@@ -202,6 +277,7 @@ class MainWindow(QMainWindow):
         """
         self.physical_v_layout = QVBoxLayout()
         self.physical_gBox = QGroupBox("Physical Forces")
+        self.set_fixed_size_policy(self.physical_gBox)
         self.physical_gBox.setCheckable(True)
 
         self.gravity_h_layout = QHBoxLayout()
@@ -275,6 +351,7 @@ class MainWindow(QMainWindow):
         self.physical_v_layout.addLayout(self.pressure_h_layout)
         self.physical_v_layout.addLayout(self.massD_h_layout)
         self.physical_v_layout.addLayout(self.speedLoss_h_layout)
+        self.set_default_state(self.physical_gBox)
 
         self.main_layout.addWidget(self.physical_gBox)
 
@@ -286,6 +363,7 @@ class MainWindow(QMainWindow):
         """
         self.tank_v_layout = QVBoxLayout()
         self.tank_gBox = QGroupBox("Tank Control")
+        self.set_fixed_size_policy(self.tank_gBox)
         self.tank_gBox.setCheckable(True)
 
         self.tank_type_h_layout = QHBoxLayout()
@@ -325,6 +403,7 @@ class MainWindow(QMainWindow):
         self.tank_gBox.setLayout(self.tank_v_layout)
         self.tank_v_layout.addLayout(self.tank_radius_h_layout)
         self.tank_v_layout.addLayout(self.tank_pos_h_layout)
+        self.set_default_state(self.tank_gBox)
 
         self.main_layout.addWidget(self.tank_gBox)
 
@@ -337,6 +416,7 @@ class MainWindow(QMainWindow):
         """
         self.timeSteps_v_layout = QVBoxLayout()
         self.timeSteps_gBox = QGroupBox("Simulation Steps")
+        self.set_fixed_size_policy(self.timeSteps_gBox)
         self.timeSteps_gBox.setCheckable(True)
 
         self.substep_type_h_layout = QHBoxLayout()
@@ -362,6 +442,7 @@ class MainWindow(QMainWindow):
         self.timeSteps_gBox.setLayout(self.timeSteps_v_layout)
         self.timeSteps_v_layout.addLayout(self.substep_type_h_layout)
         self.timeSteps_v_layout.addLayout(self.delta_t_h_layout)
+        self.set_default_state(self.timeSteps_gBox)
 
         self.main_layout.addWidget(self.timeSteps_gBox)
     
@@ -373,6 +454,7 @@ class MainWindow(QMainWindow):
         """
         self.distr_v_layout = QVBoxLayout()
         self.distr_gBox = QGroupBox("Particle Distribution")
+        self.set_fixed_size_policy(self.distr_gBox)
         self.distr_gBox.setCheckable(True)
 
         self.particle_distr_h_layout = QHBoxLayout()
@@ -421,6 +503,7 @@ class MainWindow(QMainWindow):
         self.distr_v_layout.addLayout(self.neighbr_solver_h_layout)
         self.distr_v_layout.addLayout(self.particle_sep_h_layout)
         self.distr_v_layout.addLayout(self.cell_size_h_layout)
+        self.set_default_state(self.distr_gBox)
 
         self.main_layout.addWidget(self.distr_gBox)
 #-----------------------------------------------------------------------------
@@ -485,14 +568,28 @@ class MainWindow(QMainWindow):
                 path = "images/" + sub_menu + "/" + str(image_name)
                 icon.setIcon(QIcon(path))
 
+    def add_icons_to_widgets(self, widget=None, sub_menu="Bottom_Bar", image_name=None):
+        """
+            adds icons based on their name to local list
+        """
+        if widget is not None:
+            if image_name is not None:
+                path = "images/" + sub_menu + "/" + str(image_name)
+                widget.setIcon(QIcon(path))
+
 # ------------------------------ MAIN SLOT ACTIVATION ------------------------------
 
     def activate_all_slots(self):
         """
             activates all slot widgets
         """
-        pass
-
+        self.activate_reset_slot()
+        self.activate_appearance_slots()
+        self.activate_distr_slots()
+        self.activate_motion_slots()
+        self.activate_physical_slots()
+        self.activate_tank_slots()
+        self.activate_time_slots()
 
     def activate_reset_slot(self):
         """
@@ -504,15 +601,20 @@ class MainWindow(QMainWindow):
         """
             activates appearance slot callbacks
         """
+        self.appearance_gBox.toggled.connect(self.appearance_group_box)
+
         self.nbr_of_particles_slider.valueChanged.connect(self.particle_num_slider)
         self.nbr_of_particle_sBox.valueChanged.connect(self.particle_num_spin_box)
 
         self.particle_size_sBox.valueChanged.connect(self.particle_size_spin_box)
+        self.particle_size_slider_w.valueChanged.connect(self.particle_size_slider)
 
     def activate_motion_slots(self):
         """
             activates motion slot callbacks
         """
+        self.motion_gBox.toggled.connect(self.motion_group_box)
+
         self.position_x_sBox.valueChanged.connect(self.mPosition_spin_box)
         self.position_y_sBox.valueChanged.connect(self.mPosition_spin_box)
         self.position_z_sBox.valueChanged.connect(self.mPosition_spin_box)
@@ -529,6 +631,8 @@ class MainWindow(QMainWindow):
         """
             activates physical slot callbacks
         """
+        self.physical_gBox.toggled.connect(self.physical_group_box)
+
         self.physical_m_slider.valueChanged.connect(self.mass_slider)
         self.physical_m_sBox.valueChanged.connect(self.mass_spin_box)
 
@@ -554,6 +658,8 @@ class MainWindow(QMainWindow):
         """
             activates distribution slot callbacks
         """
+        self.distr_gBox.toggled.connect(self.distr_group_box)
+
         self.particle_distr_comboBox.currentIndexChanged.connect(self.distr_combo_box)
         self.neighbr_solver_comboBox.currentIndexChanged.connect(self.solver_combo_box)
 
@@ -567,6 +673,8 @@ class MainWindow(QMainWindow):
         """
             activates tank slot callbacks
         """
+        self.tank_gBox.toggled.connect(self.tank_group_box)
+
         self.tank_x_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
         self.tank_y_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
         self.tank_z_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
@@ -581,49 +689,81 @@ class MainWindow(QMainWindow):
         """
             activates time 
         """
+        self.timeSteps_gBox.toggled.connect(self.time_group_box)
+
         self.delta_t_sBox.valueChanged.connect(self.delta_time_spin_box)
         self.delta_t_slider.valueChanged.connect(self.delta_time_slider)
         
         self.substep_comboBox.currentIndexChanged.connect(self.time_integrator_combo_box)
 
-        
+
 # ------------------------------- GROUPBOX SLOTS ------------------------------------
 
-    def appearance_gBox(self):
+    def set_default_state(self, group_box=None):
+        """
+            set default group box children states
+        """
+        if group_box is not None:
+            for child in group_box.children():
+                if child.isWidgetType():
+                    child.setHidden(True)
+            group_box.setChecked(False)
+
+    def set_fixed_size_policy(self, group_box=None):
+        """
+            set all group size policies to expanding fixed.
+        """
+        if group_box is not None:
+            group_box.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, 
+                                                QSizePolicy.Policy.Fixed))
+
+    def hide_group_box_widgets(self, group_box=None):
+        """
+            generic hide function for group box widget children
+        """
+        if group_box is not None:
+            for child in group_box.children():
+                if child.isWidgetType():
+                    if group_box.isChecked():
+                        child.setHidden(False)
+                    else:
+                        child.setHidden(True)
+
+    def appearance_group_box(self):
         """
             sets appearance slot functions
         """
-        pass
+        self.hide_group_box_widgets(self.appearance_gBox)
 
-    def motion_gBox(self):
+    def motion_group_box(self):
         """
             sets motion slot functions
         """
-        pass
+        self.hide_group_box_widgets(self.motion_gBox)
 
-    def distr_gBox(self):
+    def distr_group_box(self):
         """
-            sets distribution slot functions
+            set distribution callbacks    
         """
-        pass
+        self.hide_group_box_widgets(self.distr_gBox)
 
-    def physical_gBox(self):
+    def physical_group_box(self):
         """
             sets physical slot functions
         """
-        pass
+        self.hide_group_box_widgets(self.physical_gBox)
 
-    def tank_gBox(self):
+    def tank_group_box(self):
         """
             sets tank slot functions
         """
-        pass
+        self.hide_group_box_widgets(self.tank_gBox)
 
-    def time_gBox(self):
+    def time_group_box(self):
         """
             sets time variation slot functions
         """
-        pass
+        self.hide_group_box_widgets(self.timeSteps_gBox)
 
 # ---------------------------------- SLIDER SLOTS -----------------------------------------
 
