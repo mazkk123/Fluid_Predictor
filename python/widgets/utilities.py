@@ -1,11 +1,70 @@
 from PySide6.QtWidgets import QVBoxLayout, QWidget,  QPushButton, \
     QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QScrollArea, QGraphicsScene, QGraphicsView
+    QSpacerItem, QSizePolicy,  QFrame, QMenu, QMenuBar, QDockWidget, QScrollArea
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage
 
-class Utilities:
+
+# ----------------------------------------- SEPARATOR OPTIONS ------------------------------------
+
+class VerticalSeparator(QFrame):
+    pass
+
+class HorizontalSeparator(QFrame):
+    pass
+
+# ------------------------------------------ WIDGET ITEMS ------------------------------------------
+
+class CustomPushButton(QPushButton):
+    pass
+
+class CustomSlider(QSlider):
+    pass
+
+class CustomDoubleSpinBox(QDoubleSpinBox):
+    pass
+
+class CustomSpinBox(QSpinBox):
+    pass
+
+class CustomLineEdit(QLineEdit):
+    pass
+
+class CustomLabel(QLabel):
+    pass
+
+class CustomGroupBox(QGroupBox):
+    pass
+
+class CustomComboBox(QComboBox):
+    pass
+
+# ----------------------------------------- MENU WIDGETS ----------------------------------
+
+class CustomTabWidget(QTabWidget):
+    pass
+
+class CustomScrollArea(QScrollArea):
+    pass
+
+class CustomToolBar(QToolBar, QToolButton):
+    pass
+
+class CustomMenu(QMenu, QMenuBar):
+    pass
+
+class CustomDockableWidget(QDockWidget):
+    pass
+
+
+
+class UtilFuncs(VerticalSeparator, HorizontalSeparator):
+
+    ABOUT_UTILITY = """
+                    provides abstract utility functions to main   
+                    widget class calls from the main widgets module.
+                    """
 
     def __init__(self):
         pass
@@ -84,3 +143,15 @@ class Utilities:
                         child.setHidden(False)
                     else:
                         child.setHidden(True)
+
+    def create_frame_bars(self, vertical_bars: VerticalSeparator=None,
+                          spacer_item: QSpacerItem=None ) -> None:
+        """
+            creates vertical separator corresponding to the number of frames
+            between the spacers
+        """
+        pass
+
+    def __repr__(self) -> str:
+        return self.ABOUT_UTILITY
+

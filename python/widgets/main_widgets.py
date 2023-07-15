@@ -1,13 +1,15 @@
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, QPushButton, \
     QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QScrollArea, QGraphicsScene, QGraphicsView
+    QSpacerItem, QSizePolicy,  QScrollArea
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage, QColor, QFont
 from canvas_state import DrawingCanvas
-from utilities import Utilities
+from utilities import UtilFuncs, VerticalSeparator, HorizontalSeparator, CustomPushButton, \
+    CustomSlider, CustomDoubleSpinBox, CustomSpinBox, CustomLineEdit, CustomLabel, CustomTabWidget, \
+    CustomScrollArea, CustomToolBar, CustomMenu, CustomDockableWidget
 
-class MainWindow(QMainWindow, Utilities):
+class MainWindow(QMainWindow, UtilFuncs):
 
     def __init__(self, app):
         super().__init__()
@@ -31,28 +33,9 @@ class MainWindow(QMainWindow, Utilities):
         self.fluid_pred_options_widget = QWidget()
         self.tab_v_layout = QVBoxLayout()
 
-        self.fluid_sim_scroll_area = QScrollArea()
-        self.fluid_sim_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.fluid_sim_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.fluid_sim_scroll_area.setWidgetResizable(True)
+        self.create_scroll_area_widget()
 
-        self.fluid_sim_scroll_area.setWidget(self.main_options_widget)
-        self.main_tabs_widget.addTab(self.fluid_sim_scroll_area, "Fluid Simulation")
-        self.main_tabs_widget.addTab(self.fluid_pred_options_widget, "Fluid Prediction")
-        self.main_tabs_widget.setLayout(self.tab_v_layout)
-
-
-        # creates main group box widgets
-        self.create_reset_button()
-        self.create_fluid_solver_widget()
-        self.create_appearance_widgets()
-        self.create_motion_widget()
-        self.create_distribution_widgets()
-        self.create_physical_widget()
-        self.create_fluid_tank_widgets()
-        self.create_system_widgets()
-        self.main_layout.addSpacerItem(QSpacerItem(0,250))
-
+        self.initialize_main_group_boxes()
         self.activate_all_slots()
 
         self.horizontal_spacer_layout = QHBoxLayout()
@@ -67,6 +50,21 @@ class MainWindow(QMainWindow, Utilities):
         self.main_window.setLayout(self.horizontal_spacer_layout)
 
         self.setCentralWidget(self.main_window)
+
+    def create_scroll_area_widget(self):
+        """
+            creates and configures the initial scroll area widget binded to each
+            tab
+        """
+        self.fluid_sim_scroll_area = QScrollArea()
+        self.fluid_sim_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.fluid_sim_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.fluid_sim_scroll_area.setWidgetResizable(True)
+
+        self.fluid_sim_scroll_area.setWidget(self.main_options_widget)
+        self.main_tabs_widget.addTab(self.fluid_sim_scroll_area, "Fluid Simulation")
+        self.main_tabs_widget.addTab(self.fluid_pred_options_widget, "Fluid Prediction")
+        self.main_tabs_widget.setLayout(self.tab_v_layout)
 
     def add_tool_bars(self):
         """
@@ -98,6 +96,20 @@ class MainWindow(QMainWindow, Utilities):
         self.settings_tool_action = self.main_tool_bar.addAction("Settings")
         self.add_icons_to_actions(icon=self.settings_tool_action, image_name="settings.png")
 
+    def initialize_main_group_boxes(self) -> None:
+        """
+            creates main group box widgets within tabs
+        """
+        self.create_reset_button()
+        self.create_fluid_solver_widget()
+        self.create_appearance_widgets()
+        self.create_motion_widget()
+        self.create_distribution_widgets()
+        self.create_physical_widget()
+        self.create_fluid_tank_widgets()
+        self.create_system_widgets()
+        self.main_layout.addSpacerItem(QSpacerItem(0,250))
+    
     def create_bottom_toolbar(self):
         """
             creates and attaches the bottom toolbar to the main window
