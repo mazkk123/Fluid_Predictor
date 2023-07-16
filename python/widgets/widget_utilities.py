@@ -32,24 +32,30 @@ class CustomPushButton(QPushButton):
         """
             constructor for custom slider widget
         """
-        super(CustomPushButton).__init__()
+        super(CustomPushButton, self).__init__()
 
         if size_policy is not None:
             self.setSizePolicy(size_policy)
-            
-        self.setSizePolicy(v_size_policy, h_size_policy)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
 
-        self.setText(title)
+        if title is not None:
+            self.setText(title)
 
-        self.setMaximumSize(maximum_size)
-        self.setMinimumSize(minimum_size)
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
+        if minimum_size is not None:
+            self.setMinimumSize(minimum_size)   
+        if maximum_size is not None:
+            self.setMaximumSize(maximum_size)
+
+        if width is not None:
+            self.setFixedWidth(width)
+        if height is not None:
+            self.setFixedHeight(height)
 
         if style_sheet is not None:
-            self.setStyleSheet(self.STYLE_SHEET)
+            self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(style_sheet)
+        self.setStyleSheet(self.STYLE_SHEET)
 
 class CustomSlider(QSlider):
 
@@ -66,6 +72,7 @@ class CustomSlider(QSlider):
                  v_size_policy : QSizePolicy.Policy=None, 
                  h_size_policy : QSizePolicy.Policy=None,
                  size_policy : QSizePolicy=None,
+                 orientation : Qt.Orientation=None,
                  minimum : int = None, maximum : int = None,
                  increment : float=None, 
                  minimum_size : QSize=None,maximum_size : QSize=None,
@@ -75,34 +82,43 @@ class CustomSlider(QSlider):
         """
             constructor for custom slider widget
         """
-        super(CustomSlider).__init__()
+        super(CustomSlider, self).__init__()
 
         if size_policy is not None:
             self.setSizePolicy(size_policy)
             
-        self.setSizePolicy(v_size_policy, h_size_policy)
-
-        self.styleSheet = style_sheet
-        self.setMinimum(minimum)
-        self.setMaximum(maximum)
-        self.setSizeIncrement(increment)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
+        
+        if orientation is not None:
+            self.setOrientation(orientation)
 
         self.min = minimum
         self.max = maximum
         self.val = self.value
 
-        self.setMinimum(minimum)
-        self.setMaximum(maximum)
-        self.setSingleStep(1)
-        self.setMaximumSize(maximum_size)
-        self.setMinimumSize(minimum_size)
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
+        if minimum is not None:
+            self.setMinimum(minimum)
+        if maximum is not None:
+            self.setMaximum(maximum)
+        if increment is not None:
+            self.setSizeIncrement(increment)
 
+        if minimum_size is not None:
+            self.setMinimumSize(minimum_size)   
+        if maximum_size is not None:
+            self.setMaximumSize(maximum_size)
+
+        if width is not None:
+            self.setFixedWidth(width)
+        if height is not None:
+            self.setFixedHeight(height)
+        if size is not None:
+            self.setFixedSize(size)
         if style_sheet is not None:
-            self.setStyleSheet(self.STYLE_SHEET)
+            self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(style_sheet)
+        self.setStyleSheet(self.STYLE_SHEET)
 
         self.linked_btn = linked_btn
         self.linked_spin_box = linked_spin_box
@@ -172,28 +188,37 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_spin_box: QSpinBox=None,
                  linked_slider : QSlider = None) -> object:
-        super(CustomDoubleSpinBox).__init__()
+        super(CustomDoubleSpinBox, self).__init__()
         
         if size_policy is not None:
             self.setSizePolicy(size_policy)
             
-        self.setSizePolicy(v_size_policy, h_size_policy)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
 
-        self.setMinimum(minimum)
-        self.setMaximum(maximum)
-        self.setSizeIncrement(increment)
+        if minimum is not None:
+            self.setMinimum(minimum)
+        if maximum is not None:
+            self.setMaximum(maximum)
+        if increment is not None:
+            self.setSizeIncrement(increment)
 
-        self.setMinimumSize(minimum_size)
-        self.setMaximumSize(maximum_size)
+        if minimum_size is not None:
+            self.setMinimumSize(minimum_size)   
+        if maximum_size is not None:
+            self.setMaximumSize(maximum_size)
 
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
-        self.setFixedSize(size)
+        if width is not None:
+            self.setFixedWidth(width)
+        if height is not None:
+            self.setFixedHeight(height)
+        if size is not None:
+            self.setFixedSize(size)
 
         if style_sheet is not None:
-            self.setStyleSheet(self.STYLE_SHEET)
+            self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(style_sheet)
+        self.setStyleSheet(self.STYLE_SHEET)
 
         self.linked_spin_box = linked_spin_box
         self.linked_slider = linked_slider
@@ -232,28 +257,37 @@ class CustomSpinBox(QSpinBox):
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
                  linked_slider : QSlider = None) -> object:
-        super(CustomSpinBox).__init__()
+        super(CustomSpinBox, self).__init__()
 
         if size_policy is not None:
             self.setSizePolicy(size_policy)
             
-        self.setSizePolicy(v_size_policy, h_size_policy)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
 
-        self.setMinimum(minimum)
-        self.setMaximum(maximum)
-        self.setSizeIncrement(increment)
+        if minimum is not None:
+            self.setMinimum(minimum)
+        if maximum is not None:
+            self.setMaximum(maximum)
+        if increment is not None:
+            self.setSizeIncrement(increment)
 
-        self.setMinimumSize(minimum_size)
-        self.setMaximumSize(maximum_size)
+        if minimum_size is not None:
+            self.setMinimumSize(minimum_size)   
+        if maximum_size is not None:
+            self.setMaximumSize(maximum_size)
 
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
-        self.setFixedSize(size)
+        if width is not None:
+            self.setFixedWidth(width)
+        if height is not None:
+            self.setFixedHeight(height)
+        if size is not None:
+            self.setFixedSize(size)
 
         if style_sheet is not None:
-            self.setStyleSheet(self.STYLE_SHEET)
+            self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(style_sheet)
+        self.setStyleSheet(self.STYLE_SHEET)
 
         self.linked_double_spin_box = linked_double_spin_box
         self.linked_slider = linked_slider
@@ -291,12 +325,13 @@ class CustomLineEdit(QLineEdit):
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
                  linked_slider : QSlider = None) -> object:
-        super(CustomLineEdit).__init__()
+        super(CustomLineEdit, self).__init__()
     
         if size_policy is not None:
             self.setSizePolicy(size_policy)
             
-        self.setSizePolicy(v_size_policy, h_size_policy)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
 
 class CustomLabel(QLabel):
     STYLE_SHEET = """
@@ -312,9 +347,10 @@ class CustomLabel(QLabel):
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
                  linked_slider : QSlider = None) -> object:
-        super(CustomLabel).__init__()
+        super(CustomLabel, self).__init__()
 
-        self.setText(title)
+        if title is not None:
+            self.setText(title)
 
 class CustomGroupBox(QGroupBox, UtilFuncs):
     STYLE_SHEET = """
@@ -325,30 +361,44 @@ class CustomGroupBox(QGroupBox, UtilFuncs):
 
     def __init__(self, style_sheet : str=None, title : str=None,
                  v_size_policy : QSizePolicy.Policy=None, 
-                 h_size_policy : QSizePolicy.Policy=None,
-                 size_policy : QSizePolicy=None,
+                 h_size_policy : QSizePolicy.Policy=None, default_state : bool = False,
+                 fixed_size_policy : bool=False,
+                 size_policy : QSizePolicy=None, checkable : bool = False,
                  minimum_size : QSize=None, maximum_size : QSize=None,
                  width : QSize=None, height : QSize=None, size : QSize=None) -> object:
-        super(CustomGroupBox).__init__()
+        super(CustomGroupBox, self).__init__()
 
         if size_policy is not None:
             self.setSizePolicy(size_policy)
             
-        self.setSizePolicy(v_size_policy, h_size_policy)
+        if v_size_policy is not None and h_size_policy is not None:
+            self.setSizePolicy(v_size_policy, h_size_policy)
+        self.setCheckable(checkable)
 
-        self.setTitle(title)
+        if default_state is True:
+            self.set_default_state(self)
+        if fixed_size_policy is True:
+            self.set_fixed_size_policy(self)
 
-        self.setMinimumSize(minimum_size)   
-        self.setMaximumSize(maximum_size)
+        if title is not None:
+            self.setTitle(title)
 
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
-        self.setFixedSize(size)
+        if minimum_size is not None:
+            self.setMinimumSize(minimum_size)   
+        if maximum_size is not None:
+            self.setMaximumSize(maximum_size)
+
+        if width is not None:
+            self.setFixedWidth(width)
+        if height is not None:
+            self.setFixedHeight(height)
+        if size is not None:
+            self.setFixedSize(size)
 
         if style_sheet is not None:
-            self.setStyleSheet(self.STYLE_SHEET)
+            self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(style_sheet)
+        self.setStyleSheet(self.STYLE_SHEET)
 
         self.activate_all_slots()
 
@@ -363,6 +413,9 @@ class CustomGroupBox(QGroupBox, UtilFuncs):
             toggled group box slot
         """
         self.hide_group_box_widgets(self)
+
+    def set_default_state(self, group_box: QGroupBox = None) -> None:
+        return super().set_default_state(group_box)
 
 class CustomComboBox(QComboBox):
     STYLE_SHEET = """
@@ -379,11 +432,11 @@ class CustomComboBox(QComboBox):
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
                  linked_slider : QSlider = None) -> object:
-        super(CustomComboBox).__init__()
+        super(CustomComboBox, self).__init__()
 
         self.all_items_to_add = items_to_add
         if add_items is True:
-            self.add_items_from_list(self.all_items_to_add)
+            self.add_items_from_list()
         elif add_item is True:
             self.addItem(item)
         

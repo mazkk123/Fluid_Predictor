@@ -43,7 +43,6 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.create_scroll_area_widget()
 
         self.initialize_main_group_boxes()
-        self.activate_all_slots()
 
         self.horizontal_spacer_layout = QHBoxLayout()
 
@@ -169,9 +168,6 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.frame_range_h_layout.addWidget(self.start_frame_field)
         self.frame_range_h_layout.addWidget(self.end_frame_field)
 
-        """ self.frame_dockable_widget = QDockWidget("Frame controls")
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.frame_dockable_widget) """
-
         self.frame_control_widget = QWidget()
         self.frame_control_v_layout = QVBoxLayout()
         self.frame_control_widget.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
@@ -193,9 +189,9 @@ class MainWindow(QMainWindow, UtilFuncs):
         """
             creates a reset to defaults button in main menu widget
         """
-        self.reset_btn = CustomPushButton("Reset to Defaults")
-        self.reset_btn.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding,
-                                                 QSizePolicy.Policy.Expanding))
+        self.reset_btn = CustomPushButton(title="Reset to Defaults", 
+                                          size_policy=QSizePolicy(QSizePolicy.Policy.Expanding,
+                                                                QSizePolicy.Policy.Fixed))
         self.main_layout.addWidget(self.reset_btn)
 
     def create_fluid_solver_widget(self):
@@ -226,25 +222,24 @@ class MainWindow(QMainWindow, UtilFuncs):
         """
             creates widgets responsible for fluid appearance
         """
-        self.appearance_gBox = QGroupBox("Appearance")
-        self.set_fixed_size_policy(self.appearance_gBox)
-        self.appearance_gBox.setCheckable(True)
-        self.set_default_state(self.appearance_gBox)
+        self.appearance_gBox = CustomGroupBox(title="Appearance",
+                                              fixed_size_policy=True,
+                                              checkable=True)
         self.appearance_v_layout = QVBoxLayout()
 
         self.nbr_particles_h_layout = QHBoxLayout()
-        self.nbr_of_particles_lbl = QLabel("No. of particles")
-        self.nbr_of_particle_sBox = QSpinBox()
-        self.nbr_of_particles_slider = QSlider(Qt.Horizontal)
+        self.nbr_of_particles_lbl = CustomLabel(title="No. of particles")
+        self.nbr_of_particle_sBox = CustomSpinBox()
+        self.nbr_of_particles_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particles_lbl)
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particle_sBox)
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particles_slider)
 
         self.particle_size_h_layout = QHBoxLayout()
-        self.particle_size_lbl = QLabel("Particle Size")
-        self.particle_size_sBox = QDoubleSpinBox()
-        self.particle_size_slider_w = QSlider(Qt.Horizontal)
+        self.particle_size_lbl = CustomLabel(title="Particle Size")
+        self.particle_size_sBox = CustomSpinBox()
+        self.particle_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
         
         self.particle_size_h_layout.addWidget(self.particle_size_lbl)
         self.particle_size_h_layout.addWidget(self.particle_size_sBox)
@@ -262,15 +257,15 @@ class MainWindow(QMainWindow, UtilFuncs):
             creates the widget for the motion of the particles
         """
         self.motion_v_layout = QVBoxLayout()
-        self.motion_gBox = QGroupBox("Motion")
-        self.set_fixed_size_policy(self.motion_gBox)
-        self.motion_gBox.setCheckable(True)
+        self.motion_gBox = CustomGroupBox(title="Motion",
+                                          fixed_size_policy=True,
+                                          checkable=True)
 
         self.position_h_layout = QHBoxLayout()
-        self.position_lbl = QLabel("Position")
-        self.position_x_sBox = QDoubleSpinBox()
-        self.position_y_sBox = QDoubleSpinBox()
-        self.position_z_sBox = QDoubleSpinBox()
+        self.position_lbl = CustomLabel(title="Position")
+        self.position_x_sBox = CustomDoubleSpinBox()
+        self.position_y_sBox = CustomDoubleSpinBox()
+        self.position_z_sBox = CustomDoubleSpinBox()
 
         self.position_h_layout.addWidget(self.position_lbl)
         self.position_h_layout.addWidget(self.position_x_sBox)
@@ -278,10 +273,10 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.position_h_layout.addWidget(self.position_z_sBox)
 
         self.velocity_h_layout = QHBoxLayout()
-        self.velocity_lbl = QLabel("Velocity")
-        self.velocity_x_sBox = QDoubleSpinBox()
-        self.velocity_y_sBox = QDoubleSpinBox()
-        self.velocity_z_sBox = QDoubleSpinBox()
+        self.velocity_lbl = CustomLabel(title="Velocity")
+        self.velocity_x_sBox = CustomDoubleSpinBox()
+        self.velocity_y_sBox = CustomDoubleSpinBox()
+        self.velocity_z_sBox = CustomDoubleSpinBox()
 
         self.velocity_h_layout.addWidget(self.velocity_lbl)
         self.velocity_h_layout.addWidget(self.velocity_x_sBox)
@@ -289,10 +284,10 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.velocity_h_layout.addWidget(self.velocity_z_sBox)
 
         self.acc_h_layout = QHBoxLayout()
-        self.acc_lbl = QLabel("Acceleration")
-        self.acc_x_sBox = QDoubleSpinBox()
-        self.acc_y_sBox = QDoubleSpinBox()
-        self.acc_z_sBox = QDoubleSpinBox()
+        self.acc_lbl = CustomLabel(title="Acceleration")
+        self.acc_x_sBox = CustomDoubleSpinBox()
+        self.acc_y_sBox = CustomDoubleSpinBox()
+        self.acc_z_sBox = CustomDoubleSpinBox()
 
         self.acc_h_layout.addWidget(self.acc_lbl)
         self.acc_h_layout.addWidget(self.acc_x_sBox)
@@ -312,68 +307,68 @@ class MainWindow(QMainWindow, UtilFuncs):
             creates physical forces widget appearance
         """
         self.physical_v_layout = QVBoxLayout()
-        self.physical_gBox = QGroupBox("Physical Forces")
-        self.set_fixed_size_policy(self.physical_gBox)
-        self.physical_gBox.setCheckable(True)
+        self.physical_gBox = CustomGroupBox(title="Physical Forces",
+                                            fixed_size_policy=True,
+                                            checkable=True)
 
         self.gravity_h_layout = QHBoxLayout()
-        self.physical_g_lbl = QLabel("Gravity")
-        self.physical_g_sBox = QDoubleSpinBox()
-        self.physical_g_slider = QSlider(Qt.Horizontal)
+        self.physical_g_lbl = CustomLabel(title="Gravity")
+        self.physical_g_sBox = CustomDoubleSpinBox()
+        self.physical_g_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.gravity_h_layout.addWidget(self.physical_g_lbl)
         self.gravity_h_layout.addWidget(self.physical_g_sBox)
         self.gravity_h_layout.addWidget(self.physical_g_slider)
 
         self.buoyancy_h_layout = QHBoxLayout()
-        self.physical_b_lbl = QLabel("Buoyancy")
-        self.physical_b_sBox = QDoubleSpinBox()
-        self.physical_b_slider = QSlider(Qt.Horizontal)
+        self.physical_b_lbl = CustomLabel(title="Buoyancy")
+        self.physical_b_sBox = CustomDoubleSpinBox()
+        self.physical_b_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.buoyancy_h_layout.addWidget(self.physical_b_lbl)
         self.buoyancy_h_layout.addWidget(self.physical_b_sBox)
         self.buoyancy_h_layout.addWidget(self.physical_b_slider)
 
         self.viscosity_h_layout = QHBoxLayout()
-        self.physical_v_lbl = QLabel("Viscosity")
-        self.physical_v_sBox = QDoubleSpinBox()
-        self.physical_v_slider = QSlider(Qt.Horizontal)
+        self.physical_v_lbl = CustomLabel(title="Viscosity")
+        self.physical_v_sBox = CustomDoubleSpinBox()
+        self.physical_v_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.viscosity_h_layout.addWidget(self.physical_v_lbl)
         self.viscosity_h_layout.addWidget(self.physical_v_sBox)
         self.viscosity_h_layout.addWidget(self.physical_v_slider)
 
         self.pressure_h_layout = QHBoxLayout()
-        self.physical_p_lbl = QLabel("Pressure")
-        self.physical_p_sBox = QDoubleSpinBox()
-        self.physical_p_slider = QSlider(Qt.Horizontal)
+        self.physical_p_lbl = CustomLabel(title="Pressure")
+        self.physical_p_sBox = CustomDoubleSpinBox()
+        self.physical_p_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.pressure_h_layout.addWidget(self.physical_p_lbl)
         self.pressure_h_layout.addWidget(self.physical_p_sBox)
         self.pressure_h_layout.addWidget(self.physical_p_slider)
 
         self.mass_h_layout = QHBoxLayout()
-        self.physical_m_lbl = QLabel("Mass")
-        self.physical_m_sBox = QDoubleSpinBox()
-        self.physical_m_slider = QSlider(Qt.Horizontal)
+        self.physical_m_lbl = CustomLabel(title="Mass")
+        self.physical_m_sBox = CustomDoubleSpinBox()
+        self.physical_m_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.mass_h_layout.addWidget(self.physical_m_lbl)
         self.mass_h_layout.addWidget(self.physical_m_sBox)
         self.mass_h_layout.addWidget(self.physical_m_slider)
 
         self.massD_h_layout = QHBoxLayout()
-        self.physical_md_lbl = QLabel("Mass Density")
-        self.physical_md_sBox = QDoubleSpinBox()
-        self.physical_md_slider = QSlider(Qt.Horizontal)
+        self.physical_md_lbl = CustomLabel(title="Mass Density")
+        self.physical_md_sBox = CustomDoubleSpinBox()
+        self.physical_md_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.massD_h_layout.addWidget(self.physical_md_lbl)
         self.massD_h_layout.addWidget(self.physical_md_sBox)
         self.massD_h_layout.addWidget(self.physical_md_slider)
 
         self.speedLoss_h_layout = QHBoxLayout()
-        self.physical_sL_lbl = QLabel("Speed Loss")
-        self.physical_sL_sBox = QDoubleSpinBox()
-        self.physical_sL_slider = QSlider(Qt.Horizontal)
+        self.physical_sL_lbl = CustomLabel(title="Speed Loss")
+        self.physical_sL_sBox = CustomDoubleSpinBox()
+        self.physical_sL_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.speedLoss_h_layout.addWidget(self.physical_sL_lbl)
         self.speedLoss_h_layout.addWidget(self.physical_sL_sBox)
@@ -398,27 +393,24 @@ class MainWindow(QMainWindow, UtilFuncs):
             creates the widgets for the fluid tank session of the main window UI
         """
         self.tank_v_layout = QVBoxLayout()
-        self.tank_gBox = QGroupBox("Tank Control")
-        self.set_fixed_size_policy(self.tank_gBox)
-        self.tank_gBox.setCheckable(True)
+        self.tank_gBox = CustomGroupBox(title="Tank Control",
+                                        fixed_size_policy=True,
+                                        checkable=True)
 
         self.tank_type_h_layout = QHBoxLayout()
-        self.tank_type_lbl = QLabel("Tank Type")
-        self.tank_combo_box = QComboBox()
-
-        self.tank_combo_box.addItem("Circular")
-        self.tank_combo_box.addItem("Cubic")
-        self.tank_combo_box.addItem("Cylindrical")
-        self.tank_combo_box.addItem("Capsule")
+        self.tank_type_lbl = CustomLabel(title="Tank Type")
+        tank_items = ["Circular", "Cubic", "Cylindrical", "Capsule"]
+        self.tank_combo_box = CustomComboBox(add_items=True,
+                                             items_to_add=tank_items)
 
         self.tank_type_h_layout.addWidget(self.tank_type_lbl)
         self.tank_type_h_layout.addWidget(self.tank_combo_box)
 
         self.tank_radius_h_layout = QHBoxLayout()
-        self.tank_radius_lbl = QLabel("Tank Radius")
-        self.tank_x_radius_sBox = QDoubleSpinBox()
-        self.tank_y_radius_sBox = QDoubleSpinBox()
-        self.tank_z_radius_sBox = QDoubleSpinBox()
+        self.tank_radius_lbl = CustomLabel(title="Tank Radius")
+        self.tank_x_radius_sBox = CustomDoubleSpinBox()
+        self.tank_y_radius_sBox = CustomDoubleSpinBox()
+        self.tank_z_radius_sBox = CustomDoubleSpinBox()
 
         self.tank_radius_h_layout.addWidget(self.tank_radius_lbl)
         self.tank_radius_h_layout.addWidget(self.tank_x_radius_sBox)
@@ -426,10 +418,10 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.tank_radius_h_layout.addWidget(self.tank_z_radius_sBox)
 
         self.tank_pos_h_layout = QHBoxLayout()
-        self.tank_pos_lbl = QLabel("Tank Position")
-        self.tank_x_pos_sBox = QDoubleSpinBox()
-        self.tank_y_pos_sBox = QDoubleSpinBox()
-        self.tank_z_pos_sBox = QDoubleSpinBox()
+        self.tank_pos_lbl = CustomLabel(title="Tank Position")
+        self.tank_x_pos_sBox = CustomDoubleSpinBox()
+        self.tank_y_pos_sBox = CustomDoubleSpinBox()
+        self.tank_z_pos_sBox = CustomDoubleSpinBox()
 
         self.tank_pos_h_layout.addWidget(self.tank_pos_lbl)
         self.tank_pos_h_layout.addWidget(self.tank_x_pos_sBox)
@@ -451,25 +443,23 @@ class MainWindow(QMainWindow, UtilFuncs):
             responsible for the system of particle controls
         """
         self.timeSteps_v_layout = QVBoxLayout()
-        self.timeSteps_gBox = QGroupBox("Simulation Steps")
-        self.set_fixed_size_policy(self.timeSteps_gBox)
-        self.timeSteps_gBox.setCheckable(True)
+        self.timeSteps_gBox = CustomGroupBox(title="Simulation Steps",
+                                             fixed_size_policy=True,
+                                             checkable=True)
 
         self.substep_type_h_layout = QHBoxLayout()
-        self.substep_type_lbl = QLabel("Time Integrator")
-        self.substep_comboBox = QComboBox()
-
-        self.substep_comboBox.addItem("Default")
-        self.substep_comboBox.addItem("Verlet")
-        self.substep_comboBox.addItem("Leap_Frog")
+        self.substep_type_lbl = CustomLabel(title="Time Integrator")
+        substep_type = ["Default", "Verlet", "Leap_Frog"]
+        self.substep_comboBox = CustomComboBox(add_items=True,
+                                               items_to_add=substep_type)
 
         self.substep_type_h_layout.addWidget(self.substep_type_lbl)
         self.substep_type_h_layout.addWidget(self.substep_comboBox)
 
         self.delta_t_h_layout = QHBoxLayout()
-        self.delta_t_lbl = QLabel("Delta Time")
-        self.delta_t_slider = QSlider(Qt.Horizontal)
-        self.delta_t_sBox = QDoubleSpinBox()
+        self.delta_t_lbl = CustomLabel(title="Delta Time")
+        self.delta_t_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.delta_t_sBox = CustomDoubleSpinBox()
 
         self.delta_t_h_layout.addWidget(self.delta_t_lbl)
         self.delta_t_h_layout.addWidget(self.delta_t_slider)
@@ -489,46 +479,43 @@ class MainWindow(QMainWindow, UtilFuncs):
             scale
         """
         self.distr_v_layout = QVBoxLayout()
-        self.distr_gBox = QGroupBox("Particle Distribution")
-        self.set_fixed_size_policy(self.distr_gBox)
-        self.distr_gBox.setCheckable(True)
+        self.distr_gBox = CustomGroupBox(title="Particle Distribution",
+                                         fixed_size_policy=True,
+                                         checkable=True,
+                                         default_state=True)
 
         self.particle_distr_h_layout = QHBoxLayout()
-        self.particle_distr_lbl = QLabel("Particle Distribution")
-        self.particle_distr_comboBox = QComboBox()
-
-        self.particle_distr_comboBox.addItem("Uniform")
-        self.particle_distr_comboBox.addItem("Random")
+        self.particle_distr_lbl = CustomLabel(title="Particle Distribution")
+        particle_distr_items = ["Uniform", "Random"]
+        self.particle_distr_comboBox = CustomComboBox(add_items=True,
+                                                      items_to_add=particle_distr_items)
 
         self.particle_distr_h_layout.addWidget(self.particle_distr_lbl)
         self.particle_distr_h_layout.addWidget(self.particle_distr_comboBox)
 
         self.neighbr_solver_h_layout = QHBoxLayout()
-        self.neighbr_solver_lbl = QLabel("Neighbour Solver")
-        self.neighbr_solver_comboBox = QComboBox()
-
-        self.neighbr_solver_comboBox.addItem("Distance")
-        self.neighbr_solver_comboBox.addItem("K d trees")
-        self.neighbr_solver_comboBox.addItem("Octree")
-        self.neighbr_solver_comboBox.addItem("Quadtree")
-        self.neighbr_solver_comboBox.addItem("Spatial Hashing")
+        neighbr_solver_items = ["Distance", "K d Trees", "Octree",
+                                "Quadtree", "Spatial Hashing"]
+        self.neighbr_solver_lbl = CustomLabel(title="Neighbour Solver")
+        self.neighbr_solver_comboBox = CustomComboBox(add_items=True,
+                                                      items_to_add=neighbr_solver_items)
 
         self.neighbr_solver_h_layout.addWidget(self.neighbr_solver_lbl)
         self.neighbr_solver_h_layout.addWidget(self.neighbr_solver_comboBox)
 
         self.particle_sep_h_layout = QHBoxLayout()
-        self.particle_sep_lbl = QLabel("Particle Separation")
-        self.particle_sep_spinBox = QDoubleSpinBox()
-        self.particle_sep_slider_w = QSlider(orientation=Qt.Horizontal)
+        self.particle_sep_lbl = CustomLabel(title="Particle Separation")
+        self.particle_sep_spinBox = CustomDoubleSpinBox()
+        self.particle_sep_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.particle_sep_h_layout.addWidget(self.particle_sep_lbl)
         self.particle_sep_h_layout.addWidget(self.particle_sep_spinBox)
         self.particle_sep_h_layout.addWidget(self.particle_sep_slider_w)
 
         self.cell_size_h_layout = QHBoxLayout()
-        self.cell_size_lbl = QLabel("Cell Size")
-        self.cell_size_spinBox = QDoubleSpinBox()
-        self.cell_size_slider_w = QSlider(orientation=Qt.Horizontal)
+        self.cell_size_lbl = CustomLabel(title="Cell Size")
+        self.cell_size_spinBox = CustomDoubleSpinBox()
+        self.cell_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
 
         self.cell_size_h_layout.addWidget(self.cell_size_lbl)
         self.cell_size_h_layout.addWidget(self.cell_size_spinBox)
