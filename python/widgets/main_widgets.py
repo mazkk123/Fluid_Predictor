@@ -1,13 +1,12 @@
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, QPushButton, \
     QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QScrollArea
+    QSpacerItem, QSizePolicy,  QScrollArea, QSplitter, QDockWidget
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage, QColor, QFont
 from canvas_state import DrawingCanvas
-from utilities import UtilFuncs, VerticalSeparator, HorizontalSeparator, CustomPushButton, \
-    CustomSlider, CustomDoubleSpinBox, CustomSpinBox, CustomLineEdit, CustomLabel, CustomTabWidget, \
-    CustomScrollArea, CustomToolBar, CustomMenu, CustomDockableWidget
+from utility_functions import *
+from widget_utilities import *
 
 class MainWindow(QMainWindow, UtilFuncs):
 
@@ -20,6 +19,14 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.window_icon = QPixmap("images/Toolbar/fluid.png")
         self.setWindowIcon(self.window_icon)
 
+        self.initUI()
+
+        self.setCentralWidget(self.main_splitter_widget)
+
+    def initUI(self):
+        """
+            initializes calls to most UI elements on screen
+        """
         self.add_menu_bars()
         self.add_tool_bars()
 
@@ -43,13 +50,13 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.main_options_widget.setLayout(self.main_layout)
         self.create_bottom_toolbar()
 
-        self.horizontal_spacer_layout.addLayout(self.graphics_view_v_layout)
-        self.horizontal_spacer_layout.addWidget(self.main_tabs_widget)
+        self.main_tabs_widget.setMinimumSize(QSize(225,400))
+        self.main_tabs_widget.setMaximumSize(QSize(325,720))
 
-        self.main_window = QWidget()
-        self.main_window.setLayout(self.horizontal_spacer_layout)
-
-        self.setCentralWidget(self.main_window)
+        self.main_splitter_widget = QSplitter(Qt.Horizontal)
+        self.main_splitter_widget.addWidget(self.main_graphics_widget)
+        self.main_splitter_widget.addWidget(self.main_tabs_widget)
+        self.main_splitter_widget.setChildrenCollapsible(False)
 
     def create_scroll_area_widget(self):
         """
@@ -116,26 +123,26 @@ class MainWindow(QMainWindow, UtilFuncs):
             widget
         """
         self.graphics_view_v_layout = QVBoxLayout()
-        self.main_canvas = DrawingCanvas(QRect(0, 0, 900, 400), 
+        self.main_canvas = DrawingCanvas(QRect(0, 0, 700, 400), 
                                          QColor(255,0,0), 
                                          QFont("Arial"), 14)
 
         self.play_bar_h_layout = QHBoxLayout()
-        self.play_simulation_btn = QPushButton()
+        self.play_simulation_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.play_simulation_btn, image_name="play_backward.png")
-        self.stop_simulation_btn = QPushButton()
+        self.stop_simulation_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.stop_simulation_btn, image_name="stop.png")
-        self.play_back_simulation_btn = QPushButton()
+        self.play_back_simulation_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.play_back_simulation_btn, image_name="play_forward.png")
 
         self.frame_spacing_item = QSpacerItem(700, 0)
-        self.prev_frame_btn = QPushButton()
+        self.prev_frame_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.prev_frame_btn, image_name="frame_backward.png")
-        self.curr_frame_lbl = QLineEdit()
-        self.curr_frame_lbl.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+        self.curr_frame_lbl = CustomLineEdit()
+        self.curr_frame_lbl.setSizePolicy(QSizePolicy(QSizePolicy.Policy.MinimumExpanding,
                                                         QSizePolicy.Policy.Fixed))
         self.curr_frame_lbl.setFixedSize(QSize(40,20))
-        self.next_frame_btn = QPushButton()
+        self.next_frame_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.next_frame_btn, image_name="frame_forward.png")
 
         self.play_bar_h_layout.addWidget(self.play_simulation_btn)
@@ -149,11 +156,11 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.play_bar_h_layout.addWidget(self.next_frame_btn)
 
         self.frame_range_h_layout = QHBoxLayout()
-        self.start_frame_field = QLineEdit()
+        self.start_frame_field = CustomLineEdit()
         self.start_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
                                                          QSizePolicy.Policy.Fixed))
         self.start_frame_field.setFixedSize(QSize(40,20))
-        self.end_frame_field = QLineEdit()
+        self.end_frame_field = CustomLineEdit()
         self.end_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
                                                         QSizePolicy.Policy.Fixed))
         self.end_frame_field.setFixedSize(QSize(40,20))
@@ -162,15 +169,33 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.frame_range_h_layout.addWidget(self.start_frame_field)
         self.frame_range_h_layout.addWidget(self.end_frame_field)
 
-        self.graphics_view_v_layout.addWidget(self.main_canvas)
-        self.graphics_view_v_layout.addLayout(self.frame_range_h_layout)
-        self.graphics_view_v_layout.addLayout(self.play_bar_h_layout)
+        """ self.frame_dockable_widget = QDockWidget("Frame controls")
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.frame_dockable_widget) """
+
+        self.frame_control_widget = QWidget()
+        self.frame_control_v_layout = QVBoxLayout()
+        self.frame_control_widget.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                            QSizePolicy.Policy.Fixed))
+        self.frame_control_v_layout.addLayout(self.frame_range_h_layout)
+        self.frame_control_v_layout.addLayout(self.play_bar_h_layout)
+        self.frame_control_widget.setLayout(self.frame_control_v_layout)
+
+        self.frame_and_graphics_splitter = QSplitter(Qt.Vertical)
+        self.frame_and_graphics_splitter.addWidget(self.main_canvas)
+        self.frame_and_graphics_splitter.addWidget(self.frame_control_widget)
+
+        self.graphics_view_v_layout.addWidget(self.frame_and_graphics_splitter)
+
+        self.main_graphics_widget = QWidget()
+        self.main_graphics_widget.setLayout(self.graphics_view_v_layout)
    
     def create_reset_button(self):
         """
             creates a reset to defaults button in main menu widget
         """
-        self.reset_btn = QPushButton("Reset to Defaults")
+        self.reset_btn = CustomPushButton("Reset to Defaults")
+        self.reset_btn.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding,
+                                                 QSizePolicy.Policy.Expanding))
         self.main_layout.addWidget(self.reset_btn)
 
     def create_fluid_solver_widget(self):
@@ -180,15 +205,13 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.solver_vertical_layout = QVBoxLayout()
         self.solver_horizontal_layout = QHBoxLayout()
 
-        self.fluid_solver_group_box = QGroupBox("Solver Type")
+        self.fluid_solver_group_box = CustomGroupBox(title="Solver Type")
         self.set_fixed_size_policy(self.fluid_solver_group_box)
 
-        self.fluid_solver_label = QLabel("Choose Solver")
-        self.fluid_solver_combo_box = QComboBox()
-        self.fluid_solver_combo_box.addItem("SPH")
-        self.fluid_solver_combo_box.addItem("IISPH")
-        self.fluid_solver_combo_box.addItem("WCSPH")
-        self.fluid_solver_combo_box.addItem("Multi SPH")
+        self.fluid_solver_label = CustomLabel(title="Choose Solver")
+        fluid_solver_lbls = ["SPH", "IISPH", "WCSPH", "Multi SPH"]
+        
+        self.fluid_solver_combo_box = CustomComboBox(add_items=True, items_to_add=fluid_solver_lbls)
 
         self.solver_horizontal_layout.addWidget(self.fluid_solver_label)
         self.solver_horizontal_layout.addWidget(self.fluid_solver_combo_box)
@@ -571,451 +594,3 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.add_icons_to_actions(icon=fps_control, image_name="fps.png")
         self.add_icons_to_actions(icon=display_particle_count, image_name="count.png")
         self.add_icons_to_actions(icon=reset_simulation, image_name="reset.png")
-    
-
-# ------------------------------ MAIN SLOT ACTIVATION ------------------------------
-
-    def activate_all_slots(self):
-        """
-            activates all slot widgets
-        """
-        self.activate_reset_slot()
-        self.activate_appearance_slots()
-        self.activate_distr_slots()
-        self.activate_motion_slots()
-        self.activate_physical_slots()
-        self.activate_tank_slots()
-        self.activate_time_slots()
-
-    def activate_reset_slot(self):
-        """
-            activates the reset slot calls
-        """
-        self.reset_btn.clicked.connect(self.reset_btn_func)
-
-    def activate_appearance_slots(self):
-        """
-            activates appearance slot callbacks
-        """
-        self.appearance_gBox.toggled.connect(self.appearance_group_box)
-
-        self.nbr_of_particles_slider.valueChanged.connect(self.particle_num_slider_valueChanged)
-        self.nbr_of_particle_sBox.valueChanged.connect(self.particle_num_spin_box)
-
-        self.particle_size_sBox.valueChanged.connect(self.particle_size_spin_box)
-        self.particle_size_slider_w.valueChanged.connect(self.particle_size_slider_valueChanged)
-
-    def activate_motion_slots(self):
-        """
-            activates motion slot callbacks
-        """
-        self.motion_gBox.toggled.connect(self.motion_group_box)
-
-        self.position_x_sBox.valueChanged.connect(self.mPosition_spin_box)
-        self.position_y_sBox.valueChanged.connect(self.mPosition_spin_box)
-        self.position_z_sBox.valueChanged.connect(self.mPosition_spin_box)
-
-        self.velocity_x_sBox.valueChanged.connect(self.mVel_spin_box)
-        self.velocity_y_sBox.valueChanged.connect(self.mVel_spin_box)
-        self.velocity_z_sBox.valueChanged.connect(self.mVel_spin_box)
-
-        self.acc_x_sBox.valueChanged.connect(self.mAccel_spin_box)
-        self.acc_y_sBox.valueChanged.connect(self.mAccel_spin_box)
-        self.acc_z_sBox.valueChanged.connect(self.mAccel_spin_box)
-
-    def activate_physical_slots(self):
-        """
-            activates physical slot callbacks
-        """
-        self.physical_gBox.toggled.connect(self.physical_group_box)
-
-        self.physical_m_slider.valueChanged.connect(self.mass_slider_valueChanged)
-        self.physical_m_sBox.valueChanged.connect(self.mass_spin_box)
-
-        self.physical_g_sBox.valueChanged.connect(self.gravity_spin_box)
-        self.physical_g_slider.valueChanged.connect(self.gravity_slider_valueChanged)
-
-        self.physical_b_sBox.valueChanged.connect(self.buoyancy_spin_box)
-        self.physical_b_slider.valueChanged.connect(self.buoyancy_slider_valueChanged)
-
-        self.physical_v_sBox.valueChanged.connect(self.viscosity_spin_box)
-        self.physical_v_slider.valueChanged.connect(self.viscosity_slider_valueChanged)
-
-        self.physical_p_sBox.valueChanged.connect(self.pressure_spin_box)
-        self.physical_p_slider.valueChanged.connect(self.pressure_slider_valueChanged)
-
-        self.physical_md_sBox.valueChanged.connect(self.massD_spin_box)
-        self.physical_md_slider.valueChanged.connect(self.massD_slider_valueChanged)
-
-        self.physical_sL_sBox.valueChanged.connect(self.speed_loss_spin_box)
-        self.physical_sL_slider.valueChanged.connect(self.speed_loss_slider_valueChanged)
-
-    def activate_distr_slots(self):
-        """
-            activates distribution slot callbacks
-        """
-        self.distr_gBox.toggled.connect(self.distr_group_box)
-
-        self.particle_distr_comboBox.currentIndexChanged.connect(self.distr_combo_box)
-        self.neighbr_solver_comboBox.currentIndexChanged.connect(self.solver_combo_box)
-
-        self.particle_sep_spinBox.valueChanged.connect(self.particle_sep_spin_box)
-        self.particle_sep_slider_w.valueChanged.connect(self.particle_sep_slider_valueChanged)
-
-        self.cell_size_spinBox.valueChanged.connect(self.cell_size_spin_box)
-        self.cell_size_slider_w.valueChanged.connect(self.cell_size_slider_valueChanged)
-
-    def activate_tank_slots(self):
-        """
-            activates tank slot callbacks
-        """
-        self.tank_gBox.toggled.connect(self.tank_group_box)
-
-        self.tank_x_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
-        self.tank_y_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
-        self.tank_z_radius_sBox.valueChanged.connect(self.tank_radius_spin_box)
-
-        self.tank_combo_box.currentIndexChanged.connect(self.tank_type_combo_box)
-        
-        self.tank_x_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
-        self.tank_y_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
-        self.tank_z_pos_sBox.valueChanged.connect(self.tank_position_spin_box)
-
-    def activate_time_slots(self):
-        """
-            activates time 
-        """
-        self.timeSteps_gBox.toggled.connect(self.time_group_box)
-
-        self.delta_t_sBox.valueChanged.connect(self.delta_time_spin_box)
-        self.delta_t_slider.valueChanged.connect(self.delta_time_slider_valueChanged)
-        
-        self.substep_comboBox.currentIndexChanged.connect(self.time_integrator_combo_box)
-
-
-# ------------------------------- GROUPBOX SLOTS ------------------------------------
-
-
-    def appearance_group_box(self):
-        """
-            sets appearance slot functions
-        """
-        self.hide_group_box_widgets(self.appearance_gBox)
-
-    def motion_group_box(self):
-        """
-            sets motion slot functions
-        """
-        self.hide_group_box_widgets(self.motion_gBox)
-
-    def distr_group_box(self):
-        """
-            set distribution callbacks    
-        """
-        self.hide_group_box_widgets(self.distr_gBox)
-
-    def physical_group_box(self):
-        """
-            sets physical slot functions
-        """
-        self.hide_group_box_widgets(self.physical_gBox)
-
-    def tank_group_box(self):
-        """
-            sets tank slot functions
-        """
-        self.hide_group_box_widgets(self.tank_gBox)
-
-    def time_group_box(self):
-        """
-            sets time variation slot functions
-        """
-        self.hide_group_box_widgets(self.timeSteps_gBox)
-
-# ---------------------------------- SLIDER SLOTS -----------------------------------------
-
-    def particle_num_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def particle_size_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def particle_sep_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-    
-    def cell_size_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def mass_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def gravity_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def buoyancy_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def pressure_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def viscosity_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def massD_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def speed_loss_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-    def delta_time_slider_valueChanged(self):
-        """
-            slider template code
-        """
-        pass
-
-
-    # ------------------------------ DYNAMIC SLIDER MOVED ----------------------------
-
-    def particle_num_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def particle_size_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def particle_sep_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-    
-    def cell_size_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def mass_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def gravity_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def buoyancy_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def pressure_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def viscosity_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def massD_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def speed_loss_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-
-    def delta_time_slider_moved(self):
-        """
-            slider template code
-        """
-        pass
-        
-# ---------------------------------- BUTTON SLOTS -----------------------------------------
-
-    def reset_btn_func(self):
-        """
-            controls reset button functionality
-        """
-        pass
-
-# ---------------------------------- SPINBOX SLOTS ----------------------------------------
-    def particle_num_spin_box(self):
-        pass
-
-    def particle_size_spin_box(self):
-        pass
-    
-    def mPosition_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def mVel_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def mAccel_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def particle_sep_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def cell_size_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def createSpinBox(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def mass_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def gravity_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def buoyancy_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def viscosity_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def massD_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def pressure_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def speed_loss_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def tank_radius_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def tank_position_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    def delta_time_spin_box(self):
-        """
-            spin box template code...
-        """
-        pass
-
-    
-# ---------------------------------- COMBOBOX SLOTS ---------------------------------------
-
-    def tank_type_combo_box(self):
-        """
-            combo box template code
-        """
-        pass
-
-    def solver_combo_box(self):
-        """
-            combo box template code
-        """
-        pass
-
-    def distr_combo_box(self):
-        """
-            combo box template code
-        """
-        pass
-
-    def time_integrator_combo_box(self):
-        """
-            combo box template code
-        """
-        pass
-# ------------------------------------ TAB SLOTS ------------------------------------------

@@ -1,63 +1,27 @@
 from PySide6.QtWidgets import QVBoxLayout, QWidget,  QPushButton, \
     QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QFrame, QMenu, QMenuBar, QDockWidget, QScrollArea
+    QSpacerItem, QSizePolicy,  QFrame, QMenu, QMenuBar, QDockWidget, QScrollArea, \
+    QStyleOption
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage
-
+from typing import Union, Optional
 
 # ----------------------------------------- SEPARATOR OPTIONS ------------------------------------
 
 class VerticalSeparator(QFrame):
-    pass
+    
+    def __init__(self) -> None:
+        super(VerticalSeparator, self).__init__()
+        self.setFrameShape(QFrame.Shape.VLine)
+        self.setFrameShadow(QFrame.Shadow.Sunken)
 
 class HorizontalSeparator(QFrame):
-    pass
-
-# ------------------------------------------ WIDGET ITEMS ------------------------------------------
-
-class CustomPushButton(QPushButton):
-    pass
-
-class CustomSlider(QSlider):
-    pass
-
-class CustomDoubleSpinBox(QDoubleSpinBox):
-    pass
-
-class CustomSpinBox(QSpinBox):
-    pass
-
-class CustomLineEdit(QLineEdit):
-    pass
-
-class CustomLabel(QLabel):
-    pass
-
-class CustomGroupBox(QGroupBox):
-    pass
-
-class CustomComboBox(QComboBox):
-    pass
-
-# ----------------------------------------- MENU WIDGETS ----------------------------------
-
-class CustomTabWidget(QTabWidget):
-    pass
-
-class CustomScrollArea(QScrollArea):
-    pass
-
-class CustomToolBar(QToolBar, QToolButton):
-    pass
-
-class CustomMenu(QMenu, QMenuBar):
-    pass
-
-class CustomDockableWidget(QDockWidget):
-    pass
-
-
+    
+    def __init__(self) -> None:
+        super(VerticalSeparator, self).__init__()
+        self.setFrameShape(QFrame.Shape.VLine)
+        self.setFrameShadow(QFrame.Shadow.Sunken)
 
 class UtilFuncs(VerticalSeparator, HorizontalSeparator):
 
@@ -144,13 +108,25 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
                     else:
                         child.setHidden(True)
 
-    def create_frame_bars(self, vertical_bars: VerticalSeparator=None,
+    def create_frame_bars(self, layout: QHBoxLayout=None, 
+                          vertical_bars: VerticalSeparator=None,
                           spacer_item: QSpacerItem=None ) -> None:
         """
             creates vertical separator corresponding to the number of frames
             between the spacers
         """
-        pass
+        separator_width = 0
+
+    def adjust_label_spacing(self, box_widget: QGroupBox=None) -> None:
+        """
+            adjusts label spacing by group box proportional
+            amount
+        """
+        maximum_spacing = 0
+        for child in box_widget.children():
+            if child.isWidgetType():
+                if type(child) == type(QLabel):
+                    print(child)
 
     def __repr__(self) -> str:
         return self.ABOUT_UTILITY
