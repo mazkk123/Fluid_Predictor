@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget,  QPushButton, \
     QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
     QSpacerItem, QSizePolicy,  QFrame, QMenu, QMenuBar, QDockWidget, QScrollArea, \
-    QStyleOption
+    QStyleOption, QDialog
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage
 from typing import Union, Optional
@@ -55,28 +55,18 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
                 path = "images/" + sub_menu + "/" + str(image_name)
                 widget.setIcon(QIcon(path))
 
-    def configure_sliders(self, 
-                          slider : QSlider,
-                          start_value : float,
-                          increment : float) -> None:
+    def add_multiple_layouts(self, 
+                             parent : QGroupBox=None,
+                             parent_layout : QVBoxLayout or QHBoxLayout=None,
+                             child_layouts : list=None) -> None:
         """
-            configures the values of sliders    
+            adds multiple child layouts into a given vbox
+            or hbox layout clas
         """
-        slider.setTickPosition(start_value)
-        slider.setSizeIncrement(increment)
-        slider.setValue(start_value)
-
-    def connect_slider_with_sBox(self, 
-                               slider : QSlider,
-                               spin_box : QSpinBox,
-                               ) -> None:
-        """
-            connects slider values to spin box values
-        """
-        if slider.sliderMoved():
-            spin_box.setValue(slider.value)
-        if spin_box.valueChanged():
-            slider.setValue(spin_box.value)
+        parent.setLayout(parent_layout)
+        for child in child_layouts:
+            if child.isWidgetType() is False:
+                parent_layout.addLayout(child)
 
     def set_default_state(self, group_box : QGroupBox=None) -> None:
         """
@@ -108,25 +98,60 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
                     else:
                         child.setHidden(True)
 
-    def create_frame_bars(self, layout: QHBoxLayout=None, 
-                          vertical_bars: VerticalSeparator=None,
-                          spacer_item: QSpacerItem=None ) -> None:
+    def create_frame_bars(self, layout: QHBoxLayout=None,
+                          start: int=None, end: int=None,
+                          line_edit_top: QLineEdit=None,
+                          line_edit_side: QLineEdit=None,
+                          scale_factor: float=6) -> None:
         """
             creates vertical separator corresponding to the number of frames
             between the spacers
         """
-        separator_width = 0
+        separation_length = end - start
 
-    def adjust_label_spacing(self, box_widget: QGroupBox=None) -> None:
+        try:
+            line_edit_top_val = int(line_edit_top.text())
+            line_edit_side_val = int(line_edit_side.text())
+            
+            num_frames = line_edit_side_val - line_edit_top_val
+            spacing_between_frames = separation_length // num_frames
+
+            for i in range(num_frames-1):
+                separator_obj = VerticalSeparator()
+                separator_obj.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                        QSizePolicy.Policy.Expanding))
+                separator_obj.setFixedWidth(spacing_between_frames-((separator_obj.lineWidth() +
+                                                                    separator_obj.midLineWidth())*
+                                                                    scale_factor))
+                separator_obj.setLineWidth(3)
+                separator_obj.setMidLineWidth(3)
+                layout.addWidget(separator_obj)
+
+        except (ValueError, TypeError):
+            pass
+
+
+    def adjust_label_spacing(self, box_widget: QGroupBox=None,
+                             scale_factor : int=8) -> None:
         """
             adjusts label spacing by group box proportional
             amount
         """
-        maximum_spacing = 0
+        widget_pos_list = []
+
+        for child in box_widget.children():
+                if isinstance(child, QLabel):
+                    widget_pos_list.append(child.pos().x() + child.width())
+
+        maximum_dist = max(widget_pos_list)/scale_factor
+
         for child in box_widget.children():
             if child.isWidgetType():
-                if type(child) == type(QLabel):
-                    print(child)
+                if isinstance(child, QLabel):
+                    child.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                    QSizePolicy.Policy.Fixed))
+                    child.setFixedWidth(maximum_dist)
+                    child.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
     def __repr__(self) -> str:
         return self.ABOUT_UTILITY

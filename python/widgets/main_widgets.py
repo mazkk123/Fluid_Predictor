@@ -21,7 +21,7 @@ class MainWindow(QMainWindow, UtilFuncs):
 
         self.initUI()
 
-        self.setCentralWidget(self.main_splitter_widget)
+        self.setCentralWidget(self.main_window)
 
     def initUI(self):
         """
@@ -52,10 +52,11 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.main_tabs_widget.setMinimumSize(QSize(225,400))
         self.main_tabs_widget.setMaximumSize(QSize(325,720))
 
-        self.main_splitter_widget = QSplitter(Qt.Horizontal)
-        self.main_splitter_widget.addWidget(self.main_graphics_widget)
-        self.main_splitter_widget.addWidget(self.main_tabs_widget)
-        self.main_splitter_widget.setChildrenCollapsible(False)
+        self.horizontal_spacer_layout.addWidget(self.main_graphics_widget)
+        self.horizontal_spacer_layout.addWidget(self.main_tabs_widget)
+
+        self.main_window = QWidget()
+        self.main_window.setLayout(self.horizontal_spacer_layout)
 
     def create_scroll_area_widget(self):
         """
@@ -122,7 +123,7 @@ class MainWindow(QMainWindow, UtilFuncs):
             widget
         """
         self.graphics_view_v_layout = QVBoxLayout()
-        self.main_canvas = DrawingCanvas(QRect(0, 0, 700, 400), 
+        self.main_canvas = DrawingCanvas(QRect(0, 0, 600, 720), 
                                          QColor(255,0,0), 
                                          QFont("Arial"), 14)
 
@@ -144,29 +145,35 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.next_frame_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.next_frame_btn, image_name="frame_forward.png")
 
-        self.play_bar_h_layout.addWidget(self.play_simulation_btn)
-        self.play_bar_h_layout.addWidget(self.stop_simulation_btn)
-        self.play_bar_h_layout.addWidget(self.play_back_simulation_btn)
-
-        self.play_bar_h_layout.addSpacerItem(self.frame_spacing_item)
-
-        self.play_bar_h_layout.addWidget(self.prev_frame_btn)
-        self.play_bar_h_layout.addWidget(self.curr_frame_lbl)
-        self.play_bar_h_layout.addWidget(self.next_frame_btn)
-
         self.frame_range_h_layout = QHBoxLayout()
-        self.start_frame_field = CustomLineEdit()
+        self.start_frame_field = CustomLineEdit(text="0")
         self.start_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
                                                          QSizePolicy.Policy.Fixed))
         self.start_frame_field.setFixedSize(QSize(40,20))
-        self.end_frame_field = CustomLineEdit()
+        self.end_frame_field = CustomLineEdit(text="100")
         self.end_frame_field.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
                                                         QSizePolicy.Policy.Fixed))
         self.end_frame_field.setFixedSize(QSize(40,20))
 
-        self.frame_range_h_layout.addSpacerItem(QSpacerItem(850,0))
+        self.frame_range_h_layout.addSpacerItem(QSpacerItem(800,0))
         self.frame_range_h_layout.addWidget(self.start_frame_field)
         self.frame_range_h_layout.addWidget(self.end_frame_field)
+
+        # adding widgets to play bar after frame range hierarchies to have 
+        # access to the frame range value class instances
+
+        self.play_bar_h_layout.addWidget(self.play_simulation_btn)
+        self.play_bar_h_layout.addWidget(self.stop_simulation_btn)
+        self.play_bar_h_layout.addWidget(self.play_back_simulation_btn)
+
+        self.create_frame_bars(layout=self.play_bar_h_layout,
+                               start = 0, end = 700,
+                               line_edit_top=self.start_frame_field,
+                               line_edit_side=self.end_frame_field)
+
+        self.play_bar_h_layout.addWidget(self.prev_frame_btn)
+        self.play_bar_h_layout.addWidget(self.curr_frame_lbl)
+        self.play_bar_h_layout.addWidget(self.next_frame_btn)
 
         self.frame_control_widget = QWidget()
         self.frame_control_v_layout = QVBoxLayout()
@@ -174,6 +181,11 @@ class MainWindow(QMainWindow, UtilFuncs):
                                                             QSizePolicy.Policy.Fixed))
         self.frame_control_v_layout.addLayout(self.frame_range_h_layout)
         self.frame_control_v_layout.addLayout(self.play_bar_h_layout)
+
+        self.current_computation_field = CustomLabel(title="See changes here",
+                                                      size_policy=QSizePolicy(QSizePolicy.Policy.Expanding,
+                                                                              QSizePolicy.Policy.Expanding))
+        self.frame_control_v_layout.addWidget(self.current_computation_field)
         self.frame_control_widget.setLayout(self.frame_control_v_layout)
 
         self.frame_and_graphics_splitter = QSplitter(Qt.Vertical)
@@ -216,7 +228,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.solver_vertical_layout.addLayout(self.solver_horizontal_layout)
         self.main_layout.addWidget(self.fluid_solver_group_box)
 
-# -------------------- PARTICLE WIDGETS ------------------------------
+# -------------------- PARTICLE WIDGETS -------------------------------------
 
     def create_appearance_widgets(self):
         """
@@ -228,18 +240,38 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.appearance_v_layout = QVBoxLayout()
 
         self.nbr_particles_h_layout = QHBoxLayout()
-        self.nbr_of_particles_lbl = CustomLabel(title="No. of particles")
-        self.nbr_of_particle_sBox = CustomSpinBox()
-        self.nbr_of_particles_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.nbr_of_particles_lbl = CustomLabel(title="No. of particles",
+                                                label_control=True,
+                                                increment=1)
+        self.nbr_of_particle_sBox = CustomSpinBox(maximum=5000,
+                                                  minimum=100,
+                                                  increment=1, value=1000)
+        self.nbr_of_particles_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                                    linked_spin_box=self.nbr_of_particle_sBox,
+                                                    minimum=100, maximum=5000)
+        self.nbr_of_particle_sBox.slider = self.nbr_of_particles_slider
+
+        self.nbr_of_particles_lbl.spin = self.nbr_of_particle_sBox
+        self.nbr_of_particles_lbl.slider = self.nbr_of_particles_slider
 
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particles_lbl)
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particle_sBox)
         self.nbr_particles_h_layout.addWidget(self.nbr_of_particles_slider)
 
         self.particle_size_h_layout = QHBoxLayout()
-        self.particle_size_lbl = CustomLabel(title="Particle Size")
-        self.particle_size_sBox = CustomSpinBox()
-        self.particle_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.particle_size_lbl = CustomLabel(title="Particle Size",
+                                             label_control=True,
+                                             increment=1)
+        self.particle_size_sBox = CustomDoubleSpinBox(maximum=10,
+                                                    minimum=0,
+                                                    increment=0.1, value=0.1)
+        self.particle_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                                   linked_double_spin_box=self.particle_size_sBox,
+                                                   minimum=0, maximum=10)
+        self.particle_size_sBox.slider = self.particle_size_slider_w
+
+        self.particle_size_lbl.spin = self.particle_size_sBox
+        self.particle_size_lbl.slider = self.particle_size_slider_w
         
         self.particle_size_h_layout.addWidget(self.particle_size_lbl)
         self.particle_size_h_layout.addWidget(self.particle_size_sBox)
@@ -249,6 +281,8 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.appearance_v_layout.addLayout(self.nbr_particles_h_layout)
         self.appearance_v_layout.addLayout(self.particle_size_h_layout)
         self.set_default_state(self.appearance_gBox)
+        self.adjust_label_spacing(box_widget=self.appearance_gBox,
+                                  scale_factor=8)
 
         self.main_layout.addWidget(self.appearance_gBox)
 
@@ -262,10 +296,19 @@ class MainWindow(QMainWindow, UtilFuncs):
                                           checkable=True)
 
         self.position_h_layout = QHBoxLayout()
-        self.position_lbl = CustomLabel(title="Position")
-        self.position_x_sBox = CustomDoubleSpinBox()
-        self.position_y_sBox = CustomDoubleSpinBox()
-        self.position_z_sBox = CustomDoubleSpinBox()
+        self.position_lbl = CustomLabel(title="Position",
+                                        label_control=True,
+                                        increment = 0.1)
+        self.position_x_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=0)
+        self.position_y_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=1)
+        self.position_z_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=0)
+
+        self.position_lbl.double_spin = self.position_x_sBox
+        self.position_lbl.double_spin = self.position_y_sBox
+        self.position_lbl.double_spin = self.position_z_sBox
 
         self.position_h_layout.addWidget(self.position_lbl)
         self.position_h_layout.addWidget(self.position_x_sBox)
@@ -273,10 +316,19 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.position_h_layout.addWidget(self.position_z_sBox)
 
         self.velocity_h_layout = QHBoxLayout()
-        self.velocity_lbl = CustomLabel(title="Velocity")
-        self.velocity_x_sBox = CustomDoubleSpinBox()
-        self.velocity_y_sBox = CustomDoubleSpinBox()
-        self.velocity_z_sBox = CustomDoubleSpinBox()
+        self.velocity_lbl = CustomLabel(title="Velocity",
+                                        label_control=True,
+                                        increment = 0.1)
+        self.velocity_x_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=0.5)
+        self.velocity_y_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=0.2)
+        self.velocity_z_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                                   value=0.7)
+
+        self.velocity_lbl.double_spin = self.velocity_x_sBox
+        self.velocity_lbl.double_spin = self.velocity_y_sBox
+        self.velocity_lbl.double_spin = self.velocity_z_sBox
 
         self.velocity_h_layout.addWidget(self.velocity_lbl)
         self.velocity_h_layout.addWidget(self.velocity_x_sBox)
@@ -284,10 +336,19 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.velocity_h_layout.addWidget(self.velocity_z_sBox)
 
         self.acc_h_layout = QHBoxLayout()
-        self.acc_lbl = CustomLabel(title="Acceleration")
-        self.acc_x_sBox = CustomDoubleSpinBox()
-        self.acc_y_sBox = CustomDoubleSpinBox()
-        self.acc_z_sBox = CustomDoubleSpinBox()
+        self.acc_lbl = CustomLabel(title="Acceleration",
+                                   label_control=True,
+                                   increment = 0.1)
+        self.acc_x_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                              value=0.2)
+        self.acc_y_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                              value=0.4)
+        self.acc_z_sBox = CustomDoubleSpinBox(maximum=20, minimum=-20, increment=0.1,
+                                              value=0.7)
+
+        self.acc_lbl.double_spin = self.acc_x_sBox
+        self.acc_lbl.double_spin = self.acc_y_sBox
+        self.acc_lbl.double_spin = self.acc_z_sBox
 
         self.acc_h_layout.addWidget(self.acc_lbl)
         self.acc_h_layout.addWidget(self.acc_x_sBox)
@@ -299,6 +360,8 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.motion_v_layout.addLayout(self.velocity_h_layout)
         self.motion_v_layout.addLayout(self.acc_h_layout)
         self.set_default_state(self.motion_gBox)
+        self.adjust_label_spacing(box_widget=self.motion_gBox,
+                                  scale_factor=8)
 
         self.main_layout.addWidget(self.motion_gBox)
 
@@ -312,81 +375,144 @@ class MainWindow(QMainWindow, UtilFuncs):
                                             checkable=True)
 
         self.gravity_h_layout = QHBoxLayout()
-        self.physical_g_lbl = CustomLabel(title="Gravity")
-        self.physical_g_sBox = CustomDoubleSpinBox()
-        self.physical_g_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_g_lbl = CustomLabel(title="Gravity",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_g_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                   value=-9.81, multiplier=10)
+        self.physical_g_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                              linked_double_spin_box=self.physical_g_sBox,
+                                              minimum=-300, maximum=300, multiplier=0.1)
 
         self.gravity_h_layout.addWidget(self.physical_g_lbl)
         self.gravity_h_layout.addWidget(self.physical_g_sBox)
         self.gravity_h_layout.addWidget(self.physical_g_slider)
 
-        self.buoyancy_h_layout = QHBoxLayout()
-        self.physical_b_lbl = CustomLabel(title="Buoyancy")
-        self.physical_b_sBox = CustomDoubleSpinBox()
-        self.physical_b_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_g_lbl.double_spin = self.physical_g_sBox
+        self.physical_g_lbl.slider = self.physical_g_slider
+        self.physical_g_sBox.slider = self.physical_g_slider
 
+        self.buoyancy_h_layout = QHBoxLayout()
+        self.physical_b_lbl = CustomLabel(title="Buoyancy",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_b_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                   value=0, multiplier=10)
+        self.physical_b_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                              linked_double_spin_box=self.physical_b_sBox,
+                                              minimum=-300, maximum=300, multiplier=0.1)
+        
         self.buoyancy_h_layout.addWidget(self.physical_b_lbl)
         self.buoyancy_h_layout.addWidget(self.physical_b_sBox)
         self.buoyancy_h_layout.addWidget(self.physical_b_slider)
 
+        self.physical_b_lbl.double_spin = self.physical_b_sBox
+        self.physical_b_lbl.slider = self.physical_b_slider
+        self.physical_b_sBox.slider = self.physical_b_slider
+        
         self.viscosity_h_layout = QHBoxLayout()
-        self.physical_v_lbl = CustomLabel(title="Viscosity")
-        self.physical_v_sBox = CustomDoubleSpinBox()
-        self.physical_v_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_v_lbl = CustomLabel(title="Viscosity",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_v_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                   value=3.5, multiplier=10)
+        self.physical_v_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                              linked_double_spin_box=self.physical_v_sBox,
+                                              minimum=-300, maximum=300, multiplier=0.1)
 
         self.viscosity_h_layout.addWidget(self.physical_v_lbl)
         self.viscosity_h_layout.addWidget(self.physical_v_sBox)
         self.viscosity_h_layout.addWidget(self.physical_v_slider)
 
+        self.physical_v_lbl.double_spin = self.physical_v_sBox
+        self.physical_v_lbl.slider = self.physical_v_slider
+        self.physical_v_sBox.slider = self.physical_v_slider
+
         self.pressure_h_layout = QHBoxLayout()
-        self.physical_p_lbl = CustomLabel(title="Pressure")
-        self.physical_p_sBox = CustomDoubleSpinBox()
-        self.physical_p_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_p_lbl = CustomLabel(title="Pressure",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_p_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                   value=5, multiplier=10)
+        self.physical_p_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                              linked_spin_box=self.physical_p_sBox,
+                                              minimum=-300, maximum=300, multiplier=0.1)
 
         self.pressure_h_layout.addWidget(self.physical_p_lbl)
         self.pressure_h_layout.addWidget(self.physical_p_sBox)
         self.pressure_h_layout.addWidget(self.physical_p_slider)
-
+        
+        self.physical_p_lbl.double_spin = self.physical_p_sBox
+        self.physical_p_lbl.slider = self.physical_p_slider
+        self.physical_p_sBox.slider = self.physical_p_slider
+        
         self.mass_h_layout = QHBoxLayout()
-        self.physical_m_lbl = CustomLabel(title="Mass")
-        self.physical_m_sBox = CustomDoubleSpinBox()
-        self.physical_m_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_m_lbl = CustomLabel(title="Mass",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_m_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                   value=0.1, multiplier=10)
+        self.physical_m_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                              linked_double_spin_box=self.physical_m_sBox,
+                                              minimum=-300, maximum=300, multiplier=0.1)
 
         self.mass_h_layout.addWidget(self.physical_m_lbl)
         self.mass_h_layout.addWidget(self.physical_m_sBox)
         self.mass_h_layout.addWidget(self.physical_m_slider)
 
+        self.physical_m_lbl.double_spin = self.physical_m_sBox
+        self.physical_m_lbl.slider = self.physical_m_slider
+        self.physical_m_sBox.slider = self.physical_m_slider
+        
         self.massD_h_layout = QHBoxLayout()
-        self.physical_md_lbl = CustomLabel(title="Mass Density")
-        self.physical_md_sBox = CustomDoubleSpinBox()
-        self.physical_md_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_md_lbl = CustomLabel(title="Mass Density",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_md_sBox = CustomDoubleSpinBox(minimum=0, maximum=2000, increment=1,
+                                                    value=998.2, multiplier=1)
+        self.physical_md_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                               linked_double_spin_box=self.physical_md_sBox,
+                                               minimum=0, maximum=2000, multiplier=1)
 
         self.massD_h_layout.addWidget(self.physical_md_lbl)
         self.massD_h_layout.addWidget(self.physical_md_sBox)
         self.massD_h_layout.addWidget(self.physical_md_slider)
+        
+        self.physical_md_lbl.double_spin = self.physical_md_sBox
+        self.physical_md_lbl.slider = self.physical_md_slider
+        self.physical_md_sBox.slider = self.physical_md_slider
 
         self.speedLoss_h_layout = QHBoxLayout()
-        self.physical_sL_lbl = CustomLabel(title="Speed Loss")
-        self.physical_sL_sBox = CustomDoubleSpinBox()
-        self.physical_sL_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.physical_sL_lbl = CustomLabel(title="Speed Loss",
+                                          label_control=True,
+                                          increment=0.1)
+        self.physical_sL_sBox = CustomDoubleSpinBox(minimum=-30, maximum=30, increment=0.1,
+                                                    value=0.1, multiplier=10)
+        self.physical_sL_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                               linked_double_spin_box=self.physical_sL_sBox,
+                                               minimum=-300, maximum=300, multiplier=0.1)
 
         self.speedLoss_h_layout.addWidget(self.physical_sL_lbl)
         self.speedLoss_h_layout.addWidget(self.physical_sL_sBox)
         self.speedLoss_h_layout.addWidget(self.physical_sL_slider)
 
-        self.physical_gBox.setLayout(self.physical_v_layout)
-        self.physical_v_layout.addLayout(self.mass_h_layout)
-        self.physical_v_layout.addLayout(self.gravity_h_layout)
-        self.physical_v_layout.addLayout(self.buoyancy_h_layout)
-        self.physical_v_layout.addLayout(self.viscosity_h_layout)
-        self.physical_v_layout.addLayout(self.pressure_h_layout)
-        self.physical_v_layout.addLayout(self.massD_h_layout)
-        self.physical_v_layout.addLayout(self.speedLoss_h_layout)
+        self.physical_sL_lbl.double_spin = self.physical_sL_sBox
+        self.physical_sL_lbl.slider = self.physical_sL_slider
+        self.physical_sL_sBox.slider = self.physical_sL_slider
+
+        self.add_multiple_layouts(self.physical_gBox, self.physical_v_layout,
+                                [self.mass_h_layout, self.gravity_h_layout,
+                                self.buoyancy_h_layout, self.viscosity_h_layout, 
+                                self.pressure_h_layout, self.massD_h_layout, 
+                                self.speedLoss_h_layout])
+
         self.set_default_state(self.physical_gBox)
+        self.adjust_label_spacing(box_widget=self.physical_gBox,
+                                  scale_factor=8)
 
         self.main_layout.addWidget(self.physical_gBox)
 
-# ----------------------- TANK WIDGET -------------------------------
+# ----------------------- TANK WIDGET ---------------------------------------
 
     def create_fluid_tank_widgets(self):
         """
@@ -407,10 +533,16 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.tank_type_h_layout.addWidget(self.tank_combo_box)
 
         self.tank_radius_h_layout = QHBoxLayout()
-        self.tank_radius_lbl = CustomLabel(title="Tank Radius")
-        self.tank_x_radius_sBox = CustomDoubleSpinBox()
-        self.tank_y_radius_sBox = CustomDoubleSpinBox()
-        self.tank_z_radius_sBox = CustomDoubleSpinBox()
+        self.tank_radius_lbl = CustomLabel(title="Tank Radius",
+                                          label_control=True,
+                                          increment=0.1)
+        self.tank_x_radius_sBox = CustomDoubleSpinBox(minimum=1, maximum=10, increment=0.1)
+        self.tank_y_radius_sBox = CustomDoubleSpinBox(minimum=1, maximum=10, increment=0.1)
+        self.tank_z_radius_sBox = CustomDoubleSpinBox(minimum=1, maximum=10, increment=0.1)
+
+        self.tank_radius_lbl.double_spin = self.tank_x_radius_sBox
+        self.tank_radius_lbl.double_spin = self.tank_y_radius_sBox
+        self.tank_radius_lbl.double_spin = self.tank_z_radius_sBox
 
         self.tank_radius_h_layout.addWidget(self.tank_radius_lbl)
         self.tank_radius_h_layout.addWidget(self.tank_x_radius_sBox)
@@ -418,10 +550,16 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.tank_radius_h_layout.addWidget(self.tank_z_radius_sBox)
 
         self.tank_pos_h_layout = QHBoxLayout()
-        self.tank_pos_lbl = CustomLabel(title="Tank Position")
-        self.tank_x_pos_sBox = CustomDoubleSpinBox()
-        self.tank_y_pos_sBox = CustomDoubleSpinBox()
-        self.tank_z_pos_sBox = CustomDoubleSpinBox()
+        self.tank_pos_lbl = CustomLabel(title="Tank Position",
+                                          label_control=True,
+                                          increment=0.1)
+        self.tank_x_pos_sBox = CustomDoubleSpinBox(minimum=-10, maximum=10, increment=0.1)
+        self.tank_y_pos_sBox = CustomDoubleSpinBox(minimum=-10, maximum=10, increment=0.1)
+        self.tank_z_pos_sBox = CustomDoubleSpinBox(minimum=-10, maximum=10, increment=0.1)
+
+        self.tank_pos_lbl.double_spin = self.tank_x_pos_sBox
+        self.tank_pos_lbl.double_spin = self.tank_y_pos_sBox
+        self.tank_pos_lbl.double_spin = self.tank_z_pos_sBox
 
         self.tank_pos_h_layout.addWidget(self.tank_pos_lbl)
         self.tank_pos_h_layout.addWidget(self.tank_x_pos_sBox)
@@ -432,11 +570,12 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.tank_v_layout.addLayout(self.tank_radius_h_layout)
         self.tank_v_layout.addLayout(self.tank_pos_h_layout)
         self.set_default_state(self.tank_gBox)
+        self.adjust_label_spacing(box_widget=self.tank_gBox,
+                                  scale_factor=8)
 
         self.main_layout.addWidget(self.tank_gBox)
 
-
-# -------------------- MAIN SYSTEM WIDGETS ---------------------------------
+# -------------------- MAIN SYSTEM WIDGETS ----------------------------------
 
     def create_system_widgets(self):
         """
@@ -457,13 +596,20 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.substep_type_h_layout.addWidget(self.substep_comboBox)
 
         self.delta_t_h_layout = QHBoxLayout()
-        self.delta_t_lbl = CustomLabel(title="Delta Time")
-        self.delta_t_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
-        self.delta_t_sBox = CustomDoubleSpinBox()
+        self.delta_t_lbl = CustomLabel(title="Delta Time",
+                                          label_control=True,
+                                          increment=0.01)
+        self.delta_t_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                           minimum=0, maximum=100, multiplier=0.01)
+        self.delta_t_sBox = CustomDoubleSpinBox(minimum=0, maximum=0.2, increment=0.01,
+                                                value=0.01, multiplier=100)
 
         self.delta_t_h_layout.addWidget(self.delta_t_lbl)
         self.delta_t_h_layout.addWidget(self.delta_t_slider)
         self.delta_t_h_layout.addWidget(self.delta_t_sBox)
+
+        self.delta_t_lbl.slider = self.delta_t_slider
+        self.delta_t_lbl.double_spin = self.delta_t_sBox
 
         self.timeSteps_gBox.setLayout(self.timeSteps_v_layout)
         self.timeSteps_v_layout.addLayout(self.substep_type_h_layout)
@@ -504,18 +650,36 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.neighbr_solver_h_layout.addWidget(self.neighbr_solver_comboBox)
 
         self.particle_sep_h_layout = QHBoxLayout()
-        self.particle_sep_lbl = CustomLabel(title="Particle Separation")
-        self.particle_sep_spinBox = CustomDoubleSpinBox()
-        self.particle_sep_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.particle_sep_lbl = CustomLabel(title="Particle Separation",
+                                          label_control=True,
+                                          increment=0.01)
+        self.particle_sep_spinBox = CustomDoubleSpinBox(minimum=0.0001, maximum=0.1, increment=0.01,
+                                                        multiplier=1000)
+        self.particle_sep_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                                  linked_double_spin_box=self.particle_sep_spinBox,
+                                                  multiplier=0.0001)
+        self.particle_sep_spinBox.slider = self.particle_sep_slider_w
 
         self.particle_sep_h_layout.addWidget(self.particle_sep_lbl)
         self.particle_sep_h_layout.addWidget(self.particle_sep_spinBox)
         self.particle_sep_h_layout.addWidget(self.particle_sep_slider_w)
 
+        self.particle_sep_lbl.double_spin = self.particle_sep_spinBox
+        self.particle_sep_lbl.slider = self.particle_sep_slider_w
+
         self.cell_size_h_layout = QHBoxLayout()
-        self.cell_size_lbl = CustomLabel(title="Cell Size")
-        self.cell_size_spinBox = CustomDoubleSpinBox()
-        self.cell_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.cell_size_lbl = CustomLabel(title="Cell Size",
+                                          label_control=True,
+                                          increment=0.01)
+        self.cell_size_spinBox = CustomDoubleSpinBox(minimum=0.001, maximum=0.5, increment=0.01,
+                                                     multiplier=1000)
+        self.cell_size_slider_w = CustomSlider(orientation=Qt.Orientation.Horizontal,
+                                               linked_double_spin_box=self.cell_size_spinBox,
+                                               multiplier=0.01)
+        self.cell_size_spinBox.slider = self.cell_size_slider_w
+
+        self.cell_size_lbl.double_spin = self.cell_size_spinBox
+        self.cell_size_lbl.slider = self.cell_size_slider_w
 
         self.cell_size_h_layout.addWidget(self.cell_size_lbl)
         self.cell_size_h_layout.addWidget(self.cell_size_spinBox)
@@ -527,6 +691,8 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.distr_v_layout.addLayout(self.particle_sep_h_layout)
         self.distr_v_layout.addLayout(self.cell_size_h_layout)
         self.set_default_state(self.distr_gBox)
+        self.adjust_label_spacing(box_widget=self.distr_gBox,
+                                  scale_factor=6)
 
         self.main_layout.addWidget(self.distr_gBox)
 #-----------------------------------------------------------------------------
