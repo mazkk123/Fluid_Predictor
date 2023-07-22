@@ -22,6 +22,10 @@ into different phases within the same neighbourhood. Further
 computations are applied when particles with different attributes
 coexist in the same neighbourhood cluster
 
+## WCSPH - Weakly Compressible SPH
+
+## PCSPH - Predictive Corrective SPH
+
 ## IISPH - Implicit Incompressible SPH
 When particles reach solid boundaries or frontiers,
 the normal SPH model assumes uniform velocities and particle
