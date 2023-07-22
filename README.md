@@ -23,6 +23,12 @@ computations are applied when particles with different attributes
 coexist in the same neighbourhood cluster
 
 ## WCSPH - Weakly Compressible SPH
+This method extends the computations undertaken in the traditional
+SPH by guaranteeing better density fluctuation and advanced time
+step computations. By doing so, it ensures that fluids can achieve
+- not a fully incompressible state - but one that is weakly 
+compressible and accurately depicts time stepping and density 
+fluctuations for more particles. 
 
 ## PCSPH - Predictive Corrective SPH
 
