@@ -4,60 +4,39 @@ from PySide6.QtGui import QPixmap, QIcon, QImage, QPaintEvent, QColor, \
     QFont, QPainter, QBrush, QFont, QPen, QDragMoveEvent, QDragLeaveEvent, \
     QMouseEvent, QTransform
 
-class DrawingCanvas(QGraphicsView, QGraphicsScene):
+class DrawingCanvas(QGraphicsScene):
 
     def __init__(self,
-                 canvas_size : QRect=None,
                  drawing_colour : QColor=None,
                  font_type: QFont=None,
                  font_size: int=None) -> None:
         super(DrawingCanvas, self).__init__()
 
-        self.main_scene = QGraphicsScene()
-        self.main_frame_w = QGraphicsView(self.main_scene)
-
-        self.setGeometry(QRect(0, 0, 1000, 400))
-        
         self.drawing_color = drawing_colour
         self.drawing_font = font_type
         self.font_size = font_size
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+        self.black_brush = QBrush(Qt.black)
+        self.drawing_pen = QPen(Qt.black)
+
+        self.draw_ellipses()
+
+    def draw_text(self):
         """
-            controls main painting to the widget window
+            draws text to the active viewport
         """
-        self.main_painter = QPainter()
+        pass
 
-        self.render_points()
-
-        self.main_painter.end()
-
-    def render_points(self, point_radius: int=None, point_colour: QColor=None,
-                      pos_x: int=None, pos_y=None, point_spacing: int=1,
-                      num_points: int=100) -> None :
+    def draw_ellipses(self):
         """
-            main render points drawing calls
+            draws particle to screen
         """
-        self.drawing_pen = QPen(QColor(0,0,0,255))
-        self.drawing_pen.setWidth(3)
-        self.main_painter.setPen(self.drawing_pen)
+        num_particles_to_draw_x = 200
+        num_particles_to_draw_y = 200
 
-        # draws a uniform grid scale of spacing specified by parameter
-        num_x_points = num_points
-        num_y_points = num_points
+        spacing = 1
 
-        for i in range(1,num_x_points,5):
-            for j in range(1,num_y_points,5):
-                self.main_painter.drawPoint(QPointF(i,j))
-    
-    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
-        pass
-    
-    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
-        pass
-    
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        pass
-    
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        pass
+        for i in range(0, num_particles_to_draw_x, spacing):
+            for j in range(0, num_particles_to_draw_y, spacing):
+                self.addEllipse(i, j, i + 1, j + 1, self.drawing_pen,
+                                self.black_brush)
