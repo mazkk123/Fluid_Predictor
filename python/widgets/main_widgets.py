@@ -1,9 +1,8 @@
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, QPushButton, \
-    QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
-    QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QScrollArea, QSplitter, QDockWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, \
+    QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, \
+    QSpacerItem, QSizePolicy,  QScrollArea, QSplitter, QStatusBar
 from PySide6.QtCore import QSize, QRect , Qt
-from PySide6.QtGui import QPixmap, QIcon, QImage, QColor, QFont
+from PySide6.QtGui import QPixmap, QColor, QFont
 from canvas_state import DrawingCanvas
 from utility_functions import *
 from widget_utilities import *
@@ -14,14 +13,14 @@ class MainWindow(QMainWindow, UtilFuncs):
         super().__init__()
         self.app = app
         
-        self.setGeometry(QRect(100, 50, 1280, 720))
+        self.setGeometry(QRect(150, 30, 1280, 700))
         self.setWindowTitle("Fluid Application")
         self.window_icon = QPixmap("images/Toolbar/fluid.png")
         self.setWindowIcon(self.window_icon)
 
         self.initUI()
 
-        self.setCentralWidget(self.main_window)
+        self.setCentralWidget(self.main_splitter_widget)
 
     def initUI(self):
         """
@@ -29,49 +28,122 @@ class MainWindow(QMainWindow, UtilFuncs):
         """
         self.add_menu_bars()
         self.add_tool_bars()
-
-        self.main_tabs_widget = QTabWidget()
+        self.add_left_tool_bar()
+        self.add_status_bar()
 
         self.main_options_widget = QWidget()
         self.main_options_widget.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding,
                                                            QSizePolicy.Policy.Fixed))
         self.main_layout = QVBoxLayout()
-
-        self.fluid_pred_options_widget = QWidget()
         self.tab_v_layout = QVBoxLayout()
 
         self.create_scroll_area_widget()
-
         self.initialize_main_group_boxes()
 
-        self.horizontal_spacer_layout = QHBoxLayout()
-
         self.main_options_widget.setLayout(self.main_layout)
-        self.create_bottom_toolbar()
+        self.create_main_canvas()
+        self.create_frame_controls()
 
-        self.main_tabs_widget.setMinimumSize(QSize(225,400))
-        self.main_tabs_widget.setMaximumSize(QSize(325,720))
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fluid_options_dock_w)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.fluid_pred_dock_w)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.animation_controls_dock_w)
 
-        self.horizontal_spacer_layout.addWidget(self.main_graphics_widget)
-        self.horizontal_spacer_layout.addWidget(self.main_tabs_widget)
+        self.main_splitter_widget = QSplitter(Qt.Orientation.Horizontal)
 
-        self.main_window = QWidget()
-        self.main_window.setLayout(self.horizontal_spacer_layout)
+        self.main_splitter_widget.addWidget(self.frame_and_graphics_splitter)
+        self.main_splitter_widget.addWidget(self.fluid_options_splitter_w)
+
+        self.main_splitter_widget.setChildrenCollapsible(False)
+
+        self.fluid_options_dock_w.setMinimumWidth(300)
+        self.fluid_options_dock_w.setMinimumHeight(400)
+
+    def add_status_bar(self):
+        """
+            add state bar text to show current simulation steps
+        """
+        self.main_state_bar = QStatusBar()
+
+        self.simulation_text = CustomLabel(title="Simulation is running....")
+        self.main_state_bar.addWidget(self.simulation_text)
+
+        self.setStatusBar(self.main_state_bar)
+
+    def add_left_tool_bar(self):
+        """
+            add movement and cursor viewport handles on the left
+        """
+
+        self.left_tool_dock_w = QDockWidget("Tools")
+        self.left_tool_dock_w.setSizePolicy(QSizePolicy.Policy.Minimum,
+                                            QSizePolicy.Policy.Expanding)
+        
+        self.left_tool_bar_w = QWidget()
+        self.left_bar_v_layout = QVBoxLayout()
+        self.left_tool_bar_w.setLayout(self.left_bar_v_layout)
+        self.left_tool_dock_w.setWidget(self.left_tool_bar_w)
+
+        self.cursor_gizmo = QToolButton()
+        self.cursor_gizmo.setMinimumSize(QSize(50,50))
+        self.add_icons_to_widgets(tool_button=self.cursor_gizmo,
+                                  sub_menu="Gizmos", image_name="select.png")
+        self.translate_gizmo = QToolButton()
+        self.translate_gizmo.setMinimumSize(QSize(50,50))
+        self.add_icons_to_widgets(tool_button=self.translate_gizmo,
+                                  sub_menu="Gizmos", image_name="move.png")
+        self.rotate_gizmo = QToolButton()
+        self.rotate_gizmo.setMinimumSize(QSize(50,50))
+        self.add_icons_to_widgets(tool_button=self.rotate_gizmo,
+                                  sub_menu="Gizmos", image_name="rotate.png")
+        self.scale_gizmo = QToolButton()
+        self.scale_gizmo.setMinimumSize(QSize(50,50))
+        self.add_icons_to_widgets(tool_button=self.scale_gizmo,
+                                  sub_menu="Gizmos", image_name="scale.png")
+        self.current_gizmo = QToolButton()
+        self.current_gizmo.setMinimumSize(QSize(50,50))
+        self.add_icons_to_widgets(tool_button=self.current_gizmo,
+                                  sub_menu="Gizmos", image_name="select.png")
+
+        self.left_bar_v_layout.addWidget(self.cursor_gizmo)
+        self.left_bar_v_layout.addWidget(self.translate_gizmo)
+        self.left_bar_v_layout.addWidget(self.rotate_gizmo)
+        self.left_bar_v_layout.addWidget(self.scale_gizmo)
+        self.left_bar_v_layout.addStretch(300)
+        self.left_bar_v_layout.addWidget(self.current_gizmo)
+
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.left_tool_dock_w)
 
     def create_scroll_area_widget(self):
         """
             creates and configures the initial scroll area widget binded to each
             tab
         """
+
+        self.fluid_options_dock_w = QDockWidget("Fluid Options")
+        self.fluid_options_dock_w.setFloating(True)
+        self.fluid_options_dock_w.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
+
         self.fluid_sim_scroll_area = QScrollArea()
-        self.fluid_sim_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.fluid_sim_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.fluid_sim_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.fluid_sim_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.fluid_sim_scroll_area.setWidgetResizable(True)
 
         self.fluid_sim_scroll_area.setWidget(self.main_options_widget)
-        self.main_tabs_widget.addTab(self.fluid_sim_scroll_area, "Fluid Simulation")
-        self.main_tabs_widget.addTab(self.fluid_pred_options_widget, "Fluid Prediction")
-        self.main_tabs_widget.setLayout(self.tab_v_layout)
+
+        self.fluid_options_dock_w.setWidget(self.fluid_sim_scroll_area)
+
+        self.fluid_pred_dock_w = QDockWidget("Fluid Prediction")
+        
+        self.fluid_pred_options_widget = QWidget()
+
+        self.fluid_pred_w()
+
+        self.fluid_pred_dock_w.setWidget(self.fluid_pred_options_widget)
+
+        self.fluid_options_splitter_w = QSplitter(Qt.Orientation.Vertical)
+
+        self.fluid_options_splitter_w.addWidget(self.fluid_options_dock_w)
+        self.fluid_options_splitter_w.addWidget(self.fluid_pred_dock_w)
 
     def add_tool_bars(self):
         """
@@ -82,26 +154,8 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.addToolBar(self.main_tool_bar)
         self.main_tool_bar.setMovable(True)
 
-        self.undo_tool_action = self.main_tool_bar.addAction("Undo")
-        self.redo_tool_action = self.main_tool_bar.addAction("Redo")
-
-        self.add_icons_to_actions(icon=self.undo_tool_action, image_name="undo.png")
-        self.add_icons_to_actions(icon=self.redo_tool_action, image_name="redo.png")
-
-        self.main_tool_bar.addSeparator()
-
-        self.save_tool_action = self.main_tool_bar.addAction("Save")
-        self.copy_tool_action = self.main_tool_bar.addAction("Copy")
-        self.paste_tool_action = self.main_tool_bar.addAction("Paste")
-
-        self.add_icons_to_actions(icon=self.save_tool_action, image_name="save.png")
-        self.add_icons_to_actions(icon=self.copy_tool_action, image_name="copy.png")
-        self.add_icons_to_actions(icon=self.paste_tool_action, image_name="paste.png")
-
-        self.main_tool_bar.addSeparator()
-
-        self.settings_tool_action = self.main_tool_bar.addAction("Settings")
-        self.add_icons_to_actions(icon=self.settings_tool_action, image_name="settings.png")
+        self.create_shelves()
+        self.main_tool_bar.addWidget(self.main_shelf_w)
 
     def initialize_main_group_boxes(self) -> None:
         """
@@ -116,17 +170,105 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.create_fluid_tank_widgets()
         self.create_system_widgets()
         self.main_layout.addSpacerItem(QSpacerItem(0,250))
-    
-    def create_bottom_toolbar(self):
+
+# ------------------------------------------------------------- CREATE SHELVES ----------------------------------------------------------------------------
+    def create_shelves(self):
+        """
+            widget to create shelf bars on top
+        """
+        self.main_shelf_w = QTabWidget()
+        self.main_shelf_w.setMovable(True)
+        self.main_shelf_w.setTabShape(QTabWidget.TabShape.Rounded)
+
+        self.shelf_v_layout = QVBoxLayout()
+
+        self.create_tank_shelf()
+        self.create_colliders_shelf()
+
+        self.main_shelf_w.setLayout(self.shelf_v_layout)
+
+        self.main_shelf_w.addTab(self.tank_shelf, "Tank")
+        self.main_shelf_w.addTab(self.colliders_shelf, "Colliders")
+
+    def create_tank_shelf(self):
+        """
+            create collider shapes shelf tool
+        """   
+        
+        self.tank_shelf = QWidget()
+        self.tank_h_layout = QHBoxLayout()
+
+        self.tank_shelf.setLayout(self.tank_h_layout)
+
+        self.rectangular_collider = QToolButton()
+        self.rectangular_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.rectangular_collider,
+                                  sub_menu="Shelf", image_name="cube.png")
+        self.sphere_collider = QToolButton()
+        self.sphere_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.sphere_collider,
+                                  sub_menu="Shelf", image_name="sphere.png")
+        self.capsule_collider = QToolButton()
+        self.capsule_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.capsule_collider,
+                                  sub_menu="Shelf", image_name="capsule.png")
+        self.cylinder_collider = QToolButton()
+        self.cylinder_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.cylinder_collider,
+                                  sub_menu="Shelf", image_name="cylinder.png")
+
+        self.tank_h_layout.addWidget(self.rectangular_collider)
+        self.tank_h_layout.addWidget(self.sphere_collider)
+        self.tank_h_layout.addWidget(self.capsule_collider)
+        self.tank_h_layout.addWidget(self.cylinder_collider)
+        self.tank_h_layout.addStretch(200)
+
+    def create_colliders_shelf(self):
+        """
+            create tank types shelf tool
+        """
+        self.colliders_shelf = QWidget()
+        self.colliders_h_layout = QHBoxLayout()
+
+        self.colliders_shelf.setLayout(self.colliders_h_layout)
+
+        self.ellipse_collider = QToolButton()
+        self.ellipse_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.ellipse_collider,
+                                  sub_menu="Shelf", image_name="ellipse.png")
+        self.rectangle_collider = QToolButton()
+        self.rectangle_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.rectangle_collider,
+                                  sub_menu="Shelf", image_name="rectangle.png")
+        self.polygon_collider = QToolButton()
+        self.polygon_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.polygon_collider,
+                                  sub_menu="Shelf", image_name="polygon.png")
+        self.triangle_collider = QToolButton()
+        self.triangle_collider.setMinimumSize(QSize(40,40))
+        self.add_icons_to_widgets(tool_button=self.triangle_collider,
+                                  sub_menu="Shelf", image_name="triangle.png")
+
+        self.colliders_h_layout.addWidget(self.ellipse_collider)
+        self.colliders_h_layout.addWidget(self.rectangle_collider)
+        self.colliders_h_layout.addWidget(self.polygon_collider)
+        self.colliders_h_layout.addWidget(self.triangle_collider)
+        self.colliders_h_layout.addStretch(200)
+
+# -------------------------------------------------------------- CREATE DRAWING AREAS ---------------------------------------------------------------------
+    def create_main_canvas(self):
         """
             creates and attaches the bottom toolbar to the main window
             widget
         """
         self.graphics_view_v_layout = QVBoxLayout()
-        self.main_canvas = DrawingCanvas(QRect(0, 0, 600, 720), 
-                                         QColor(255,0,0), 
+        self.main_canvas = DrawingCanvas(QColor(255,0,0), 
                                          QFont("Arial"), 14)
 
+    def create_frame_controls(self):
+        """
+            create frame toolbar at bottom of window
+        """
         self.play_bar_h_layout = QHBoxLayout()
         self.play_simulation_btn = CustomPushButton()
         self.add_icons_to_widgets(widget=self.play_simulation_btn, image_name="play_backward.png")
@@ -155,7 +297,7 @@ class MainWindow(QMainWindow, UtilFuncs):
                                                         QSizePolicy.Policy.Fixed))
         self.end_frame_field.setFixedSize(QSize(40,20))
 
-        self.frame_range_h_layout.addSpacerItem(QSpacerItem(800,0))
+        self.frame_range_h_layout.addStretch(800)
         self.frame_range_h_layout.addWidget(self.start_frame_field)
         self.frame_range_h_layout.addWidget(self.end_frame_field)
 
@@ -167,7 +309,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.play_bar_h_layout.addWidget(self.play_back_simulation_btn)
 
         self.create_frame_bars(layout=self.play_bar_h_layout,
-                               start = 0, end = 700,
+                               start = 0, end = 1000,
                                line_edit_top=self.start_frame_field,
                                line_edit_side=self.end_frame_field)
 
@@ -181,21 +323,25 @@ class MainWindow(QMainWindow, UtilFuncs):
                                                             QSizePolicy.Policy.Fixed))
         self.frame_control_v_layout.addLayout(self.frame_range_h_layout)
         self.frame_control_v_layout.addLayout(self.play_bar_h_layout)
-
-        self.current_computation_field = CustomLabel(title="See changes here",
-                                                      size_policy=QSizePolicy(QSizePolicy.Policy.Expanding,
-                                                                              QSizePolicy.Policy.Expanding))
-        self.frame_control_v_layout.addWidget(self.current_computation_field)
         self.frame_control_widget.setLayout(self.frame_control_v_layout)
 
-        self.frame_and_graphics_splitter = QSplitter(Qt.Vertical)
+        self.animation_controls_dock_w = QDockWidget("Frame Controls")
+        self.animation_controls_dock_w.setWidget(self.frame_control_widget)
+
+        self.animation_controls_dock_w.setSizePolicy(QSizePolicy.Policy.Minimum,
+                                                     QSizePolicy.Policy.Minimum)
+
+        self.create_bottom_splitter()
+
+    def create_bottom_splitter(self):
+        """
+            frame splitter and dock widget creation
+        """
+        self.frame_and_graphics_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.frame_and_graphics_splitter.setChildrenCollapsible(False)
+
         self.frame_and_graphics_splitter.addWidget(self.main_canvas)
-        self.frame_and_graphics_splitter.addWidget(self.frame_control_widget)
-
-        self.graphics_view_v_layout.addWidget(self.frame_and_graphics_splitter)
-
-        self.main_graphics_widget = QWidget()
-        self.main_graphics_widget.setLayout(self.graphics_view_v_layout)
+        self.frame_and_graphics_splitter.addWidget(self.animation_controls_dock_w)
    
     def create_reset_button(self):
         """
@@ -217,7 +363,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.set_fixed_size_policy(self.fluid_solver_group_box)
 
         self.fluid_solver_label = CustomLabel(title="Choose Solver")
-        fluid_solver_lbls = ["SPH", "IISPH", "WCSPH", "Multi SPH"]
+        fluid_solver_lbls = ["SPH", "Multi SPH", "WCSPH", "PCSPH", "IISPH", "Eulerian", "FLIP", "PIC"]
         
         self.fluid_solver_combo_box = CustomComboBox(add_items=True, items_to_add=fluid_solver_lbls)
 
@@ -704,46 +850,173 @@ class MainWindow(QMainWindow, UtilFuncs):
         menu_bar = self.menuBar()
         file_bar = menu_bar.addMenu("File")
 
-        quit_action = file_bar.addAction("Quit")
-        undo_action = file_bar.addAction("Undo")
-        redo_action = file_bar.addAction("Redo")
+        new_action = file_bar.addAction("New")
+        open_action = file_bar.addAction("Open")
+        open_recent = file_bar.addMenu("Open Recent...")
 
-        self.add_icons_to_actions(quit_action, image_name="quit.png")
-        self.add_icons_to_actions(undo_action, image_name="undo.png")
-        self.add_icons_to_actions(redo_action, image_name="redo.png")
+        file_bar.addSeparator()
+
+        set_project = file_bar.addAction("Set Project")
+
+        file_bar.addSeparator()
+
+        save_action = file_bar.addAction("Save")
+        save_as_action = file_bar.addAction("Save As")
+        import_action = file_bar.addAction("Import")
+        export_action = file_bar.addAction("Export")
+
+        file_bar.addSeparator()
+        quit_action = file_bar.addAction("Quit")
 
         # creating the edit toolbar
         edit_bar = menu_bar.addMenu("Edit")
 
-        save_action = edit_bar.addAction("Save")
         copy_action = edit_bar.addAction("Copy")
         paste_action = edit_bar.addAction("Paste")
+
+        edit_bar.addSeparator()
+
+        undo_action = edit_bar.addAction("Undo")
+        redo_action = edit_bar.addAction("Redo")
+
+        edit_bar.addSeparator()
+
+        delete_action = edit_bar.addAction("Delete")
+
+        window_bar = menu_bar.addMenu("Window")
+
+        full_screen = window_bar.addAction("FullScreen")
+
+        window_bar.addSeparator()
+
+        resizable = window_bar.addAction("Resizable")
+        resizable.setCheckable(True)
+
+        expand_window = window_bar.addAction("Expand")
+        shrink_window = window_bar.addAction("Shrink")
+
+        display_bar = menu_bar.addMenu("Display")
+
+        display_all = display_bar.addAction("Display All")
+        display_all.setCheckable(True)
+
+        hide_menu = display_bar.addMenu("Hide")
         
-        self.add_icons_to_actions(icon=save_action, image_name="save.png")
-        self.add_icons_to_actions(icon=copy_action, image_name="copy.png")
-        self.add_icons_to_actions(icon=paste_action, image_name="paste.png")
+        hide_tank_display = hide_menu.addAction("Tank")
+        hide_tank_display.setCheckable(True)
+        hide_colliders_display = hide_menu.addAction("Collider")
+        hide_colliders_display.setCheckable(True)
+        hide_fps_control = hide_menu.addAction("FPS")
+        hide_fps_control.setCheckable(True)
+        hide_display_particle_count = hide_menu.addAction("No. of particles")
+        hide_display_particle_count.setCheckable(True)
 
-        #creating the import/export menu bars
-        import_bar = menu_bar.addMenu("Import/Export")
+        display_bar.addSeparator()
 
-        json_import = import_bar.addAction("Import JSON")
-        txt_import = import_bar.addAction("Import txt")
-        import_bar.addSeparator()
-        json_export = import_bar.addAction("Export JSON")
-        txt_export = import_bar.addAction("Export txt")
+        tank_display = display_bar.addAction("Tank")
+        tank_display.setCheckable(True)
+        colliders_display = display_bar.addAction("Collider")
+        colliders_display.setCheckable(True)
+        fps_control = display_bar.addAction("FPS")
+        fps_control.setCheckable(True)
+        display_particle_count = display_bar.addAction("No. of particles")
+        display_particle_count.setCheckable(True)
+        reset_simulation = display_bar.addAction("Reset Simulation")
 
-        self.add_icons_to_actions(icon=json_import, image_name="import.png")
-        self.add_icons_to_actions(icon=txt_import, image_name="import.png")
-        self.add_icons_to_actions(icon=json_export, image_name="export.png")
-        self.add_icons_to_actions(icon=txt_export, image_name="export.png")
+        display_bar.addSeparator()
+
+        dockers_options = display_bar.addMenu("Dockers")
+        fluid_options = dockers_options.addAction("Fluid Options")
+        fluid_options.setCheckable(True)
+        fluid_pred_options = dockers_options.addAction("Fluid Prediction")
+        fluid_pred_options.setCheckable(True)
+        frame_controls = dockers_options.addAction("Frame Controls")
+        frame_controls.setCheckable(True)
+        viewport_tools = dockers_options.addAction("Tools")
+        viewport_tools.setCheckable(True)
+
+        all_viewport_tools = display_bar.addMenu("Tools")
+
+        select_action = all_viewport_tools.addAction("Select")
+        translate_action = all_viewport_tools.addAction("Translate")
+        rotate_action = all_viewport_tools.addAction("Rotate")
+        scale_action = all_viewport_tools.addAction("Scale")
+
+        shelves = display_bar.addMenu("Shelves")
+
+        tank_shelf = shelves.addAction("Tank")
+        collider_shelf = shelves.addAction("Collider")
+
+        predictor_bar = menu_bar.addMenu("Predictor")
 
         #creating the settings bar
         settings_bar = menu_bar.addMenu("Settings")
+        restore_values = settings_bar.addAction("Restore Session")
+        reset_values = settings_bar.addAction("Reset Values")
 
-        fps_control = settings_bar.addAction("Display FPS")
-        display_particle_count = settings_bar.addAction("Display No. of particles")
-        reset_simulation = settings_bar.addAction("Reset Simulation")
+        settings_bar.addSeparator()
 
-        self.add_icons_to_actions(icon=fps_control, image_name="fps.png")
-        self.add_icons_to_actions(icon=display_particle_count, image_name="count.png")
-        self.add_icons_to_actions(icon=reset_simulation, image_name="reset.png")
+        more_settings = settings_bar.addAction("More Settings...")
+
+        information_bar = menu_bar.addMenu("About")
+
+        about_app = information_bar.addAction("About Predictor")
+        learn_more = information_bar.addAction("Learn More")
+        help = information_bar.addAction("Help")
+
+    def fluid_pred_w(self):
+        """
+            creates fluid prediction controls
+        """
+        
+        self.fluid_pred_v_layout = QVBoxLayout()
+
+        self.fluid_pred_options_widget.setLayout(self.fluid_pred_v_layout)
+
+        self.attrib_pred_h_layout = QHBoxLayout()
+        
+        self.attribs_pred_lbl = CustomLabel(title="Attrs to Predict")
+        attribs_pred_list = ["Default", "Position", "Velocity", "Colour", "Pressure", "Mass Density"]
+        self.attribs_pred_combo_box = CustomComboBox(add_items=True, items_to_add=attribs_pred_list)
+
+        self.attrib_pred_h_layout.addWidget(self.attribs_pred_lbl)
+        self.attrib_pred_h_layout.addWidget(self.attribs_pred_combo_box)
+
+        self.pred_model_h_layout = QHBoxLayout()
+
+        self.pred_model_lbl = CustomLabel(title="Choose Model")
+        pred_model_list = ["Linear", "Recmoid", "Laplacian"]
+        self.pred_model_combo_box = CustomComboBox(add_items=True, items_to_add=pred_model_list)
+
+        self.pred_model_h_layout.addWidget(self.pred_model_lbl)
+        self.pred_model_h_layout.addWidget(self.pred_model_combo_box)
+
+        self.epoch_h_layout = QHBoxLayout()
+
+        self.num_epochs_lbl = CustomLabel(title="No. Epochs")
+        self.num_epochs_spin_box = CustomSpinBox()
+        self.num_epochs_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.epoch_h_layout.addWidget(self.num_epochs_lbl)
+        self.epoch_h_layout.addWidget(self.num_epochs_spin_box)
+        self.epoch_h_layout.addWidget(self.num_epochs_slider)
+
+        self.export_loc_h_layout = QHBoxLayout()
+
+        self.export_file_path = CustomLabel(title="File Path")
+        self.export_line_edit = CustomLineEdit(text="Export location specify here...")
+
+        self.export_loc_h_layout.addWidget(self.export_file_path)
+        self.export_loc_h_layout.addWidget(self.export_line_edit)
+
+        self.reset_default_btn = QPushButton("Reset")
+
+        self.fluid_pred_v_layout.addWidget(self.reset_default_btn)
+        self.fluid_pred_v_layout.addLayout(self.attrib_pred_h_layout)
+        self.fluid_pred_v_layout.addLayout(self.pred_model_h_layout)
+        self.fluid_pred_v_layout.addLayout(self.epoch_h_layout)
+        self.fluid_pred_v_layout.addLayout(self.export_loc_h_layout)
+        self.fluid_pred_v_layout.addStretch(100)
+
+        self.adjust_label_spacing_layout(box_widget=self.fluid_pred_options_widget,
+                                         scale_factor=8)

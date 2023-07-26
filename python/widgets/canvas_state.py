@@ -1,22 +1,23 @@
-from PySide6.QtWidgets import  QWidget, QSizePolicy
+from PySide6.QtWidgets import  QWidget, QSizePolicy, QGraphicsView, QGraphicsScene
 from PySide6.QtCore import QSize, QRect , Qt, QPointF, QPoint
 from PySide6.QtGui import QPixmap, QIcon, QImage, QPaintEvent, QColor, \
     QFont, QPainter, QBrush, QFont, QPen, QDragMoveEvent, QDragLeaveEvent, \
     QMouseEvent, QTransform
 
-class DrawingCanvas(QWidget):
+class DrawingCanvas(QGraphicsView, QGraphicsScene):
 
     def __init__(self,
-                 canvas_size : QRect,
-                 drawing_colour : QColor,
-                 font_type: QFont,
-                 font_size: int) -> None:
-        super().__init__()
+                 canvas_size : QRect=None,
+                 drawing_colour : QColor=None,
+                 font_type: QFont=None,
+                 font_size: int=None) -> None:
+        super(DrawingCanvas, self).__init__()
 
-        """ self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
-                                       QSizePolicy.Policy.Expanding))
-        self.setFixedWidth(canvas_size.width()) """
-        self.setGeometry(canvas_size)
+        self.main_scene = QGraphicsScene()
+        self.main_frame_w = QGraphicsView(self.main_scene)
+
+        self.setGeometry(QRect(0, 0, 1000, 400))
+        
         self.drawing_color = drawing_colour
         self.drawing_font = font_type
         self.font_size = font_size
@@ -25,30 +26,11 @@ class DrawingCanvas(QWidget):
         """
             controls main painting to the widget window
         """
-        self.draw_feature_text()
+        self.main_painter = QPainter()
 
         self.render_points()
 
         self.main_painter.end()
-
-    def draw_feature_text(self) -> None:
-        """
-            draws feature text on top right hand side of screen        
-        """
-        self.fps_text_to_draw = "FPS: None"
-        self.pt_num_text_to_draw = "No. Points: None"
-        self.projection_text_to_draw = "Projection: persp"
-
-        self.font_to_draw = QFont()
-        self.font_to_draw.setFamily("Arial")
-        self.font_to_draw.setPixelSize(self.font_size)
-
-        self.main_painter = QPainter(self)
-        self.main_painter.setFont(self.font_to_draw)
-
-        self.main_painter.drawText(800,20, self.fps_text_to_draw)
-        self.main_painter.drawText(800,35, self.pt_num_text_to_draw)
-        self.main_painter.drawText(800,50, self.projection_text_to_draw)
 
     def render_points(self, point_radius: int=None, point_colour: QColor=None,
                       pos_x: int=None, pos_y=None, point_spacing: int=1,

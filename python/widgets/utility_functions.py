@@ -44,7 +44,8 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
                 path = "images/" + sub_menu + "/" + str(image_name)
                 icon.setIcon(QIcon(path))
 
-    def add_icons_to_widgets(self, widget : QWidget=None, 
+    def add_icons_to_widgets(self, widget : QWidget=None,
+                             tool_button: QToolButton=None, 
                              sub_menu: str="Bottom_Bar", 
                              image_name : str=None) -> None:
         """
@@ -54,6 +55,10 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
             if image_name is not None:
                 path = "images/" + sub_menu + "/" + str(image_name)
                 widget.setIcon(QIcon(path))
+        if tool_button is not None:
+            if image_name is not None:
+                path = "images/" + sub_menu + "/" + str(image_name)
+                tool_button.setIcon(QIcon(path))
 
     def add_multiple_layouts(self, 
                              parent : QGroupBox=None,
@@ -133,6 +138,28 @@ class UtilFuncs(VerticalSeparator, HorizontalSeparator):
 
     def adjust_label_spacing(self, box_widget: QGroupBox=None,
                              scale_factor : int=8) -> None:
+        """
+            adjusts label spacing by group box proportional
+            amount
+        """
+        widget_pos_list = []
+
+        for child in box_widget.children():
+                if isinstance(child, QLabel):
+                    widget_pos_list.append(child.pos().x() + child.width())
+
+        maximum_dist = max(widget_pos_list)/scale_factor
+
+        for child in box_widget.children():
+            if child.isWidgetType():
+                if isinstance(child, QLabel):
+                    child.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Fixed,
+                                                    QSizePolicy.Policy.Fixed))
+                    child.setFixedWidth(maximum_dist)
+                    child.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+    def adjust_label_spacing_layout(self, box_widget: QWidget=None,
+                                    scale_factor : int=8) -> None:
         """
             adjusts label spacing by group box proportional
             amount
