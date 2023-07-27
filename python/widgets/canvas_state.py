@@ -31,8 +31,8 @@ class DrawingCanvas(QGraphicsScene):
         """
             draws particle to screen
         """
-        num_particles_to_draw_x = 200
-        num_particles_to_draw_y = 200
+        num_particles_to_draw_x = 100
+        num_particles_to_draw_y = 100
 
         spacing = 1
 

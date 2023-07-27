@@ -7,13 +7,11 @@ from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QIcon, QImage, QMouseEvent
 from typing import Union, Optional
 from utility_functions import UtilFuncs, VerticalSeparator, HorizontalSeparator
+from appearance import *
 
 # ------------------------------------------ WIDGET ITEMS ------------------------------------------
 
 class CustomPushButton(QPushButton):
-    
-     STYLE_SHEET = """
-                """
     
      ABOUT_CUSTOM_SLIDER = """
         This is a custom push button with its own style widgets                        
@@ -33,6 +31,13 @@ class CustomPushButton(QPushButton):
             constructor for custom slider widget
         """
         super(CustomPushButton, self).__init__()
+
+        styling = AppearancePushButton()
+        
+        if style_sheet is not None:
+            self.setStyleSheet(style_sheet)
+
+        self.setStyleSheet(styling.STYLE)
 
         if size_policy is not None:
             self.setSizePolicy(size_policy)
@@ -55,12 +60,7 @@ class CustomPushButton(QPushButton):
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(self.STYLE_SHEET)
-
 class CustomSlider(QSlider):
-
-    STYLE_SHEET = """
-                """
     
     ABOUT_CUSTOM_SLIDER = """
         This is a custom slider with its own style widgets                        
@@ -119,8 +119,6 @@ class CustomSlider(QSlider):
             self.setFixedSize(size)
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
-
-        self.setStyleSheet(self.STYLE_SHEET)
 
         self.btn = linked_btn
         self.spin_box = linked_spin_box
@@ -193,9 +191,6 @@ class CustomSlider(QSlider):
         return self.ABOUT_CUSTOM_SLIDER
 
 class CustomDoubleSpinBox(QDoubleSpinBox):
-    
-    STYLE_SHEET = """
-    """
 
     ABOUT_DOUBLE_SPIN_BOX = """
         This is a custom double spin box with its own style widgets                        
@@ -246,8 +241,6 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(self.STYLE_SHEET)
-
         self.spin_box = linked_spin_box
         self.slider = linked_slider
 
@@ -295,9 +288,6 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
         print(self.ABOUT_DOUBLE_SPIN_BOX)
 
 class CustomSpinBox(QSpinBox):
-
-    STYLE_SHEET = """
-    """
 
     ABOUT_SPIN_BOX = """
         This is a custom spin box with its own style widgets                        
@@ -350,8 +340,6 @@ class CustomSpinBox(QSpinBox):
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(self.STYLE_SHEET)
-
         self.double_spin_box = linked_double_spin_box
         self.slider = linked_slider
 
@@ -393,9 +381,6 @@ class CustomSpinBox(QSpinBox):
 
 class CustomLineEdit(QLineEdit):
 
-    STYLE_SHEET = """
-    """
-
     ABOUT_LINE_EDIT = """
         This is a custom line edit with its own style widgets                        
         and utility functions overloaded from the QLineEdit 
@@ -430,8 +415,6 @@ class CustomLineEdit(QLineEdit):
         print(self.ABOUT_LINE_EDIT)
 
 class CustomLabel(QLabel):
-    STYLE_SHEET = """
-    """
 
     ABOUT_LABEL = """
         This is a custom label with its own style widgets                        
@@ -542,8 +525,6 @@ class CustomLabel(QLabel):
         self.mouse_pressed = False
 
 class CustomGroupBox(QGroupBox, UtilFuncs):
-    STYLE_SHEET = """
-    """
 
     ABOUT_GROUP_BOX = """
         This is a custom group box with its own style widgets                        
@@ -590,8 +571,6 @@ class CustomGroupBox(QGroupBox, UtilFuncs):
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
 
-        self.setStyleSheet(self.STYLE_SHEET)
-
         self.activate_all_slots()
 
     def activate_all_slots(self):
@@ -607,9 +586,6 @@ class CustomGroupBox(QGroupBox, UtilFuncs):
         self.hide_group_box_widgets(self)
 
 class CustomComboBox(QComboBox):
-    
-    STYLE_SHEET = """
-    """
 
     ABOUT_COMBO_BOX = """
         This is a custom combo box with its own style widgets                        
@@ -634,8 +610,6 @@ class CustomComboBox(QComboBox):
             self.setStyleSheet(style_sheet)
         
         self.currentIndexChanged.connect(self.index_changed)
-        
-        self.setStyleSheet(self.STYLE_SHEET)
             
     def add_items_from_list(self):
         """
@@ -653,10 +627,6 @@ class CustomComboBox(QComboBox):
 # ----------------------------------------- MENU WIDGETS ----------------------------------
 
 class CustomTabWidget(QTabWidget):
-    
-    STYLE_SHEET = """
-
-    """
 
     ABOUT_TAB_WIDGET = """
         This is a custom tab widget with its own style widgets                        
@@ -700,13 +670,7 @@ class CustomTabWidget(QTabWidget):
         if size is not None:
             self.setFixedSize(size)
 
-        self.setStyleSheet(self.STYLE_SHEET)
-
 class CustomScrollArea(QScrollArea):
-    
-    STYLE_SHEET = """
-
-    """
 
     ABOUT_SCROLL_AREA = """
         This is a custom scroll area with its own style widgets                        
@@ -724,10 +688,6 @@ class CustomScrollArea(QScrollArea):
         print(self.ABOUT_SCROLL_AREA)
 
 class CustomToolBar(QToolBar, QToolButton):
-    
-    STYLE_SHEET = """
-
-    """
 
     ABOUT_TOOL_BAR = """
         This is a custom tool bar with its own style widgets                        
@@ -745,10 +705,6 @@ class CustomToolBar(QToolBar, QToolButton):
         print(self.ABOUT_TOOL_BAR)
 
 class CustomMenu(QMenu, QMenuBar):
-    
-    STYLE_SHEET = """
-
-    """
 
     ABOUT_MENU = """
         This is a custom combo box with its own style widgets                        
@@ -766,10 +722,6 @@ class CustomMenu(QMenu, QMenuBar):
         print(self.ABOUT_MENU)
 
 class CustomDockableWidget(QDockWidget):
-    
-    STYLE_SHEET = """
-
-    """
 
     ABOUT_DOCK_WIDGET = """
         This is a custom combo box with its own style widgets                        
