@@ -32,6 +32,12 @@ fluctuations for more particles.
 
 ## PCSPH - Predictive Corrective SPH
 
+## Eulerian approach
+
+## FLIP simulation
+
+## PIC - Particle in Cell
+
 ## IISPH - Implicit Incompressible SPH
 When particles reach solid boundaries or frontiers,
 the normal SPH model assumes uniform velocities and particle
@@ -66,23 +72,6 @@ reassemble the value computed the quickest. In the future, a
 GPU implementation with CUDA is expected to attain even faster
 results and simulate greater numbers of particles.
 
-# GUI creation
-The graphical interface for this project was designed
-using pyside6 and qtcreator. It is inspired by the interfaces 
-implemented into modern DCC applications such as Maya, Blender 
-and Houdini. Focused purely on fluid simulations, much of the 
-tree view and nodal graph representations are overlooked for this
-implementation
-
-## Menu Bars
-In the menu bars, users are given options to save,
-copy, redo, import and export. The import and export 
-options are purely to enable users to easily transfer
-their simulation data into other DCC packages such as 
-Houdini. This application exports data into JSON and txt
-formats currently, but further data formats are seen to
-be added in the future.
-
 ## Importing data
 It is important that data from other packages are 
 imported back into this application as either txt or 
@@ -90,18 +79,7 @@ JSON formats as well. Failure to do so can cause
 numerical instabilities in the calculations implemented
 into the application.
 
-## Frame buffer system
-To facilitate faster frame rates, Data is stored into
-a temporary frame buffer whenever a simulation is run. 
-The visualized display is essentially a cached state of 
-JSON data that is being fetched from the frame buffer.
 
-## Dockable widgets
-All widgets in this project are tab dockable just for 
-better UX and UI design. Custom functions exist so that
-widgets can be minimized and rescaled whenever a user 
-wishes to fully display their simulation options or fully 
-display the simulation screen fully.
 
 
 
