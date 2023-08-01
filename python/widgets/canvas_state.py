@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import  QWidget, QSizePolicy, QGraphicsView, QGraphicsScene
-from PySide6.QtCore import QSize, QRect , Qt, QPointF, QPoint
+from PySide6.QtCore import QSize, QRect , Qt, QPointF, QPoint, QTimer
 from PySide6.QtGui import QPixmap, QIcon, QImage, QPaintEvent, QColor, \
     QFont, QPainter, QBrush, QFont, QPen, QDragMoveEvent, QDragLeaveEvent, \
     QMouseEvent, QTransform
@@ -31,8 +31,8 @@ class DrawingCanvas(QGraphicsScene):
         """
             draws particle to screen
         """
-        num_particles_to_draw_x = 100
-        num_particles_to_draw_y = 100
+        num_particles_to_draw_x = 50
+        num_particles_to_draw_y = 50
 
         spacing = 1
 
