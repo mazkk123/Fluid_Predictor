@@ -21,6 +21,7 @@ class Particle:
         self._shape = shape
         self._size = size
         self._acceleration = acceleration
+        self._next_acceleration = None
         self._mass = mass
         self._hash_value = 0
 
@@ -50,6 +51,10 @@ class Particle:
     @property
     def acceleration(self):
         return self._acceleration
+    
+    @property
+    def next_acceleration(self):
+        return self._next_acceleration
     
     @property
     def shape(self):
@@ -116,6 +121,10 @@ class Particle:
     @acceleration.setter
     def set_acceleration(self, value):
         self._acceleration = value
+
+    @next_acceleration.setter
+    def set_next_acceleration(self, value):
+        self._next_acceleration = value
 
     @shape.setter
     def set_shape(self, value):

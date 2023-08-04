@@ -4,10 +4,10 @@ import random as rd
 import re
 import sys
 
-from compute_Euler import Euler
-from compute_SPH import SPH
-from compute_multiSPH import MultiSPH
-from compute_FLIP import FLIP
+from Fluid_Calculations.compute_Euler import Euler
+from Fluid_Calculations.compute_SPH import SPH
+from Fluid_Calculations.compute_multiSPH import MultiSPH
+from Fluid_Calculations.compute_FLIP import FLIP
 
 from distributions import Random, Uniform
 from search_methods import *
@@ -103,6 +103,7 @@ class FluidSystem:
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
                         params = self.params,
+                        time_stepping="Euler Cromer",
                         delta_time=0.02
                     ).update()
                 if id==1:

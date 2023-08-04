@@ -3,7 +3,9 @@ import numpy as np
 import random as rd
 import re
 
-from search_methods import SpatialHashing, CompactHashing, ZSorting, NearestNeighbour
+from Fluid_Utilities.search_methods import SpatialHashing, CompactHashing, ZSorting, NearestNeighbour
+from Fluid_Utilities.time_stepping import ForwardEuler, EulerCromer, LeapFrog, Verlet, IndependentTime, \
+                                    RegionalShortTime, RungeKutta
 from Collisions.box_collisions import BoxCollisions, AABB, OrientedBBox
 from Collisions.sphere_collisions import SphereCollisions, CapsuleCollisions
 from Particles.particles import Particle
@@ -24,13 +26,25 @@ class SPH(Particle):
         "epsilon":0.1
     }
 
+    TIME_SCHEMES = {
+
+        "Forward Euler": 0,
+        "Euler Cromer": 1,
+        "Leap Frog": 2,
+        "Verlet": 3,
+        "Independent Time": 4,
+        "Regional Short Time": 5,
+        "Runge Kutta": 6
+    }
+
     def __init__(self,
                  particle: Particle=None,
                  search_method: str=None,
                  hash_table: dict=None,
                  hash_value: int=None,
                  params: dict=None,
-                 delta_time: float=0.02):
+                 delta_time: float=0.02,
+                 time_stepping: str="Euler Cromer"):
 
         if params is not None:
             self.params = params
@@ -44,6 +58,8 @@ class SPH(Particle):
             self.hash_table = hash_table
         if delta_time is not None:
             self.delta_time = delta_time
+        if time_stepping is not None:
+            self.time_stepping = time_stepping
 
         self.neighbours_list = []
         self.update_particle_neighbours(self)
@@ -239,6 +255,40 @@ class SPH(Particle):
                         self.particle.pressure + self.particle.pressure_force + \
                         self.gravity + self.buoyancy + \
                         self.particle.surface_tension
+    
+    def choose_time_stepping(self, time_step_type:str = "Euler Cromer",
+                             particle: Particle=None):
+        """
+        
+        """
+        if self.TIME_SCHEMES[time_step_type] == 0:
+            ForwardEuler(
+                particle,
+                self.delta_time
+            )
+        if self.TIME_SCHEMES[time_step_type] == 1:
+            EulerCromer(
+                particle,
+                self.delta_time
+            )
+        if self.TIME_SCHEMES[time_step_type] == 2:
+            LeapFrog(
+                particle,
+                self.delta_time
+            )
+        if self.TIME_SCHEMES[time_step_type] == 3:
+            Verlet(
+                particle,
+                self.delta_time
+            )
+        if self.TIME_SCHEMES[time_step_type] == 4:
+            IndependentTime()
+        if self.TIME_SCHEMES[time_step_type] == 5:
+            RegionalShortTime()
+        if self.TIME_SCHEMES[time_step_type] == 6:
+            RungeKutta()
+        else:
+            EulerCromer()
         
     def update(self):
 
@@ -246,6 +296,7 @@ class SPH(Particle):
         self.XSPH_vel_correction()
 
         self.particle.acceleration = self.all_forces / self.PARAMETERS["mass_density"]
-        self.particle.velocity += self.delta_time*self.particle.acceleration
-        self.particle.initial_pos += self.particle.velocity*self.delta_time
+        self.particle.next_acceleration = self.particle.acceleration
+
+        self.choose_time_stepping(self.time_stepping, self.particle)
 
