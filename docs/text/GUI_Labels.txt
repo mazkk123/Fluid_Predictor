@@ -1,0 +1,30 @@
+Tab Bar Right:
+	- Fluid Controls
+		- Particle
+			- Solver:
+			- Appearance
+				- No. of Particles
+				- Color
+				- Point size
+			- Motion
+				- Initial Position
+				- Initial Velocity
+				- Acceleration
+			- Physical Forces
+				- Gravity
+				- Buoyancy
+				- Viscosity
+				- Pressure
+				- Mass Density
+		- Tank
+			- Tank type
+			- Tank Size
+			- Tank Position
+			- Tank Radius
+		- System:
+			- delta time
+			- Time integrator
+#				- leap frog scheme
+				- normal scheme
+		- Meshing
+	- Predictor Controls
