@@ -7,7 +7,7 @@ from Fluid_Utilities.search_methods import SpatialHashing, CompactHashing, ZSort
 from Fluid_Utilities.time_stepping import ForwardEuler, EulerCromer, LeapFrog, Verlet, IndependentTime, \
                                     RegionalShortTime, RungeKutta
 from Collisions.box_collisions import BoxCollisions, AABB, OrientedBBox
-from Collisions.sphere_collisions import SphereCollisions, CapsuleCollisions
+from Collisions.sphere_collisions import SphereCollisions, CapsuleCollisions, CylinderCollisions
 from Particles.particles import Particle
 
 class SPH(Particle):
@@ -27,7 +27,6 @@ class SPH(Particle):
     }
 
     TIME_SCHEMES = {
-
         "Forward Euler": 0,
         "Euler Cromer": 1,
         "Leap Frog": 2,
@@ -37,17 +36,26 @@ class SPH(Particle):
         "Runge Kutta": 6
     }
 
+    COLLISION_TYPES = {
+        "Cuboid":{"OrientedBBox":0, "AABB":1, "Normal":2},
+        "Cylinder":1,
+        "Sphere":2,
+        "Capsule":3,
+        "Abstract":4
+    }
+
     def __init__(self,
                  particle: Particle=None,
                  search_method: str=None,
                  hash_table: dict=None,
                  hash_value: int=None,
-                 params: dict=None,
                  delta_time: float=0.02,
-                 time_stepping: str="Euler Cromer"):
-
-        if params is not None:
-            self.params = params
+                 time_stepping: str="Euler Cromer",
+                 tank_attrs: dict=None,
+                 collision_type: str="box"):
+        
+        if tank_attrs is not None:
+            self.tank_attrs = tank_attrs
         if particle is not None:
             self.particle = particle
         if search_method is not None:
@@ -60,7 +68,9 @@ class SPH(Particle):
             self.delta_time = delta_time
         if time_stepping is not None:
             self.time_stepping = time_stepping
-
+        if collision_type is not None:
+            self.collision_type = collision_type
+        
         self.neighbours_list = []
         self.update_particle_neighbours(self)
         self.gravity_const = np.array([0, -9.81, 0])
@@ -256,31 +266,30 @@ class SPH(Particle):
                         self.gravity + self.buoyancy + \
                         self.particle.surface_tension
     
-    def choose_time_stepping(self, time_step_type:str = "Euler Cromer",
-                             particle: Particle=None):
+    def choose_time_stepping(self, time_step_type:str = "Euler Cromer"):
         """
         
         """
         if self.TIME_SCHEMES[time_step_type] == 0:
             ForwardEuler(
-                particle,
+                self.particle,
                 self.delta_time
             )
         if self.TIME_SCHEMES[time_step_type] == 1:
             EulerCromer(
-                particle,
+                self.particle,
                 self.delta_time
-            )
+            ).exec_time_scheme(self.delta_time)
         if self.TIME_SCHEMES[time_step_type] == 2:
             LeapFrog(
-                particle,
+                self.particle,
                 self.delta_time
-            )
+            ).exec_time_scheme(self.delta_time)
         if self.TIME_SCHEMES[time_step_type] == 3:
             Verlet(
-                particle,
+                self.particle,
                 self.delta_time
-            )
+            ).exec_time_scheme(self.delta_time)
         if self.TIME_SCHEMES[time_step_type] == 4:
             IndependentTime()
         if self.TIME_SCHEMES[time_step_type] == 5:
@@ -288,8 +297,83 @@ class SPH(Particle):
         if self.TIME_SCHEMES[time_step_type] == 6:
             RungeKutta()
         else:
-            EulerCromer()
-        
+            EulerCromer(
+                self.particle,
+                self.delta_time
+            ).exec_time_scheme(self.delta_time)
+
+    def density_prediction(self):
+
+        density = 0 
+        for id, nbr_particle in enumerate(self.neighbours_list):
+            kernel_value = self.kernel_linear(self.particle.initial_pos - nbr_particle.initial_pos, 0)
+            density += kernel_value*self.particle.mass
+
+        return self.PARAMETERS["mass_density"] + density
+    
+    def prediction_update(self, time_step_type:str = "Euler Cromer",
+                             particle: Particle=None):
+        if particle is not None:
+            if self.TIME_SCHEMES[time_step_type] == 0:
+                ForwardEuler(
+                    particle,
+                    self.delta_time
+                )
+            if self.TIME_SCHEMES[time_step_type] == 1:
+                return EulerCromer(
+                    particle,
+                    self.delta_time
+                ).get_time_scheme_values()
+            if self.TIME_SCHEMES[time_step_type] == 2:
+                return LeapFrog(
+                    particle,
+                    self.delta_time
+                ).get_time_scheme_values()
+            if self.TIME_SCHEMES[time_step_type] == 3:
+                return Verlet(
+                    particle,
+                    self.delta_time
+                ).get_time_scheme_values()
+            if self.TIME_SCHEMES[time_step_type] == 4:
+                IndependentTime()
+            if self.TIME_SCHEMES[time_step_type] == 5:
+                RegionalShortTime()
+            if self.TIME_SCHEMES[time_step_type] == 6:
+                RungeKutta()
+            else:
+                return EulerCromer(
+                    particle,
+                    self.delta_time
+                ).get_time_scheme_values()
+
+    def choose_collision_types(self, collision_type:str = "Cuboid",
+                               secondary_type:str = "Normal",
+                               particle:Particle = None):
+        if particle is not None:
+            if isinstance(self.COLLISION_TYPES[collision_type], dict):
+                if self.COLLISION_TYPES[collision_type][secondary_type] == 0:
+                    OrientedBBox()
+                if self.COLLISION_TYPES[collision_type][secondary_type] == 1:
+                    AABB()
+                if self.COLLISION_TYPES[collision_type][secondary_type] == 2:
+                    BoxCollisions(
+                        particle=self.particle,
+                        tank_size=self.tank_attrs["dimensions"]["size"],
+                        tank_location=self.tank_attrs["diemensions"]["location"],
+                        speed_loss=self.PARAMETERS["loss_of_speed"]
+                    ).collision_resolution()
+            else:
+                if self.TIME_SCHEMES[collision_type] == 1:
+                    CylinderCollisions()
+                if self.TIME_SCHEMES[collision_type] == 2:
+                    SphereCollisions()
+                if self.TIME_SCHEMES[collision_type] == 3:
+                    CapsuleCollisions()
+                if self.TIME_SCHEMES[collision_type] == 4:
+                    pass
+                else:
+                    BoxCollisions()
+
     def update(self):
 
         self.update_all_forces()
@@ -299,4 +383,5 @@ class SPH(Particle):
         self.particle.next_acceleration = self.particle.acceleration
 
         self.choose_time_stepping(self.time_stepping, self.particle)
+        self.choose_collision_types("Cuboid", "Normal")
 

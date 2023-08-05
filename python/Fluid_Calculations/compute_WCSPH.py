@@ -3,6 +3,7 @@ import numpy as np
 import random as rd
 import re
 
+from Particles.particles import Particle
 from compute_SPH import SPH
 
 class WCSPH(SPH):
@@ -16,14 +17,25 @@ class WCSPH(SPH):
         "lambda_vis":0.3
     }
 
-    def __init__(self):
+    def __init__(self,
+                 p: Particle=None,
+                 search_method: str=None,
+                 hash_table:dict=None,
+                 hash_value:int=None,
+                 params:dict = None,
+                 delta_time:float = None
+                 ):
         
-        super().__init__()
+        super().__init__(particle=p,
+                        search_method=search_method,
+                        hash_table=hash_table,
+                        hash_value=hash_value,
+                        params=params)
 
         self.compute_K()
 
     def compute_K(self):
-        self.K = m.pow(self.EXTRA_PARAMS["SSF"], 2) * self.PARAMETERS["mass_density"]/ (self.EXTRA_PARAMS["alpha"] + self.EXTRA_PARAMS["beta"])
+        self.K = m.pow(self.EXTRA_PARAMS["SSF"], 2) * self.PARAMETERS["mass_density"] / (self.EXTRA_PARAMS["alpha"] + self.EXTRA_PARAMS["beta"])
 
     def update_pressure(self):
         

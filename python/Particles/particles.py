@@ -16,8 +16,13 @@ class Particle:
             initialize particle properties 
         """
         self._initial_pos = init_pos
+        self._predicted_initial_pos = init_pos
+
         self._colour = colour
+
         self._velocity = velocity
+        self._predicted_velocity = velocity
+
         self._shape = shape
         self._size = size
         self._acceleration = acceleration
@@ -28,6 +33,7 @@ class Particle:
         # particle force attributes
 
         self._mass_density = 0
+
         self._pressure = 0
         self._viscosity = np.array([0, 0, 0])
         self._pressure_force = np.array([0, 0, 0])
@@ -39,6 +45,10 @@ class Particle:
     @property
     def initial_pos(self):
         return self._initial_pos
+
+    @property
+    def predicted_initial_pos(self):
+        return self._predicted_initial_pos
     
     @property
     def colour(self):
@@ -47,6 +57,10 @@ class Particle:
     @property
     def velocity(self):
         return self._velocity
+    
+    @property
+    def predicted_velocity(self):
+        return self._predicted_velocity
     
     @property
     def acceleration(self):
@@ -107,35 +121,43 @@ class Particle:
 # -------------------------------------- SETTER METHODS ------------------------------------------
 
     @initial_pos.setter
-    def set_initial_pos(self, value):
+    def initial_pos(self, value):
         self._initial_pos = value
 
+    @predicted_initial_pos.setter
+    def predicted_initial_pos(self, value):
+        self._predicted_initial_pos = value
+
     @colour.setter
-    def set_colour(self, value):
+    def colour(self, value):
         self._colour = value
 
     @velocity.setter
-    def set_velocity(self, value):
+    def velocity(self, value):
         self._velocity = value
 
+    @predicted_velocity.setter
+    def predicted_velocity(self, value):
+        self._predicted_velocity = value
+
     @acceleration.setter
-    def set_acceleration(self, value):
+    def acceleration(self, value):
         self._acceleration = value
 
     @next_acceleration.setter
-    def set_next_acceleration(self, value):
+    def next_acceleration(self, value):
         self._next_acceleration = value
 
     @shape.setter
-    def set_shape(self, value):
+    def shape(self, value):
         self._shape = value
 
     @neighbours.setter
-    def set_neighbours(self, value):
+    def neighbours(self, value):
         self._neighbours = value
 
     @size.setter
-    def set_size(self, value):
+    def size(self, value):
         self._size = value
 
     @mass_density.setter

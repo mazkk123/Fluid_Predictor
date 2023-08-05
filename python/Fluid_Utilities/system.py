@@ -7,7 +7,11 @@ import sys
 from Fluid_Calculations.compute_Euler import Euler
 from Fluid_Calculations.compute_SPH import SPH
 from Fluid_Calculations.compute_multiSPH import MultiSPH
+from Fluid_Calculations.compute_PCSPH import PCSPH
+from Fluid_Calculations.compute_WCSPH import WCSPH
 from Fluid_Calculations.compute_FLIP import FLIP
+from Fluid_Calculations.compute_LPSPH import LPSPH
+from Fluid_Calculations.compute_IISPH import IISPH
 
 from distributions import Random, Uniform
 from search_methods import *
@@ -22,6 +26,13 @@ class FluidSystem:
     NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing",
                           "Z-Sorting"]
     ORIENTATION_TYPE = ["Uniform", "Random"]
+    
+    TANK_ATTRS = {
+        "dimensions":{
+            "location":np.array([0, 0, 0]), "size":np.array([5, 5, 5])
+            },
+        "type":"Cuboid"
+    }
 
     HASH_MAP = {}
 
@@ -30,8 +41,7 @@ class FluidSystem:
                   search_method:str = "Spatial Hashing",
                   num_particles:int = 1000,
                   solver_type:str = "p",
-                  orientation_type:str = "Uniform",
-                  params: dict=None):
+                  orientation_type:str = "Uniform"):
         
         super(FluidSystem, self).__init__()
 
@@ -42,11 +52,6 @@ class FluidSystem:
 
         self.particle_list = []
         self.search_method = search_method
-        
-        if params is None:
-            self.params = self.PARAMETERS
-        else:
-            self.params = params
   
         self.do_neighbouring = False
 
@@ -102,22 +107,47 @@ class FluidSystem:
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
-                        params = self.params,
                         time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02
                     ).update()
                 if id==1:
                     print("do Euler")
+                    Euler()
                 if id==2:
                     print("do Multi")
+                    MultiSPH()
                 if id==3:
                     print("do IISPH")
+                    IISPH()
                 if id==4:
                     print("do FLIP")
+                    FLIP()
                 if id==5:
                     print("do WCSPH")
+                    WCSPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02 
+                    ).update()
                 if id==6:
                     print("do PCSPH")
+                    PCSPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02 
+                    )
+                if id == 7:
+                    print("do LPSPH")
+                    LPSPH()
 
     def choose_simulation_type(self):
         """

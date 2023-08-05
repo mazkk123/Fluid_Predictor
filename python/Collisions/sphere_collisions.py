@@ -13,3 +13,7 @@ class CapsuleCollisions:
 class SphereCollisions:
     pass
 
+class CylinderCollisions:
+    pass
+
+
