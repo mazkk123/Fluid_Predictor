@@ -5,32 +5,84 @@ predict particle positions, velocities and accelerations
 in multiple SPH approximations of a fluid.
 
 ## Weighting Kernels
+In an SPH approximation of fluids, different weighting 
+kernels are used as approximators for computing various
+forces within a neighbourhood vicinity of a particle in
+the system.
 
 ### KGC - Kernel Gradient Correction
+In large scale simulations and for SPH stability, KGC
+is required to reduce weighting kernel steps from being 
+too large by rescaling them based on a kernel correction 
+factor.
 
 ### Poly 6 
+For mass density and surface tension calculations the poly
+6 kernel is used and generates the most stable results.
 
 ### Spiky
+The spiky kernel type is mostly used for pressure force and
+pressure calculations based on extensive experimentation.
 
 ### Viscosity
+As the name suggests, the viscosity kernel is used to 
+approximate the viscosity force/ laminar viscosity that
+is acting on a particle.
 
 ### Cubic Spline
+Some SPH implementations choose to use a full Cubic Spline
+approximation, whereby all force computations utilize a
+cubic spline weighting kernel in their calculations.
 
 ## Forces
+A variety of physical forces exist per particle which
+contrbute to their velocity and position staps between
+timesteps
+
+## Presure Forces
+These are unknown forces that exist between particles
+contributing to their intermolecular state.
 
 ### Pressure
 
+## Advective Forces
+These forces contribute to the general flow of a particle
+by affecting its velocity and position.
+
 ### Viscosity
+This determines the clumping between particle neighbourhoods
+in the system. It is the intermolecular friction that 
+exists between particles which determines whether a fluid 
+appears water like or globular.
 
 #### Artificial Viscosity
+An artificial viscosity term can be added in certain situations
+to ensure better stability in the simulation
 
 #### Laminar Viscosity
+this is the main type of viscosity that exists for laminar 
+fluid flows. These type of flows are quite stable and non
+turbulent.
 
 ### Thermal Diffusion
+This force determines how a fluid should react in different
+temperatures and should the fluid expand in these cases.
 
 ### Buoyancy
+A force that controls the upward trajectory of the fluid. 
+Liquids have no buoyancy and therefore stick to the ground.
+Buoyant fluids such as gasses rise and diffuse through a 
+containing space due to the contribution of this force.
+
+### Surface Tension
+This is the friction that exists between the fluid and a 
+solid boundary wall. Controlling this force can create splashy
+or more subdued droplets when a fluid is poured or dropped
+onto another fluid interface.
 
 ### Body Forces
+Additional body force exists to provide the fluid with some
+mass and initial density when it reacts with different interfaces.
 
 ## Fluid Models
 Below are the fluid models used within this framework
