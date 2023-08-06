@@ -34,6 +34,13 @@ class FluidSystem:
         "type":"Cuboid"
     }
 
+    PHASE_INFORMATION = {
+        "phase_number":3,
+        "mass_density":[998.2, 1010, 700],
+        "viscosity":[3.5, 10, 23],
+        "mass":[0.1, 5, 6]
+    }
+
     HASH_MAP = {}
 
     def __init__ (self,
@@ -116,10 +123,27 @@ class FluidSystem:
                     Euler()
                 if id==2:
                     print("do Multi")
-                    MultiSPH()
+                    MultiSPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02,
+                        phase_info=self.PHASE_INFORMATION
+                    )
                 if id==3:
                     print("do IISPH")
-                    IISPH()
+                    IISPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02 
+                    ).update()
                 if id==4:
                     print("do FLIP")
                     FLIP()
@@ -144,10 +168,18 @@ class FluidSystem:
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02 
-                    )
+                    ).update()
                 if id == 7:
                     print("do LPSPH")
-                    LPSPH()
+                    LPSPH(
+                      particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02   
+                    ).update()
 
     def choose_simulation_type(self):
         """

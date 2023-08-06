@@ -42,8 +42,9 @@ class PCSPH(SPH):
             pressure_force += kernel_grad*pressure_avg
         self.particle.pressure_force = -m.pow(self.PARAMETERS["mass"], 2)*pressure_force
     
-    def calculate_density_error(self, predicted_density:float = None):
-        return predicted_density - self.PARAMETERS["mass_density"]
+    def calculate_density_error(self, predicted_density:float =None):
+        if predicted_density is not None:
+            return predicted_density - self.PARAMETERS["mass_density"]
     
     def find_beta_const(self):
         return m.pow(self.delta_time, 2)*m.pow(self.particle.mass, 2)* \
@@ -75,7 +76,7 @@ class PCSPH(SPH):
     def update(self):
 
         iterations = 0
-        while self.calculate_density_error() > self.OTHER_PARAMS["predictor_threshold"] or \
+        while self.calculate_density_error(self.density_prediction()) > self.OTHER_PARAMS["predictor_threshold"] or \
             iterations < self.OTHER_PARAMS["max_iterations"]:
 
             self.velocity_prediction = self.prediction_update(particle=self.particle)[1]

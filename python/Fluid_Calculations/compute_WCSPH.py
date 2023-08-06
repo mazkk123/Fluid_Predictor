@@ -66,3 +66,6 @@ class WCSPH(SPH):
     def adaptive_time_stepping(self):
         if self.CFL_condition(self.delta_time) and self.viscous_CFL_condition(self.delta_time) and self.force_CFL_condition(self.delta_time):
             pass
+
+    def update(self):
+        return super().update()

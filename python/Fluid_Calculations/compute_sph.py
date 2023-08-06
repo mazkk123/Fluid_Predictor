@@ -144,7 +144,7 @@ class SPH(Particle):
         density = 0 
         for id, nbr_particle in enumerate(self.neighbours_list):
             kernel_value = self.kernel_linear(self.particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*self.particle.mass
+            density += kernel_value*nbr_particle.mass
 
         self.particle.mass_density = self.PARAMETERS["mass_density"] + density
 
