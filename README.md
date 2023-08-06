@@ -4,7 +4,39 @@ and machine learning methodologies, this project aims to
 predict particle positions, velocities and accelerations
 in multiple SPH approximations of a fluid.
 
-## SPH - Smooth Particle Hydrodynamics
+## Weighting Kernels
+
+### KGC - Kernel Gradient Correction
+
+### Poly 6 
+
+### Spiky
+
+### Viscosity
+
+### Cubic Spline
+
+## Forces
+
+### Pressure
+
+### Viscosity
+
+#### Artificial Viscosity
+
+#### Laminar Viscosity
+
+### Thermal Diffusion
+
+### Buoyancy
+
+### Body Forces
+
+## Fluid Models
+Below are the fluid models used within this framework
+to the user's disposal.
+
+### SPH - Smooth Particle Hydrodynamics
 The first implementation type is using the average
 SPH model with different nearest neighbour search algorithms
 to the user's disposal. The algorithm works by using 
@@ -13,7 +45,7 @@ present between different neighbourhood clusters of
 particles approximated using a nearest neighbour search
 algorithms and hash tables.
 
-## Multi SPH - Mixing particles with attributes
+### Multi SPH - Mixing particles with attributes
 A multi SPH approach introduces the presence of different 
 attributes in the traditional SPH approach to fluids. Instead
 of treating fluids of uniform mass, mass density and physical
@@ -22,7 +54,7 @@ into different phases within the same neighbourhood. Further
 computations are applied when particles with different attributes
 coexist in the same neighbourhood cluster
 
-## WCSPH - Weakly Compressible SPH
+### WCSPH - Weakly Compressible SPH
 This method extends the computations undertaken in the traditional
 SPH by guaranteeing better density fluctuation and advanced time
 step computations. By doing so, it ensures that fluids can achieve,
@@ -30,7 +62,7 @@ not a fully incompressible state, but one that is weakly
 compressible and accurately depicts time stepping and density 
 fluctuations for more particles. 
 
-## PCSPH - Predictive Corrective SPH
+### PCSPH - Predictive Corrective SPH
 Pressure instability is commonplace with the traditional SPH 
 approximation of fluids. To achieve further fluid incompressibility,
 velocity and position values are first used to predict pressure 
@@ -39,7 +71,7 @@ threshold, pressure correction values are added to the pressure until
 this condition is invalidated. The benefit of this approximation is to 
 stabilize pressure between discrete time steps within the simulation.
 
-## LPSPH - Local Poisson SPH
+### LPSPH - Local Poisson SPH
 Another implementation that improves pressure instabilities between
 time steps to further achieve incompressibility. In contrast to 
 the PCSPH approximation, this implementation categorizes particles 
@@ -51,7 +83,7 @@ their respective pressure neighbourhoods are undergone. The sum of
 individual pressures is added to the main pressure calculation as
 the compensation step to ensure pressure stability.
 
-## IISPH - Implicit Incompressible SPH
+### IISPH - Implicit Incompressible SPH
 When particles reach solid boundaries or frontiers,
 the normal SPH model assumes uniform velocities and particle
 separation. With this model, drift velocity and velocity advection
