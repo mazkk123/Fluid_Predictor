@@ -3,7 +3,7 @@ import numpy as np
 import random as rd
 import re
 
-from Fluid_Utilities.search_methods import SpatialHashing, CompactHashing, ZSorting, NearestNeighbour
+from Fluid_Utilities.search_methods import NearestNeighbour
 from Fluid_Utilities.time_stepping import ForwardEuler, EulerCromer, LeapFrog, Verlet, IndependentTime, \
                                     RegionalShortTime, RungeKutta
 from Collisions.box_collisions import BoxCollisions, AABB, OrientedBBox
@@ -23,7 +23,8 @@ class SPH(Particle):
         "tension_threshold":7,
         "pressure_const":7,
         "loss_of_speed":0.5,
-        "epsilon":0.1
+        "epsilon":0.1,
+        "neighbour_num":30
     }
 
     TIME_SCHEMES = {
@@ -46,7 +47,7 @@ class SPH(Particle):
 
     def __init__(self,
                  particle: Particle=None,
-                 search_method: str=None,
+                 search_method: str="Spatial Hashing",
                  hash_table: dict=None,
                  hash_value: int=None,
                  delta_time: float=0.02,
@@ -80,9 +81,15 @@ class SPH(Particle):
             find all particles hashed to the same cell in the
             global HASH_MAP param
         """
-        if (len(self.hash_table[self.hash_value]!=0)):
-            for items in self.hash_table[self.hash_value]:
+        if self.search_method != "Neighbour":
+            if (len(self.hash_table[self.hash_value]!=0)):
+                for items in self.hash_table[self.hash_value]:
+                    self.neighbours_list.append(items)
+        else:
+            for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
+                                          neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
                 self.neighbours_list.append(items)
+
         
     def kernel_gradient(self, position: np.array=None, kernel_type:int = 0):
         """
@@ -291,9 +298,9 @@ class SPH(Particle):
                 self.delta_time
             ).exec_time_scheme(self.delta_time)
         if self.TIME_SCHEMES[time_step_type] == 4:
-            IndependentTime()
+            IndependentTime().exec_time_scheme()
         if self.TIME_SCHEMES[time_step_type] == 5:
-            RegionalShortTime()
+            RegionalShortTime().exec_time_scheme()
         if self.TIME_SCHEMES[time_step_type] == 6:
             RungeKutta()
         else:

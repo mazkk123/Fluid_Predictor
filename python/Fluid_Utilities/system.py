@@ -14,7 +14,7 @@ from Fluid_Calculations.compute_LPSPH import LPSPH
 from Fluid_Calculations.compute_IISPH import IISPH
 
 from distributions import Random, Uniform
-from search_methods import *
+from search_methods import CompactHashing, SpatialHashing, ZSorting
 
 from Particles.particles import Particle
 from Particles.error_handling import *
@@ -69,13 +69,23 @@ class FluidSystem:
             updating and initializing particle hash values
             using search method specified
         """
-        init_hash_value = SpatialHashing(self.PARAMETERS["cell_size", self.num_particles]).find_hash_value(particle)
-        if len(self.HASH_MAP[init_hash_value])!=0:
-            self.HASH_MAP[init_hash_value].append(particle)
-            particle.hash_value = init_hash_value
+        neighbor_search = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()]
+
+        if neighbor_search != "Neighbour":
+            
+            if neighbor_search is "Spatial Hashing":
+                init_hash_value = SpatialHashing(self.PARAMETERS["cell_size", self.num_particles]).find_hash_value(particle)
+            elif neighbor_search is "Compact Hashing":
+                init_hash_value = CompactHashing(self.PARAMETERS["cell_size", self.num_particles]).find_hash_value(particle)
+
+            if len(self.HASH_MAP[init_hash_value])!=0:
+                self.HASH_MAP[init_hash_value].append(particle)
+                particle.hash_value = init_hash_value
+            else:
+                self.HASH_MAP[init_hash_value] = [particle]
+                particle.hash_value = init_hash_value
         else:
-            self.HASH_MAP[init_hash_value] = [particle]
-            particle.hash_value = init_hash_value
+            return
 
     def init_particle_attrs(self):
         """
@@ -132,7 +142,7 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02,
                         phase_info=self.PHASE_INFORMATION
-                    )
+                    ).update()
                 if id==3:
                     print("do IISPH")
                     IISPH(

@@ -44,6 +44,7 @@ class Particle:
             self.phase_viscosities= [0 for i in range(phase_number)]
             self.drift_velocities = [np.array([0, 0, 0]) for i in range(phase_number)]
             self.interp_density = 0
+            self.aggregate_phase_viscosity = 0
 
         # particle force attributes
 

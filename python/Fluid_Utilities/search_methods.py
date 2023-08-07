@@ -52,7 +52,6 @@ class NearestNeighbour:
         
         self.search_radius = search_radius
         self.neighbour_size = neighbour_size
-        self.neighbours = []
 
     def find_neighbours(self, particle: Particle=None,
                         particle_list: list=None):
@@ -60,7 +59,7 @@ class NearestNeighbour:
             find neighbouring particles given search radius
             and number of particles allowed in search radius
         """
-        self.neighbours = []
+        neighbours = []
 
         if Particle is not None:
             if len(particle_list)!=0:
@@ -68,8 +67,8 @@ class NearestNeighbour:
                     if p!=particle and (p.initial_pos <= particle.initial_pos + self.search_radius
                                         and p.initial_pos > particle.initial_pos - self.search_radius):
                         if (len(self.neighbours) < self.neighbour_size):
-                            self.neighbours.append(p)
-        return self.neighbours
+                            neighbours.append(p)
+        return neighbours
 
 
 class CompactHashing(SpatialHashing):
