@@ -18,14 +18,12 @@ class LPSPH(SPH):
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
-                 params:dict = None,
                  delta_time:float = None):
         
         super().__init__(particle=p,
                         search_method=search_method,
                         hash_table=hash_table,
                         hash_value=hash_value,
-                        params=params,
                         delta_time=delta_time)
 
         if ref_radius is not None:

@@ -21,7 +21,6 @@ class MultiSPH(SPH):
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
-                 params:dict = None,
                  delta_time:float = None,
                  phase_info:dict = None):
         
@@ -29,7 +28,6 @@ class MultiSPH(SPH):
                          search_method=search_method,
                          hash_table=hash_table,
                          hash_value=hash_value,
-                         params=params,
                          delta_time=delta_time)
 
         self.phase_info = phase_info

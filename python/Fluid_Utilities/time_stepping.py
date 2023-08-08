@@ -27,10 +27,10 @@ class EulerCromer:
         
         self.particle = particle
 
-        self.velocity = np.array([0, 0 ,0])
-        self.position = np.array([0, 0 ,0])
+        self.velocity = np.array([0, 0 ,0], dtype="float64")
+        self.position = np.array([0, 0 ,0], dtype="float64")
 
-        self.exec_time_scheme()
+        self.exec_time_scheme(delta_time)
         self.exec_pseudo_time_scheme(delta_time)
 
     def exec_time_scheme(self, delta_time):

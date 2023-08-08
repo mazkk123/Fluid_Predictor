@@ -4,6 +4,8 @@ import random as rd
 import re
 import sys
 
+sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Calculations\\")
+
 from Fluid_Calculations.compute_Euler import Euler
 from Fluid_Calculations.compute_SPH import SPH
 from Fluid_Calculations.compute_multiSPH import MultiSPH
@@ -13,6 +15,8 @@ from Fluid_Calculations.compute_FLIP import FLIP
 from Fluid_Calculations.compute_LPSPH import LPSPH
 from Fluid_Calculations.compute_IISPH import IISPH
 
+sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
+
 from distributions import Random, Uniform
 from search_methods import CompactHashing, SpatialHashing, ZSorting
 
@@ -21,17 +25,19 @@ from Particles.error_handling import *
 
 class FluidSystem:
     
-    SIMULATION_TYPES = ["SPH", "Euler", "MultiSPH", "IISPH", 
-                        "FLIP", "WCSPH", "PCSPH", "LPSPH"]
-    NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing",
-                          "Z-Sorting"]
+    SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", "LPSPH"]
+    NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing", "Z-Sorting"]
     ORIENTATION_TYPE = ["Uniform", "Random"]
     
     TANK_ATTRS = {
         "dimensions":{
             "location":np.array([0, 0, 0]), "size":np.array([5, 5, 5])
             },
-        "type":"Cuboid"
+        "type":"Cuboid",
+    }
+
+    ATTRS = {
+        "cell_size":0.15
     }
 
     PHASE_INFORMATION = {
@@ -47,20 +53,16 @@ class FluidSystem:
                   type:str = "SPH",
                   search_method:str = "Spatial Hashing",
                   num_particles:int = 1000,
-                  solver_type:str = "p",
                   orientation_type:str = "Uniform"):
-        
-        super(FluidSystem, self).__init__()
 
         self.simulation_type = type
-        self.solver_type = solver_type
         self.num_particles = num_particles
         self.orientation_type = orientation_type
 
         self.particle_list = []
         self.search_method = search_method
   
-        self.do_neighbouring = False
+        self.num_frames = 100
 
         self.init_particle_attrs()
 
@@ -73,15 +75,15 @@ class FluidSystem:
 
         if neighbor_search != "Neighbour":
             
-            if neighbor_search is "Spatial Hashing":
-                init_hash_value = SpatialHashing(self.PARAMETERS["cell_size", self.num_particles]).find_hash_value(particle)
-            elif neighbor_search is "Compact Hashing":
-                init_hash_value = CompactHashing(self.PARAMETERS["cell_size", self.num_particles]).find_hash_value(particle)
+            if neighbor_search=="Spatial Hashing":
+                init_hash_value = SpatialHashing(self.ATTRS["cell_size"], self.num_particles).find_hash_value(particle)
+            elif neighbor_search=="Compact Hashing":
+                init_hash_value = CompactHashing(self.ATTRS["cell_size"], self.num_particles).find_hash_value(particle)
 
-            if len(self.HASH_MAP[init_hash_value])!=0:
+            try:
                 self.HASH_MAP[init_hash_value].append(particle)
                 particle.hash_value = init_hash_value
-            else:
+            except KeyError:
                 self.HASH_MAP[init_hash_value] = [particle]
                 particle.hash_value = init_hash_value
         else:
@@ -112,13 +114,18 @@ class FluidSystem:
         """
             update calls per particle basis
         """
+
         for p in self.particle_list:
             if self.choose_simulation_type() is not None:
                 
                 self.update_hash(p)
+
+                """ for key, item in self.HASH_MAP.items():
+                    print(key, ":", item) """
+
                 id = self.choose_simulation_type()
                 if id==0:
-                    print("do SPH")
+                    #print("do SPH")
                     SPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -129,9 +136,6 @@ class FluidSystem:
                         delta_time=0.02
                     ).update()
                 if id==1:
-                    print("do Euler")
-                    Euler()
-                if id==2:
                     print("do Multi")
                     MultiSPH(
                         particle = p,
@@ -143,7 +147,7 @@ class FluidSystem:
                         delta_time=0.02,
                         phase_info=self.PHASE_INFORMATION
                     ).update()
-                if id==3:
+                if id==2:
                     print("do IISPH")
                     IISPH(
                         particle = p,
@@ -154,10 +158,7 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02 
                     ).update()
-                if id==4:
-                    print("do FLIP")
-                    FLIP()
-                if id==5:
+                if id==3:
                     print("do WCSPH")
                     WCSPH(
                         particle = p,
@@ -168,7 +169,7 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02 
                     ).update()
-                if id==6:
+                if id==4:
                     print("do PCSPH")
                     PCSPH(
                         particle = p,
@@ -179,7 +180,7 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02 
                     ).update()
-                if id == 7:
+                if id == 5:
                     print("do LPSPH")
                     LPSPH(
                       particle = p,
@@ -198,14 +199,9 @@ class FluidSystem:
         """
         for id, sim_type in enumerate(self.SIMULATION_TYPES):
             if self.simulation_type == sim_type:
-                if self.solver_type == "p":
-                    self.do_neighbouring = True 
-                else:
-                    self.do_neighbouring = False
                 return id           
             else:
                 self.sim_active[id] = False
-                return None
 
     def choose_neighbour_search(self):
         """
@@ -213,12 +209,9 @@ class FluidSystem:
             searching, then calculate the relevant neighbour
             search algorithm
         """
-        if self.do_neighbouring:
-            for id, neighbr_search in enumerate(self.NEIGHBOUR_SEARCHES):
-                if self.search_method == neighbr_search:
-                    return id
-                else:
-                    return None
+        for id, neighbr_search in enumerate(self.NEIGHBOUR_SEARCHES):
+            if self.search_method == neighbr_search:
+                return id
 
     def choose_orientation(self):
         """
@@ -229,6 +222,3 @@ class FluidSystem:
         for id, orientation in enumerate(self.ORIENTATION_TYPE):
             if self.orientation_type == orientation:
                 return id
-            else:
-                return None
-

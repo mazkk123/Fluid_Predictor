@@ -17,14 +17,12 @@ class PCSPH(SPH):
                  particle: Particle=None,
                  search_method: str=None,
                  hash_table: dict=None,
-                 hash_value: int=None,
-                 params: dict=None,):
+                 hash_value: int=None):
         
         super().__init__(particle=particle,
                          search_method=search_method,
                          hash_table=hash_table,
-                         hash_value=hash_value,
-                         params=params)
+                         hash_value=hash_value)
 
         self.particle = particle
         self.particle.pressure_force = np.array([0, 0, 0])

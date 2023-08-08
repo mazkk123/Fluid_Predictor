@@ -38,10 +38,17 @@ class SpatialHashing:
     def find_hash_value(self, particle: Particle):
         
         hash_value = (
-            (self.hash_function[0] * self.PRIME_NUMBERS[0]) ^ 
-            (self.hash_function[1] * self.PRIME_NUMBERS[1]) ^
-            (self.hash_function[2] * self.PRIME_NUMBERS[2])
+            (self.hash_function(particle.initial_pos[0],
+                                particle.initial_pos[1],
+                                particle.initial_pos[2])[0] * self.PRIME_NUMBERS[0]) ^ 
+            (self.hash_function(particle.initial_pos[0],
+                                particle.initial_pos[1],
+                                particle.initial_pos[2])[1] * self.PRIME_NUMBERS[1]) ^
+            (self.hash_function(particle.initial_pos[0],
+                                particle.initial_pos[1],
+                                particle.initial_pos[2])[2] * self.PRIME_NUMBERS[2])
             ) % self.find_next_prime(2*self.num_particles)
+        return hash_value
         
 
 class NearestNeighbour:

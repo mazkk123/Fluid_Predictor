@@ -22,7 +22,6 @@ class WCSPH(SPH):
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
-                 params:dict = None,
                  delta_time:float = None
                  ):
         
@@ -30,7 +29,7 @@ class WCSPH(SPH):
                         search_method=search_method,
                         hash_table=hash_table,
                         hash_value=hash_value,
-                        params=params)
+                        delta_time=delta_time)
 
         self.compute_K()
 

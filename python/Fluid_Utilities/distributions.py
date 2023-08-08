@@ -18,7 +18,7 @@ class Uniform:
             a list of np arrays holding the particle positions in a list
         """        
 
-        ppr = m.pow(self.num_particles, 1/3)
+        ppr = int(m.pow(self.num_particles, 1/3))
         positions = []
 
         for i in range(ppr):

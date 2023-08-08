@@ -2,6 +2,9 @@ import math as m
 import numpy as np
 import random as rd
 import re
+import sys
+
+sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Collisions\\")
 
 from Particles.particles import Particle
 from collisions import Collisions

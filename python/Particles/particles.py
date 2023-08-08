@@ -7,10 +7,10 @@ from typing import Union, Optional
 class Particle:
 
     def __init__(self,
-                 init_pos : Union(float, float, float) | np.array=np.array([0, 0, 0]),
-                 colour : Union(int, int, int, int) | np.array=np.array([0, 0, 0]),
-                 velocity : Union(float, float, float) | np.array=np.array([0, 0, 0]),
-                 acceleration: Union(float, float, float)| np.array=np.array([0, 0, 0]),
+                 init_pos : np.array=np.array([0, 0, 0], dtype="float64"),
+                 colour : np.array=np.array([0, 0, 0], dtype="float64"),
+                 velocity : np.array=np.array([0, 0, 0], dtype="float64"),
+                 acceleration: np.array=np.array([0, 0, 0], dtype="float64"),
                  mass: float=0.1, shape : str="circle", size : int=2,
                  phase_number: int=3) -> None:
         """
@@ -54,14 +54,22 @@ class Particle:
         self.prev_pressure = 0
         self.iter_pressure = 0
 
-        self.viscosity = np.array([0, 0, 0])
-        self.pressure_force = np.array([0, 0, 0])
-        self.gravity = np.array([0, 0, 0])
-        self.buoyancy = np.array([0, 0, 0])
-        self.surface_tension = np.array([0, 0 ,0])
-        self.displacement = np.array([0, 0, 0])
-        self.displacement_iter = np.array([0, 0, 0])
-        self.acceleration_adv = np.array([0, 0, 0])
+        self.viscosity = np.array([0, 0, 0], dtype="float64")
+        self.laminar_viscosity = np.array([0, 0, 0], dtype="float64")
+        self.artificial_viscosity = np.array([0, 0, 0], dtype="float64")
+        self.pressure_force = np.array([0, 0, 0], dtype="float64")
+        self.buoyancy = np.array([0, 0, 0], dtype="float64")
+        self.surface_tension = np.array([0, 0 ,0], dtype="float64")
+        self.displacement = np.array([0, 0, 0], dtype="float64")
+        self.displacement_iter = np.array([0, 0, 0], dtype="float64")
+        self.acceleration_adv = np.array([0, 0, 0], dtype="float64")
+        self.gravity = np.array([0, 0, 0], dtype="float64")
+
+        self.body_force = np.array([0, 0 ,0])
+        self.temperature = 0
+        self.thermal_conduc = 0
+        self.specific_heat = 0
+        self.thermal_diffusion = np.array([0, 0, 0])
 
 # ------------------------------------ PROPERTY GETTERS --------------------------------------
     
