@@ -35,20 +35,32 @@ class DFSPH(SPH):
         self.density_error = np.array([0, 0, 0], dtype="float64")
 
     def update(self):
+        
+        self.update_divergence()
+        self.correct_density_error()
+        self.correct_divergence_error()
+
         return super().update()
     
     def correct_density_error(self):
-        pass
+        iter_step = 0
+        if self.mass_density - self.PARAMETERS["mass_density"] > self.OTHER_PARAMS["boundary_threshold"] or \
+            iter_step < 1:
 
+            self.update_stiffness_k()
+            self.update_density_velocity()
+
+            iter_step += 1
+    
     def correct_divergence_error(self):
         iter_step = 0
         while (self.divergence > self.OTHER_PARAMS["boundary_threshold"]) or \
             iter_step < 1:
 
-            self.update_divergence()
             self.update_stiffness_k_v()
             self.update_divergence_velocity()
 
+            iter_step +=1 
     def update_non_pressure_f(self):
         
         self.update_viscosity()
