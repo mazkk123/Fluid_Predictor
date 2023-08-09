@@ -9,7 +9,13 @@ from Particles.particles import Particle
 class DFSPH(SPH):
 
     OTHER_PARAMS = {
-        "boundary_threshold":6
+        "boundary_threshold":6,
+        "max_iter":1,
+        "stiffness_constant":1000,
+        "alpha":0.4,
+        "beta_const":0.25,
+        "lambda_const":0.005,
+        "maximum_force":1000
     }
 
     def __init__(self,
@@ -36,11 +42,18 @@ class DFSPH(SPH):
 
     def update(self):
         
+        self.update_non_pressure_f()
+        self.adapt_to_CFL()
+
         self.update_divergence()
         self.correct_density_error()
         self.correct_divergence_error()
 
-        return super().update()
+        self.acceleration = self.non_pressure_f + self.particle.pressure_force
+
+        self.XSPH_vel_correction()
+        self.choose_collision_types()
+        self.choose_time_stepping()
     
     def correct_density_error(self):
         iter_step = 0
@@ -61,6 +74,7 @@ class DFSPH(SPH):
             self.update_divergence_velocity()
 
             iter_step +=1 
+
     def update_non_pressure_f(self):
         
         self.update_viscosity()
@@ -92,16 +106,6 @@ class DFSPH(SPH):
         self.particle.stiffness_k = (
             1/ m.pow(self.delta_time, 2) *
             self.density_error * self.particle.divergence_factor
-        )
-    
-    def update_divergence_force(self, id):
-        mass_factor = -self.particle.mass / self.particle.mass_density
-        self.divergence_force[id] = (
-            mass_factor * self.particle.stiffness_k_v * self.neighbours_list[id].mass *
-            self.cubic_spline_kernel(
-            kernel_type=1,
-            nbr_position=self.neighbours_list[id].initial_pos
-            )
         )
 
     def update_divergence(self):
@@ -198,7 +202,21 @@ class DFSPH(SPH):
                  )
             )
         self.particle.pressure_force *= -self.particle.mass
-        
+    
+    def CFL_condition(self):
+        return self.OTHER_PARAMS["alpha"] * \
+                (self.PARAMETERS["cell_size"] / np.sqrt(self.OTHER_PARAMS["stiffness_constant"]))
+    
+    def CFL_force_condition(self):
+        return self.OTHER_PARAMS["beta_const"] * \
+                np.sqrt((self.PARAMETERS["cell_size"]/ self.OTHER_PARAMS["maximum_force"]))
+    
+    def CFL_viscosity_condition(self):
+        return self.OTHER_PARAMS["lambda_const"] / np.linalg.norm(self.velocity_divergence)
+    
     def adapt_to_CFL(self):
-        pass
+
+        self.CFL_conditions = [self.CFL_condition(), self.CFL_force_condition(),
+                               self.CFL_viscosity_condition()]
+        self.delta_time = min(self.CFL_conditions)
 
