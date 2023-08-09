@@ -38,11 +38,10 @@ class Particle:
             self.phase_number = phase_number
             self.mass_fractions = [0.1 for i in range(phase_number)]
             self.phase_pressures = [0 for i in range(phase_number)]
-            self.phase_velocities = [np.array([0, 0, 0]) for i in range(phase_number)]
             self.phase_stress_tensor = [0 for i in range(phase_number)]
             self.phase_volume_fraction = [0 for i in range(phase_number)]
             self.phase_viscosities= [0 for i in range(phase_number)]
-            self.drift_velocities = [np.array([0, 0, 0]) for i in range(phase_number)]
+            self.drift_velocities = [np.array([0, 0, 0], dtype="float64") for i in range(phase_number)]
             self.interp_density = 0
             self.aggregate_phase_viscosity = 0
 
@@ -64,12 +63,15 @@ class Particle:
         self.displacement_iter = np.array([0, 0, 0], dtype="float64")
         self.acceleration_adv = np.array([0, 0, 0], dtype="float64")
         self.gravity = np.array([0, 0, 0], dtype="float64")
+        self.divergence_factor = np.array([0, 0, 0], dtype="float64")
+        self.stiffness_k = np.array([0, 0, 0], dtype="float64")
+        self.stiffness_k_v = np.array([0, 0, 0], dtype="float64")
 
-        self.body_force = np.array([0, 0 ,0])
+        self.body_force = np.array([0, 0 ,0], dtype="float64")
         self.temperature = 0
         self.thermal_conduc = 0
         self.specific_heat = 0
-        self.thermal_diffusion = np.array([0, 0, 0])
+        self.thermal_diffusion = np.array([0, 0, 0], dtype="float64")
 
 # ------------------------------------ PROPERTY GETTERS --------------------------------------
     

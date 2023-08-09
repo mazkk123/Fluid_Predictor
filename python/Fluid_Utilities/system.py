@@ -6,14 +6,15 @@ import sys
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Calculations\\")
 
-from Fluid_Calculations.compute_Euler import Euler
 from Fluid_Calculations.compute_SPH import SPH
 from Fluid_Calculations.compute_multiSPH import MultiSPH
 from Fluid_Calculations.compute_PCSPH import PCSPH
 from Fluid_Calculations.compute_WCSPH import WCSPH
-from Fluid_Calculations.compute_FLIP import FLIP
 from Fluid_Calculations.compute_LPSPH import LPSPH
 from Fluid_Calculations.compute_IISPH import IISPH
+from Fluid_Calculations.compute_DFSPH import DFSPH
+from Fluid_Calculations.compute_FSISPH import FSISPH
+
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
@@ -25,7 +26,7 @@ from Particles.error_handling import *
 
 class FluidSystem:
     
-    SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", "LPSPH"]
+    SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", "LPSPH", "DFSPH", "FSISPH"]
     NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing", "Z-Sorting"]
     ORIENTATION_TYPE = ["Uniform", "Random"]
     
@@ -126,7 +127,7 @@ class FluidSystem:
 
                 id = self.choose_simulation_type()
                 if id==0:
-                    #print("do SPH")
+                    """ print("do SPH") """
                     SPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -134,16 +135,17 @@ class FluidSystem:
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
+                        temperature= False,
                         delta_time=0.02
                     ).update()
                 if id==1:
-                    print("do Multi")
+                    """ print("do Multi") """
                     MultiSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
-                        time_stepping="Euler Cromer",
+                        time_stepping = "Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02,
                         phase_info=self.PHASE_INFORMATION
@@ -171,7 +173,7 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id==4:
-                    print("do PCSPH")
+                    """ print("do PCSPH") """
                     PCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -192,6 +194,28 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02   
                     ).update()
+                if id == 5:
+                    print("do DFSPH")
+                    DFSPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02   
+                    ).update()
+                if id == 5:
+                    print("do FSISPH")
+                    FSISPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02   
+                    ).update()
 
     def choose_simulation_type(self):
         """
@@ -201,8 +225,6 @@ class FluidSystem:
         for id, sim_type in enumerate(self.SIMULATION_TYPES):
             if self.simulation_type == sim_type:
                 return id           
-            else:
-                self.sim_active[id] = False
 
     def choose_neighbour_search(self):
         """

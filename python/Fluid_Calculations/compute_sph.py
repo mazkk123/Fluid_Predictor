@@ -2,6 +2,9 @@ import math as m
 import numpy as np
 import random as rd
 import re
+import sys
+
+sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
 from Fluid_Utilities.search_methods import NearestNeighbour
 from Fluid_Utilities.time_stepping import ForwardEuler, EulerCromer, LeapFrog, Verlet, IndependentTime, \
@@ -263,7 +266,7 @@ class SPH(Particle):
     def update_gravity(self):
         """
         """
-        self.particle.gravity = self.gravity_const
+        self.particle.gravity = self.gravity_const*self.particle.mass
 
     def update_color_gradient(self):
         """
@@ -323,9 +326,13 @@ class SPH(Particle):
         new_vel = np.array([0, 0, 0], dtype="float64")
         for id, nbr_particle in enumerate(self.neighbours_list):
             average_density = self.particle.mass_density + nbr_particle.mass_density
-            new_vel += (
-                2*nbr_particle.mass/(average_density) * self.kernel_linear(self.particle.initial_pos - nbr_particle.initial_pos)
-            )
+            try:
+                new_vel += (
+                    2*nbr_particle.mass/(average_density) * self.kernel_linear(self.particle.initial_pos - nbr_particle.initial_pos, 0)
+                )
+            except ZeroDivisionError:
+                new_vel = np.array([0, 0, 0], dtype="float64")
+
         self.particle.velocity += self.PARAMETERS["epsilon"] * new_vel
 
     def update_all_forces(self):
@@ -367,6 +374,8 @@ class SPH(Particle):
         print("Buoyancy:", self.particle.buoyancy)
         print("Gravity:", self.particle.gravity)
         print("surface tension:", self.particle.surface_tension)
+        print("Body Force:", self.particle.body_force)
+        print("Thermal:", self.particle.thermal_diffusion)
         print("viscosity:", self.particle.viscosity)
         print("\n\n")
 
@@ -384,6 +393,7 @@ class SPH(Particle):
                 self.particle,
                 self.delta_time
             ).exec_time_scheme(self.delta_time)
+            print("doing time step")
         if self.TIME_SCHEMES[time_step_type] == 2:
             LeapFrog(
                 self.particle,
@@ -427,17 +437,17 @@ class SPH(Particle):
                 return EulerCromer(
                     particle,
                     self.delta_time
-                ).get_time_scheme_values()
+                ).get_time_scheme_values(self.delta_time)
             if self.TIME_SCHEMES[time_step_type] == 2:
                 return LeapFrog(
                     particle,
                     self.delta_time
-                ).get_time_scheme_values()
+                ).get_time_scheme_values(self.delta_time)
             if self.TIME_SCHEMES[time_step_type] == 3:
                 return Verlet(
                     particle,
                     self.delta_time
-                ).get_time_scheme_values()
+                ).get_time_scheme_values(self.delta_time)
             if self.TIME_SCHEMES[time_step_type] == 4:
                 IndependentTime()
             if self.TIME_SCHEMES[time_step_type] == 5:
@@ -496,10 +506,10 @@ class SPH(Particle):
 
     def update_q(self, position:np.array,
                  nbr_position:np.array):
-        return np.linalg.norm(position - nbr_position) / self.PARAMETERS["cell_spacing"]
+        return np.linalg.norm(position - nbr_position) / self.PARAMETERS["cell_size"]
 
     def update_alpha_factor(self):
-        return 1/(np.power(np.pi, 2/3) * m.pow(self.PARAMETERS["cell_spacing"], 3))
+        return 1/(np.power(np.pi, 2/3) * m.pow(self.PARAMETERS["cell_size"], 3))
 
     def kernel_gradient_correction(self):
         pass
@@ -523,7 +533,7 @@ class SPH(Particle):
         self.particle.thermal_diffusion *= const_term
 
     def update_nubla(self):
-        return np.power(0.1 * self.PARAMETERS["cell_spacing"])
+        return 0.1 * self.PARAMETERS["cell_size"]
     
     def update_laminar_viscosity(self):
         for nbr_particle in self.neighbours_list:
@@ -556,7 +566,7 @@ class SPH(Particle):
                 return 0
         if kernel_type==1:
             return self.update_alpha_factor() * (-3 * (1- np.power(self.update_q(self.particle.initial_pos, nbr_position), 2)) *
-                    ((2*self.update_q(self.particle.initial_pos, nbr_position) + 1 )/ self.PARAMETERS["cell_spacing"])) * \
+                    ((2*self.update_q(self.particle.initial_pos, nbr_position) + 1 )/ self.PARAMETERS["cell_size"])) * \
                     self.particle.initial_pos - nbr_position
 
     def update_body_force(self):
