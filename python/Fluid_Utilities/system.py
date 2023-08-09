@@ -31,7 +31,8 @@ class FluidSystem:
     
     TANK_ATTRS = {
         "dimensions":{
-            "location":np.array([0, 0, 0]), "size":np.array([5, 5, 5])
+            "location":np.array([0, 0, 0], dtype="float64"), 
+            "size":np.array([5, 5, 5], dtype="float64")
             },
         "type":"Cuboid",
     }

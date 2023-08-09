@@ -14,13 +14,13 @@ class SPH(Particle):
 
     PARAMETERS = {
         "grid_separation":0.1,
-        "cell_size":0.15,
+        "cell_size":0.3,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
         "buoyancy":0.0,
-        "tension_coefficient":0.0725,
-        "tension_threshold":7,
+        "tension_coefficient":0.0728,
+        "tension_threshold":6,
         "pressure_const":7,
         "loss_of_speed":0.5,
         "epsilon":0.1,
@@ -82,6 +82,7 @@ class SPH(Particle):
         self.neighbours_list = []
         self.update_particle_neighbours()
         self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
+        self.num_test_steps = 50
 
     # ------------------------------------------------------------------ TRADITIONAL SPH ------------------------------------------------------------------------
 
@@ -102,35 +103,87 @@ class SPH(Particle):
         """
         """
         if kernel_type==0:
-            kernel_value = np.power(position * (m.pow(self.PARAMETERS["cell_size"], 2) - np.power(np.linalg.norm(position),2)), 2)
-            kernel_const = -945/(32 * np.pi * m.pow(self.PARAMETERS["cell_size"], 9))
-            return kernel_value*kernel_const
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_value = np.array([0, 0, 0], dtype="float64")
+                else:
+                    kernel_value = np.power(position * (m.pow(self.PARAMETERS["cell_size"], 2) - np.power(np.linalg.norm(position),2)), 2)
+                kernel_const = -945.0/(32 * np.pi * m.pow(self.PARAMETERS["cell_size"], 9))
+                return kernel_value*kernel_const
+            else:
+                return np.array([0, 0, 0], dtype="float64")
         if kernel_type==1:
-            kernel_value = position/np.linalg.norm(position)*np.power((
-                self.PARAMETERS["cell_size"] - np.linalg.norm(position)
-                ), 2)
-            kernel_const = -45/(np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
-            return kernel_value*kernel_const
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_value =  np.array([0, 0, 0], dtype="float64")
+                else:
+                    kernel_value = position/np.linalg.norm(position)*(np.power(
+                                    self.PARAMETERS["cell_size"] - np.linalg.norm(position), 2))           
+                kernel_const = -45.0/(np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
+                return kernel_value*kernel_const
+            else:
+                return np.array([0, 0, 0], dtype="float64")
         if kernel_type==2:
-            pass
-
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_value =  np.array([0, 0, 0], dtype="float64")
+                else:
+                    kernel_value = (
+                        position * (
+                        (-3 * np.linalg.norm(position) / 2 * m.pow(self.PARAMETERS["cell_size"], 3)) + 
+                        (2 / m.pow(self.PARAMETERS["cell_size"], 2)) - 
+                        (self.PARAMETERS["cell_size"] / 2 * m.pow(np.linalg.norm(position), 3))
+                        )
+                    )           
+                kernel_const = 15.0/(2*np.pi*m.pow(self.PARAMETERS["cell_size"], 3))
+                return kernel_value*kernel_const
+            else:
+                return np.array([0, 0, 0], dtype="float64")
+            
     def kernel_laplacian(self, position: np.array=None, kernel_type:int = 0):
         """
         """
         if kernel_type==0:
-            kernel_val =( (m.pow(self.PARAMETERS["cell_size"], 2) - np.linalg.norm(position)) *
-                          (3 * m.pow(self.PARAMETERS["cell_size"], 2) - 7*np.power(np.linalg.norm(position), 2))
-                         )
-            kernel_const = -945/(32 * np.pi * m.pow(self.PARAMETERS["cell_size"], 9))
-            return kernel_val*kernel_const
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_val = 0
+                else:
+                    kernel_val =( (m.pow(self.PARAMETERS["cell_size"], 2) - np.linalg.norm(position)) *
+                                (3 * m.pow(self.PARAMETERS["cell_size"], 2) - 7*np.power(np.linalg.norm(position), 2))
+                                )
+                kernel_const = -945.0/(32 * np.pi * m.pow(self.PARAMETERS["cell_size"], 9))
+                return kernel_val*kernel_const
+            else:
+                return 0
         if kernel_type==1:
-            kernel_val = (self.PARAMETERS["cell_size"] - np.linalg.norm(position)) * (
-                self.PARAMETERS["cell_size"] - 2*np.linalg.norm(position)
-            )
-            kernel_const = -90/(np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
-            return kernel_val*kernel_const
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_val = 0
+                else:
+                    kernel_val = (self.PARAMETERS["cell_size"] - np.linalg.norm(position)) * \
+                        (self.PARAMETERS["cell_size"] - 2*np.linalg.norm(position))
+                kernel_const = -90 / (np.pi * m.pow(self.PARAMETERS["cell_size"], 6))
+                return kernel_val*kernel_const
+            else:
+                return 0
         if kernel_type==2:
-            pass
+            if np.linalg.norm(position) <= self.PARAMETERS["cell_size"] and \
+                np.linalg.norm(position) >= 0:
+                if np.linalg.norm(position) == 0:
+                    kernel_val = 0
+                else:
+                    kernel_val = self.PARAMETERS["cell_size"] - np.linalg.norm(position)
+
+                kernel_const = 45.0/(np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
+
+                return kernel_val*kernel_const
+            else:
+                return 0
 
     def kernel_linear(self, position: np.array=None, kernel_type:int = 0):
         """
@@ -150,7 +203,13 @@ class SPH(Particle):
             else:
                 return 0
         if kernel_type==2:
-            pass
+            kernel_val = (m.pow(self.PARAMETERS["cell_size"], 2) - m.pow(np.linalg.norm(position), 2)) * \
+                        (3 * m.pow(self.PARAMETERS["cell_size"], 2) - 7 * m.pow(np.linalg.norm(position), 2))
+            kernel_const = -945/(32 * np.pi*m.pow(self.PARAMETERS["cell_size"], 9))
+            if np.linalg.norm(position) >= 0 and np.linalg.norm(position) <= self.PARAMETERS["cell_size"]:
+                return kernel_val*kernel_const
+            else:
+                return 0
 
     def update_mass_density(self):
         """
@@ -189,21 +248,22 @@ class SPH(Particle):
     def update_viscosity(self):
         """
         """
-        viscosity = np.array([0, 0, 0])
+        viscosity = np.array([0, 0, 0], dtype="float64")
         for id, nbr_particle in enumerate(self.neighbours_list):
             vel_dif = nbr_particle.velocity - self.particle.velocity
-            kernel_laplacian = (
-                self.particle.initial_pos - nbr_particle.initial_pos
-            )
-            mass_pressure = self.particle.mass/nbr_particle.mass_density
+            kernel_laplacian = self.kernel_laplacian(self.particle.initial_pos - nbr_particle.initial_pos, 2)
+            try:
+                mass_pressure = self.particle.mass/nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_pressure = 0
             viscosity += vel_dif*mass_pressure*kernel_laplacian
-        
-        self.viscosity = viscosity*self.PARAMETERS["viscosity"]
+
+        self.particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
 
     def update_gravity(self):
         """
         """
-        self.particle.gravity = self.particle.mass_density * self.gravity_const
+        self.particle.gravity = self.gravity_const
 
     def update_color_gradient(self):
         """
@@ -230,11 +290,11 @@ class SPH(Particle):
     def update_surface_curvature(self):
         """        
         """
-        surface_curvature = np.array([0, 0, 0], dtype="float64")
+        surface_curvature = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
-            pos_difference = self.particle.initial_pos - nbr_particle.initial_pos
             surface_curvature += (
-                self.particle.mass * 1/self.particle.mass_density * self.kernel_laplacian(pos_difference, 0)
+                self.particle.mass * 1/self.particle.mass_density * self.kernel_laplacian(
+                self.particle.initial_pos - nbr_particle.initial_pos, 0)
             )
         return surface_curvature
 
@@ -244,10 +304,11 @@ class SPH(Particle):
         normal_field = self.update_normal_field()
         surface_curvature = self.update_surface_curvature()
         normal_field_magnitude = np.linalg.norm(normal_field)
-
-        self.particle.surface_tension = (
-            self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
-        )
+        
+        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
+            self.particle.surface_tension = (
+                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
+            )
 
     def update_buoyancy(self):
         """
@@ -275,7 +336,8 @@ class SPH(Particle):
         self.update_pressure_force()
         self.update_gravity()
         self.update_buoyancy()
-        self.update_surface_tension()
+        self.update_surface_tension() 
+        self.update_viscosity() 
 
         if self.temperature is True:
             self.update_EOS_pressure()
@@ -289,17 +351,25 @@ class SPH(Particle):
                               self.particle.body_force + self.particle.laminar_viscosity + \
                               self.particle.thermal_diffusion
         
-        print("Mass Density:", self.particle.mass_density)
-        print("Pressure:", self.particle.mass_density)
-        print("Gravity:", self.particle.mass_density)
-        print("surface tension:", self.particle.surface_tension)
-        print("viscosity:", self.particle.viscosity)
+        #self.debugging_forces()
 
         self.all_forces = self.particle.pressure_force + \
                           self.gravity_const + self.buoyancy + \
                           self.particle.surface_tension + \
                           self.particle.viscosity
-        
+    
+    def debugging_forces(self):
+
+        print("Mass: ", self.particle.mass)
+        print("Mass Density:", self.particle.mass_density)
+        print("Pressure:", self.particle.pressure)
+        print("Pressure Force:", self.particle.pressure_force)
+        print("Buoyancy:", self.particle.buoyancy)
+        print("Gravity:", self.particle.gravity)
+        print("surface tension:", self.particle.surface_tension)
+        print("viscosity:", self.particle.viscosity)
+        print("\n\n")
+
     def choose_time_stepping(self, time_step_type:str = "Euler Cromer"):
         """
         
@@ -381,9 +451,7 @@ class SPH(Particle):
                 ).get_time_scheme_values()
 
     def choose_collision_types(self, collision_type:str = "Cuboid",
-                               secondary_type:str = "Normal",
-                               particle:Particle = None):
-        if particle is not None:
+                               secondary_type:str = "Normal"):
             if isinstance(self.COLLISION_TYPES[collision_type], dict):
                 if self.COLLISION_TYPES[collision_type][secondary_type] == 0:
                     OrientedBBox()
@@ -393,7 +461,7 @@ class SPH(Particle):
                     BoxCollisions(
                         particle=self.particle,
                         tank_size=self.tank_attrs["dimensions"]["size"],
-                        tank_location=self.tank_attrs["diemensions"]["location"],
+                        tank_location=self.tank_attrs["dimensions"]["location"],
                         speed_loss=self.PARAMETERS["loss_of_speed"]
                     ).collision_resolution()
             else:
@@ -406,7 +474,12 @@ class SPH(Particle):
                 if self.TIME_SCHEMES[collision_type] == 4:
                     pass
                 else:
-                    BoxCollisions()
+                    BoxCollisions(
+                        particle=self.particle,
+                        tank_size=self.tank_attrs["dimensions"]["size"],
+                        tank_location=self.tank_attrs["dimensions"]["location"],
+                        speed_loss=self.PARAMETERS["loss_of_speed"]
+                    ).collision_resolution()
 
     def update(self):
 
@@ -416,8 +489,8 @@ class SPH(Particle):
         self.particle.acceleration = self.all_forces / self.PARAMETERS["mass_density"]
         self.particle.next_acceleration = self.particle.acceleration
 
-        self.choose_time_stepping(self.time_stepping)
         self.choose_collision_types("Cuboid", "Normal")
+        self.choose_time_stepping(self.time_stepping)
 
     # -------------------------------------------------------------------- THERMAL INTEGRATION ---------------------------------------------------------------------
 
