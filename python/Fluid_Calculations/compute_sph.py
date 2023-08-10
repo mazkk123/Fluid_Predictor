@@ -6,7 +6,7 @@ import sys
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
-from Fluid_Utilities.search_methods import NearestNeighbour
+from Fluid_Utilities.search_methods import NearestNeighbour, SpatialHashing, CompactHashing
 from Fluid_Utilities.time_stepping import ForwardEuler, EulerCromer, LeapFrog, Verlet, IndependentTime, \
                                     RegionalShortTime, RungeKutta
 from Collisions.box_collisions import BoxCollisions, AABB, OrientedBBox
@@ -21,7 +21,7 @@ class SPH(Particle):
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
-        "buoyancy":0.0,
+        "buoyancy":0.15,
         "tension_coefficient":0.0728,
         "tension_threshold":6,
         "pressure_const":7,
@@ -30,7 +30,7 @@ class SPH(Particle):
         "neighbour_num":30,
         "thermal_exp_coeff":0.5,
         "kinematic_visc":2.5,
-        "abs_temperature":20,
+        "abs_temperature":173,
         "sound_speed":300
     }
 
@@ -83,9 +83,11 @@ class SPH(Particle):
         self.temperature = temperature
 
         self.neighbours_list = []
+        self.dynamic_list = []
+        self.incremental_step = self.PARAMETERS["cell_size"] / 4
+        
         self.update_particle_neighbours()
         self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
-        self.num_test_steps = 50
 
     # ------------------------------------------------------------------ TRADITIONAL SPH ------------------------------------------------------------------------
 
@@ -102,6 +104,27 @@ class SPH(Particle):
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
                 self.neighbours_list.append(items)
     
+    def bbox_around_particle(self):
+            
+        bbox_max = self.particle.initial_pos + np.array([self.PARAMETERS["cell_size"],
+                                                         self.PARAMETERS["cell_size"],
+                                                         self.PARAMETERS["cell_size"]], dtype="float64")
+                                                            
+        bbox_min = self.particle.initial_pos - np.array([self.PARAMETERS["cell_size"],
+                                                         self.PARAMETERS["cell_size"],
+                                                         self.PARAMETERS["cell_size"], dtype="float64")
+        
+        for i in np.arrange(bbox_min[0], bbox_max[0], self.incremental_step):
+            for j in np.arrange(bbox_min[1], bbox_max[1], self.incremental_step):
+                for k in np.arrange(bbox_min[2], bbox_max[2], self.incremental_step):
+                    
+                    hash_value = SpatialHashing(
+                                                            
+        
+        
+    def particle_queries(self):
+        pass
+        
     def kernel_gradient(self, position: np.array=None, kernel_type:int = 0):
         """
         """
