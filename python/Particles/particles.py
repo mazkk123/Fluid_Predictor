@@ -87,6 +87,7 @@ class Particle:
         self.parallel_velocity = velocity
         self.interface_velocity = velocity
         self.volume = 0
+        self.sound_speed = 0
 
         self.bulk_modulus = 0
         
