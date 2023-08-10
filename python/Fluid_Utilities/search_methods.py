@@ -50,6 +50,21 @@ class SpatialHashing:
             ) % self.find_next_prime(2*self.num_particles)
         return hash_value
         
+    def find_hash_value_pos(self, position:np.array):
+        
+        hash_value = (
+            (self.hash_function(position[0],
+                                position[1],
+                                position[2])[0] * self.PRIME_NUMBERS[0]) ^ 
+            (self.hash_function(position[0],
+                                position[1],
+                                position[2])[1] * self.PRIME_NUMBERS[1]) ^
+            (self.hash_function(position[0],
+                                position[1],
+                                position[2])[2] * self.PRIME_NUMBERS[2])
+            ) % self.find_next_prime(2*self.num_particles)
+        return hash_value
+        
 
 class NearestNeighbour:
     
