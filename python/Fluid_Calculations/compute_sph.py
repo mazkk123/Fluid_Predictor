@@ -393,7 +393,6 @@ class SPH(Particle):
                 self.particle,
                 self.delta_time
             ).exec_time_scheme(self.delta_time)
-            print("doing time step")
         if self.TIME_SCHEMES[time_step_type] == 2:
             LeapFrog(
                 self.particle,
@@ -510,10 +509,7 @@ class SPH(Particle):
 
     def update_alpha_factor(self):
         return 1/(np.power(np.pi, 2/3) * m.pow(self.PARAMETERS["cell_size"], 3))
-
-    def kernel_gradient_correction(self):
-        pass
-
+    
     def update_heat_conduction(self):
 
         const_term = 1 / (self.particle.pressure * self.particle.specific_heat)
@@ -547,9 +543,6 @@ class SPH(Particle):
             self.particle.laminar_viscosity += (
                     (viscosity_term * kernel_grad_term)  / (density_term + positional_term) * velocity_term
             )
-
-    def artificial_viscosity(self):
-        pass
 
     def cubic_spline_kernel(self, kernel_type:int = 0,
                             nbr_position:np.array=np.array([0, 0, 0])):

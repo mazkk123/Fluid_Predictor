@@ -45,6 +45,8 @@ class FSISPH(SPH):
         self.trapezoidal_sub_interval_amt = 100
         self.delta_x = 0.01
 
+        self.sound_speed = 0
+
     def deformation(self):
         return 1/2 * (self.velocity_grad_tensor - self.velocity_grad_tensor.transpose())
     
@@ -280,7 +282,11 @@ class FSISPH(SPH):
         pass
 
     def update_interface_neighbours(self):
-        pass
+        for id, nbr_particle in enumerate(self.neighbours_list):
+            if id%2==0:
+                self.interface_neighbrs.append(nbr_particle)
+            else:
+                continue
     
     def outward_facing_unit_norm(self, position):
         return self.normalize(position)
@@ -288,12 +294,22 @@ class FSISPH(SPH):
     def update_interface_normals(self):
         pass
 
-    def update_artificial_viscosity_slip(self):
-        pass
-    
-    def update_sound_speed(self):
-        pass
-    
+    def update_artificial_viscosity_slip(self, id):
+        self.artificial_viscosity = (
+            self.update_artificial_viscosity_no_slip(id)
+            *
+        )
+
+    def update_sound_speed(self, id):
+        self.sound_speed = (
+            np.sqrt(self.OTHER_PARAMS["lambda_const"] * 
+                    (self.particle.pressure - 
+                     self.neighbours_list[id].pressure) / 
+                     (self.particle.mass_density - 
+                      self.neighbours_list[id].pressure))
+        )
+        return self.sound_speed
+
     def update_artificial_viscosity_no_slip(self, id):
         viscosity_term = (
             self.particle.velocity - self.neighbours_list[id].velocity *
@@ -307,7 +323,12 @@ class FSISPH(SPH):
         const_term = -self.force / (self.particle.mass_density - self.neighbours_list[id].mass_density)
         self.particle.artificial_viscosity = (
             const_term * 
-            (self.OTHER_PARAMS["alpha_const"])
+            (self.OTHER_PARAMS["alpha_const"])*
+            self.update_sound_speed(id)*
+            viscosity + 
+
+            self.OTHER_PARAMS["beta_const"]*
+            m.pow(viscosity, 2)
         )
 
     def update_force(self, id):
