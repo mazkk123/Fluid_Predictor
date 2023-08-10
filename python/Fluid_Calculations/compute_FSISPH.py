@@ -11,7 +11,9 @@ class FSISPH(SPH):
     OTHER_PARAMS = {
         "alpha_const":0.25,
         "beta_const":0.5,
-        "lambda_const":7
+        "lambda_const":7,
+        "deformation":0.7,
+        "diffusion_coefficient":0.05
     }
 
     def __init__(self,
@@ -44,8 +46,6 @@ class FSISPH(SPH):
 
         self.trapezoidal_sub_interval_amt = 100
         self.delta_x = 0.01
-
-        self.sound_speed = 0
 
     def deformation(self):
         return 1/2 * (self.velocity_grad_tensor - self.velocity_grad_tensor.transpose())
@@ -278,21 +278,62 @@ class FSISPH(SPH):
 
             self.particle.cauchy_stress_tensor = numerator / denominator
 
-    def update_conservative_diffusion(self):
-        pass
-
-    def update_interface_neighbours(self):
+    def update_conservative_diffusion_mass_d(self):
+        mass_density = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
-            if id%2==0:
-                self.interface_neighbrs.append(nbr_particle)
-            else:
-                continue
+            if self.update_sound_speed(id) == nbr_particle.sound_speed:
+                numerator = (
+                     (nbr_particle.mass_density - self.particle.mass_density) *
+                     (self.update_sound_speed(id) - nbr_particle.sound_speed) *
+                     (self.PARAMETERS["cell_size"]*(self.particle.initial_pos -
+                     nbr_particle.initial_pos) * self.cubic_spline_kernel_grad(
+                      self.particle.initial_pos - nbr_particle.initial_pos
+                    )
+                )
+                denominator = (
+                   nbr_particle.mass_density*(m.pow(np.linalg.norm(
+                    self.particle.initial_pos - nbr_particle.initial_pos), 2) +
+                    self.OTHER_PARAMS["deformation"])
+                )
+                mass_density += numerator / denominator
+                
+        self.particle.mass_density = -self.OTHER_PARAMS["diffusion_coefficient"] * \
+                       mass_density
+        
+    def update_conservative_diffusion_velocity(self):
+        velocity = 0
+        for id, nbr_particle in enumerate(self.neighbours_list):
+            if self.update_sound_speed(id) == nbr_particle.sound_speed:
+                numerator = (
+                     (nbr_particle.velocity - self.particle.velocity) *
+                     (self.update_sound_speed(id) - nbr_particle.sound_speed) *
+                     (self.PARAMETERS["cell_size"]*(self.particle.initial_pos -
+                     nbr_particle.initial_pos) * self.cubic_spline_kernel_grad(
+                      self.particle.initial_pos - nbr_particle.initial_pos
+                    )
+                )
+                denominator = (
+                   nbr_particle.mass_density*(m.pow(np.linalg.norm(
+                    self.particle.initial_pos - nbr_particle.initial_pos), 2) +
+                    self.OTHER_PARAMS["deformation"])
+                )
+                velocity += numerator / denominator
+                
+        self.particle.velocity = -self.OTHER_PARAMS["diffusion_coefficient"] * \
+                       velocity
     
     def outward_facing_unit_norm(self, position):
         return self.normalize(position)
     
     def update_interface_normals(self):
-        pass
+        for id, nbr_particle in enumerate(self.neighbours_list):
+            if self.update_sound_speed(id) == nbr_particle.sound_speed:
+                self.interface_normal = (
+                    nbr_particle.mass / nbr_particle.mass_density *
+                    self.cubic_spline_kernel_grad(self.particle.initial_pos -
+                    nbr_particle.initial_pos)
+                )
+        self.interface_normal *= -1
 
     def update_artificial_viscosity_slip(self, id):
         self.artificial_viscosity = (
@@ -301,14 +342,14 @@ class FSISPH(SPH):
         )
 
     def update_sound_speed(self, id):
-        self.sound_speed = (
+        self.particle.sound_speed = (
             np.sqrt(self.OTHER_PARAMS["lambda_const"] * 
                     (self.particle.pressure - 
                      self.neighbours_list[id].pressure) / 
                      (self.particle.mass_density - 
                       self.neighbours_list[id].pressure))
         )
-        return self.sound_speed
+        return self.particle.sound_speed
 
     def update_artificial_viscosity_no_slip(self, id):
         viscosity_term = (
