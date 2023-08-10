@@ -86,9 +86,9 @@ class Particle:
         self.perp_velocity = velocity
         self.parallel_velocity = velocity
         self.interface_velocity = velocity
+        self.interface_normal = np.array([0, 0, 0], dtype="float64")
         self.volume = 0
         self.sound_speed = 0
-
         self.bulk_modulus = 0
         
         self.shear_modulus = np.array([[0, 0, 0], 
