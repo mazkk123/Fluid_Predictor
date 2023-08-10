@@ -445,6 +445,7 @@ class FSISPH(SPH):
     def update_velocity(self):
         velocity = np.array([0, 0, 0], dtype="float64")
         for id, nbr_particle in enumerate(self.neighbours_list):
+            self.update_acceleration_force(id)
             velocity += (
                 self.update_force(id) * nbr_particle.mass *
                 self.particle.acceleration *
