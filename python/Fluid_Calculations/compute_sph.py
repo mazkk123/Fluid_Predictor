@@ -568,7 +568,44 @@ class SPH(Particle):
             return self.update_alpha_factor() * (-3 * (1- np.power(self.update_q(self.particle.initial_pos, nbr_position), 2)) *
                     ((2*self.update_q(self.particle.initial_pos, nbr_position) + 1 )/ self.PARAMETERS["cell_size"])) * \
                     self.particle.initial_pos - nbr_position
+        
+    def cubic_spline_kernel_grad_c(self, position, index_comp:int = 0):
+        
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q>=0 and q<=1:
+            return -3*q + 9/4*m.pow(q, 2) * position[index_comp]
+        if q>=1 and q<= 2:
+            return -3/4 * m.pow(2 - q, 2) * position[index_comp]
+        if q>2:
+            return 0
+        
+    def cubic_spline_kernel_pos(self, position):
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q >= 0 and q <= 0.5:
+            return 1 - 6*m.pow(q, 2) + 6*m.pow(q, 3)
+        if q > 0.5 and  q<= 1:
+            return 2*m.pow(1-q, 3)
+        if q>1:
+            return 0
+        
+    def cubic_spline_kernel_gradient(self, position):
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q>=0 and q<=1:
+            return -3*q + 9/4*m.pow(q, 2)
+        if q>=1 and q<= 2:
+            return -3/4 * m.pow(2 - q, 2)
+        if q>2:
+            return 0
 
+    def cubic_spline_kernel_gradient_mag(self, position):
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q>=0 and q<=1:
+            return np.abs(-3*q + 9/4*m.pow(q, 2))
+        if q>=1 and q<= 2:
+            return np.abs(-3/4 * m.pow(2 - q, 2))
+        if q>2:
+            return 0
+        
     def update_body_force(self):
         self.particle.body_force = self.PARAMETERS["thermal_exp_coeff"]*self.particle.gravity* \
                 (self.particle.temperature - self.PARAMETERS["abs_temperature"])

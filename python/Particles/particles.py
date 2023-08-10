@@ -73,6 +73,36 @@ class Particle:
         self.specific_heat = 0
         self.thermal_diffusion = np.array([0, 0, 0], dtype="float64")
 
+        # update for FSISPH model
+
+        self.cauchy_stress_tensor = np.array([[0, 0, 0], 
+                                              [0, 0, 0],
+                                              [0, 0, 0]], dtype="float64")
+        
+        self.deviatoric_stress_tensor = np.array([[0, 0, 0], 
+                                                  [0, 0, 0],
+                                                  [0, 0, 0]], dtype="float64")
+        self.half_velocity = velocity
+        self.perp_velocity = velocity
+        self.parallel_velocity = velocity
+        self.interface_velocity = velocity
+        self.volume = 0
+
+        self.bulk_modulus = 0
+        
+        self.shear_modulus = np.array([[0, 0, 0], 
+                                      [0, 0, 0],
+                                      [0, 0, 0]], dtype="float64")
+        
+        self.shear_stress = np.array([[0, 0, 0], 
+                                      [0, 0, 0],
+                                      [0, 0, 0]], dtype="float64")
+        
+        self.shear_strain = np.array([[0, 0, 0], 
+                                      [0, 0, 0],
+                                      [0, 0, 0]], dtype="float64")
+
+
 # ------------------------------------ PROPERTY GETTERS --------------------------------------
     
     
