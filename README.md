@@ -142,6 +142,35 @@ separation. With this model, drift velocity and velocity advection
 is taken into account whenever particles interact with solid 
 boundaries and reach above a certain velocity threshold.
 
+### FSISPH - Fluid Solid Interface SPH
+Enforcing incompressibility and density variance near interfacial
+regions in mixing fluids is a limitation of the traditional SPH
+model. Here, intermediate velocity, slip conditions and conservative
+diffusion is introduced near interfacial mixing regions to precipitate
+more turbulent behaviour when different fluids mix together.
+
+### DFSPH - Divergence Free SPH
+In this model, there is better splashy behaviour near solid
+boundaries. 2 additional correction steps are undertaken 
+before every velocity update which ensure that divergence is
+zero and predicted densities match the rest density of the fluid
+in question.
+
+### VCSPH - Vorticity Confinement SPH
+An extended version of the DFSPH model, which introduces a vorticity
+step using the curl of the fluid and a stream function to update 
+velocity based on the vorticity of the fluid. Using the last velocity 
+update step in the DFSPH model, we compute vorticity and stream 
+function forces and reupdate velocity values based on these. This
+structure also implements look-up tables for weighted kernels for faster
+computation times.
+
+### PBF - Particle Based Fluid
+Another model which introduces vorticity confinement and a constraint 
+function to the fluid. As a result, particles are more close together 
+when solid objects are dropped into the fluid tank. An XSPH viscosity 
+term is also introduced to ensure more coherent motion.
+
 # Neighbourhood search algorithms
 
 ## Spatial Hashing
