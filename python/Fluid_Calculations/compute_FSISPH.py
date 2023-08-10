@@ -138,8 +138,28 @@ class FSISPH(SPH):
                     self.particle.pressure*np.identity(3)
                 )
 
-    def update_acceleration_force(self):
-        pass
+    def update_acceleration_force(self, id):
+        
+        if self.slip_condition is True:
+            self.update_artificial_viscosity_slip(id)
+        elif self.slip_condition is not True:
+            self.update_artificial_viscosity_no_slip(id)
+            
+        tensor_term = ( 
+           self.particle.cauchy_stress_tensor / 
+           (self.particle.mass_density*self.neighbours_list[id].mass_density) -
+           (self.particle.artificial_viscosity / 2)
+        )
+        
+        kernel_term = (
+           self.cubic_spline_kernel_grad(
+               np.abs(
+               self.particle.initial_pos - 
+               self.neighbours_list[id].initial_pos)
+            )
+        )
+        
+        self.particle.acceleration = kernel_term*tensor_term
 
     def update_shear_modulus(self, id):
         self.particle.shear_modulus = self.update_shear_stress() / self.update_shear_strain(id)
@@ -195,7 +215,6 @@ class FSISPH(SPH):
         self.particle.perp_velocity = (
             numerator / denom
         )
-
 
     def local_domain_volume(self, id):
         trapezoidal_amt = self.trapezoidal_sub_interval_amt
@@ -328,17 +347,26 @@ class FSISPH(SPH):
     def update_interface_normals(self):
         for id, nbr_particle in enumerate(self.neighbours_list):
             if self.update_sound_speed(id) == nbr_particle.sound_speed:
-                self.interface_normal = (
+                self.particle.interface_normal = (
                     nbr_particle.mass / nbr_particle.mass_density *
                     self.cubic_spline_kernel_grad(self.particle.initial_pos -
                     nbr_particle.initial_pos)
                 )
-        self.interface_normal *= -1
+        self.particle.interface_normal *= -1
+        
+    def interface_normal(self):
+        self.update_interface_normals()
+        return self.normalize(self.particle.interface_normal)
 
     def update_artificial_viscosity_slip(self, id):
         self.artificial_viscosity = (
             self.update_artificial_viscosity_no_slip(id)
-            *
+            * (self.interface_normal() * 
+            self.normalize(self.particle.velocity -
+                           self.neighbours_list[id].velocity)) *
+            (self.normalize(self.neighbour_particles[id].interface_normal) * 
+            self.normalize(self.particle.velocity -
+                           self.neighbours_list[id].velocity))
         )
 
     def update_sound_speed(self, id):
