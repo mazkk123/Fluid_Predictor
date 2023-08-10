@@ -118,7 +118,8 @@ class SPH(Particle):
             for j in np.arrange(bbox_min[1], bbox_max[1], self.incremental_step):
                 for k in np.arrange(bbox_min[2], bbox_max[2], self.incremental_step):
                     
-                    hash_value = SpatialHashing(
+                    hash_value = SpatialHashing(self.PARAMETERS["cell_size"],
+                                                5000).
                                                             
         
         
