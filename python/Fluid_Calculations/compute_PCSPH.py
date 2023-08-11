@@ -3,7 +3,7 @@ import numpy as np
 import random as rd
 import re
 
-from compute_SPH import SPH
+from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
 
 class PCSPH(SPH):

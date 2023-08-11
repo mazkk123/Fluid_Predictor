@@ -4,7 +4,7 @@ import random as rd
 import re
 
 from Particles.particles import Particle
-from compute_SPH import SPH
+from Fluid_Calculations.compute_sph import SPH
 
 class LPSPH(SPH):
 

@@ -3,7 +3,7 @@ import numpy as np
 import random as rd
 import re
 
-from compute_SPH import SPH
+from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
 
 class DFSPH(SPH):
@@ -159,7 +159,6 @@ class DFSPH(SPH):
             )
         self.density_error = m.pow(self.delta_time, 2)*density_error
 
-    
     def update_divergence_velocity(self):
         divergence_velocity = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
@@ -204,64 +203,3 @@ class DFSPH(SPH):
                  )
             )
         self.particle.pressure_force *= -self.particle.mass
-    
-    def update_vel_max(self):
-        self.velocity_max = max([nbr_particle.velocity for 
-                             nbr_particle in self.neighbours_list])
-        return self.velocity_max
-    
-    def update_Vel_max(self):
-        self.update_vel_max()
-        self.update_force_max()
-        
-        self.Vel_max = self.velocity_max + \
-               np.sqrt(self.PARAMETERS["cell_size"]*
-               self.force_max)
-            
-    def update_force_max(self):
-        self.force_max = np.array([0, 0, 0], dtype="float64")
-        self.max_force_arr = []
-        for nbr_particle in self.neighbours_list:
-            self.force_max = (
-               nbr_particle.gravity +
-               nbr_particle.buoyancy +
-               nbr_particle.viscosity +
-               nbr_particle.pressure_force +
-               nbr_particle.surface_tension
-            )
-            self.max_force_arr.append(self.force_max)
-        self.force_max = max(self.max_force_arr)
-        
-    def CFL_condition(self):
-        return self.OTHER_PARAMS["alpha"] * \
-                (self.PARAMETERS["cell_size"] / np.sqrt(self.OTHER_PARAMS["stiffness_constant"]))
-    
-    def CFL_force_condition(self):
-        return self.OTHER_PARAMS["beta_const"] * \
-                np.sqrt(self.PARAMETERS["cell_size"]/ self.update_max_force())
-                
-    def update_velocity_divergence(self):
-        self.velocity_divergence = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
-            self.velocity_divergence += (nbr_particle.mass*
-               self.cubic_spline_kernel_grad(
-               self.particle.initial_pos - nbr_particle.initial_pos
-               )
-            )
-        
-    def CFL_viscosity_condition(self):
-        self.update_velocity_divergence()
-        return self.OTHER_PARAMS["lambda_const"] / np.linalg.norm(self.velocity_divergence)
-    
-    def adapt_to_CFL(self):
-        self.update_Vel_max()
-        if self.Vel_max < self.OTHER_PARAMS["alpha_const"]* \
-               self.OTHER_PARAMS["sound_speed"]:
-            self.delta_time = self.OTHER_PARAMS["stiffness_n"]*min(self.CFL_condition(), 
-                                  self.CFL_force_condition(),
-                                  self.CFL_viscosity_condition())
-        else:
-            self.delta_time = min(self.CFL_condition(), 
-                                  self.CFL_force_condition(),
-                                  self.CFL_viscosity_condition())
-            

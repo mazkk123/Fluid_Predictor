@@ -89,7 +89,7 @@ class SPH(Particle):
         self.update_particle_neighbours()
         self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
 
-    # ------------------------------------------------------------------ TRADITIONAL SPH ------------------------------------------------------------------------
+    # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------
 
     def update_particle_neighbours(self):
         """
@@ -113,27 +113,30 @@ class SPH(Particle):
                                                             
         bbox_min = self.particle.initial_pos - np.array([self.PARAMETERS["cell_size"],
                                                          self.PARAMETERS["cell_size"],
-                                                         self.PARAMETERS["cell_size"], dtype="float64")
+                                                         self.PARAMETERS["cell_size"]], dtype="float64")
         
         position = np.array([0, 0, 0], dtype="float64")
-        for i in np.arrange(bbox_min[0], bbox_max[0], self.incremental_step):
-            for j in np.arrange(bbox_min[1], bbox_max[1], self.incremental_step):
-                for k in np.arrange(bbox_min[2], bbox_max[2], self.incremental_step):
+        for i in np.arange(bbox_min[0], bbox_max[0], self.incremental_step):
+            for j in np.arange(bbox_min[1], bbox_max[1], self.incremental_step):
+                for k in np.arange(bbox_min[2], bbox_max[2], self.incremental_step):
                     
                     position[0], position[1], position[2] = i, j, k
                     hash = SpatialHashing(self.PARAMETERS["cell_size"], 5000)
                     hash_value = hash.find_hash_value_pos(position)
                     
                     if hash_value != self.hash_value and \
-                        hash_value in self.hash_map.keys():
+                        hash_value in self.hash_table.keys():
                         
-                        self.dynamic_list.append(self.hash_map[hash_value])
-        
-        for nbrs in self.dynamic_list[0]:
+                        for elem in self.hash_table[hash_value]:
+                            self.dynamic_list.append(elem)
+
+        for nbrs in self.dynamic_list:
             if np.linalg.norm(self.particle.initial_pos - 
                 nbrs.initial_pos) < self.PARAMETERS["cell_size"]:
                 self.neighbours_list.append(nbrs)
-        
+   
+    # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
+
     def kernel_gradient(self, position: np.array=None, kernel_type:int = 0):
         """
         """
@@ -245,6 +248,8 @@ class SPH(Particle):
                 return kernel_val*kernel_const
             else:
                 return 0
+
+    # ------------------------------------------------------------------ FORCE CALCULATIONS -----------------------------------------------------------------------
 
     def update_mass_density(self):
         """
@@ -533,8 +538,68 @@ class SPH(Particle):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-    # -------------------------------------------------------------------- THERMAL INTEGRATION ---------------------------------------------------------------------
+# ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
+    def update_vel_max(self):
+        self.velocity_max = max([nbr_particle.velocity for 
+                             nbr_particle in self.neighbours_list])
+        return self.velocity_max
+    
+    def update_Vel_max(self):
+        self.update_vel_max()
+        self.update_force_max()
+        
+        self.Vel_max = self.velocity_max + \
+               np.sqrt(self.PARAMETERS["cell_size"]*
+               self.force_max)
+            
+    def update_force_max(self):
+        self.force_max = np.array([0, 0, 0], dtype="float64")
+        self.max_force_arr = []
+        for nbr_particle in self.neighbours_list:
+            self.force_max = (
+               nbr_particle.gravity +
+               nbr_particle.buoyancy +
+               nbr_particle.viscosity +
+               nbr_particle.pressure_force +
+               nbr_particle.surface_tension
+            )
+            self.max_force_arr.append(self.force_max)
+        self.force_max = max(self.max_force_arr)
+        
+    def CFL_condition(self):
+        return self.OTHER_PARAMS["alpha"] * \
+                (self.PARAMETERS["cell_size"] / np.sqrt(self.OTHER_PARAMS["stiffness_constant"]))
+    
+    def CFL_force_condition(self):
+        return self.OTHER_PARAMS["beta_const"] * \
+                np.sqrt(self.PARAMETERS["cell_size"]/ self.update_max_force())
+                
+    def update_velocity_divergence(self):
+        self.velocity_divergence = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in self.neighbours_list:
+            self.velocity_divergence += (nbr_particle.mass*
+               self.cubic_spline_kernel_grad(
+               self.particle.initial_pos - nbr_particle.initial_pos
+               )
+            )
+        
+    def CFL_viscosity_condition(self):
+        self.update_velocity_divergence()
+        return self.OTHER_PARAMS["lambda_const"] / np.linalg.norm(self.velocity_divergence)
+    
+    def adapt_to_CFL(self):
+        self.update_Vel_max()
+        if self.Vel_max < self.OTHER_PARAMS["alpha_const"]* \
+               self.OTHER_PARAMS["sound_speed"]:
+            self.delta_time = self.OTHER_PARAMS["stiffness_n"]*min(self.CFL_condition(), 
+                                  self.CFL_force_condition(),
+                                  self.CFL_viscosity_condition())
+        else:
+            self.delta_time = min(self.CFL_condition(), 
+                                  self.CFL_force_condition(),
+                                  self.CFL_viscosity_condition())
 
+# ------------------------------------------------------------------ THERMAL INTEGRATION ---------------------------------------------------------------------------
     def update_q(self, position:np.array,
                  nbr_position:np.array):
         return np.linalg.norm(position - nbr_position) / self.PARAMETERS["cell_size"]
@@ -562,7 +627,8 @@ class SPH(Particle):
 
     def update_nubla(self):
         return 0.1 * self.PARAMETERS["cell_size"]
-    
+
+# ------------------------------------------------------------------- CUBIC SPLINE KERNEL ---------------------------------------------------------------------------
     def update_laminar_viscosity(self):
         for nbr_particle in self.neighbours_list:
             viscosity_term = 4 * nbr_particle.mass * self.PARAMETERS["kinematic_visc"] * (self.particle.initial_pos - 

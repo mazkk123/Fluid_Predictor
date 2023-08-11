@@ -90,6 +90,7 @@ class Particle:
         self.volume = 0
         self.sound_speed = 0
         self.bulk_modulus = 0
+        self.force = np.array([0, 0, 0], dtype="float64")
         
         self.shear_modulus = np.array([[0, 0, 0], 
                                       [0, 0, 0],

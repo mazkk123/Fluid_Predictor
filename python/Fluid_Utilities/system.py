@@ -6,7 +6,7 @@ import sys
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Calculations\\")
 
-from Fluid_Calculations.compute_SPH import SPH
+from Fluid_Calculations.compute_sph import SPH
 from Fluid_Calculations.compute_multiSPH import MultiSPH
 from Fluid_Calculations.compute_PCSPH import PCSPH
 from Fluid_Calculations.compute_WCSPH import WCSPH
