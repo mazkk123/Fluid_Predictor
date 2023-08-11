@@ -11,6 +11,8 @@ class Uniform:
 
         self.num_particles = num_particles
         self.spacing = spacing
+        self.num_layers = 10
+        self.radius = 5
 
     def uniform_box_distribution(self):
         """
@@ -36,14 +38,33 @@ class Uniform:
             perform a uniform distribution of particles and returns
             a list of np arrays holding the particle positions in a list
         """        
-        pass
+        num_particles_per_layer = self.num_particles / self.num_layers
+        positions = []
+        
+        for i in range(self.num_layers):
+            rho = np.linspace(0, 2*np.pi, self.num_particles_per_layer, 
+                              endpoint=False)
+            position = np.array([self.radius*np.cos(rho),
+                                 self.radius*np.sin(rho),
+                                 i])
+            positions.append(position)
 
     def uniform_sphere_distribution(self):
         """
             perform a uniform distribution of particles and returns
             a list of np arrays holding the particle positions in a list
         """        
-        pass
+        
+        positions = []
+        
+        rho = np.linspace(0, 2*np.pi, self.num_particles / 2, 
+                              endpoint=False)
+        phi = np.linspace(0, np.pi, self.num_particles / 2, 
+                              endpoint=False)
+        position = np.array([self.radius*np.cos(rho)*np.sin(phi)
+                             self.radius*np.sin(rho)*np.sim(phi)
+                             self.radius*np.cos(phi)])
+        positions.append(position)
 
 class Random:
 
@@ -58,6 +79,8 @@ class Random:
         """        
 
         positions = []
+        self.radius = 5
+        self.num_layers = 10 
 
         for i in range(self.num_particles):
             
@@ -68,3 +91,27 @@ class Random:
             positions.append(np.array([x, y, z]))
 
         return positions
+        
+    def random_cylinder_distribution(self):
+        num_particles_per_layer = self.num_particles / self.num_layers
+        positions = []
+        
+        for i in range(self.num_layers):
+            for j in range(num_particles_per_layer):
+                rho = j*rd.random()*2*np.pi
+                position = np.array([self.radius*np.cos(rho),
+                                     self.radius*np.sin(rho),
+                                     i])
+            positions.append(position)
+        
+    def random_sphere_distribution(self):
+        positions = []
+        
+        for i in range(self.num_particles / 2):
+            for j in range(self.num_particles / 2):
+                rho = j*rd.random()*2*np.pi
+                phi = i*rd.random()*np.pi
+                position = np.array([self.radius*np.cos(rho)*np.sin(phi),
+                                     self.radius*np.sin(rho)*np.sin(phi),
+                                     self.radius*np.cos(phi)])
+            positions.append(position)
