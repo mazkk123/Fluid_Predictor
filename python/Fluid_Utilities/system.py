@@ -14,6 +14,8 @@ from Fluid_Calculations.compute_LPSPH import LPSPH
 from Fluid_Calculations.compute_IISPH import IISPH
 from Fluid_Calculations.compute_DFSPH import DFSPH
 from Fluid_Calculations.compute_FSISPH import FSISPH
+from Fluid_Calculations.compute_VCSPH import VCSPH
+from Fluid_Calculations.compute_PBD import PBD
 
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
@@ -26,7 +28,8 @@ from Particles.error_handling import *
 
 class FluidSystem:
     
-    SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", "LPSPH", "DFSPH", "FSISPH"]
+    SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", 
+                       "LPSPH", "DFSPH", "FSISPH", "VCSPH", "PBD"]
     NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing", "Z-Sorting"]
     ORIENTATION_TYPE = ["Uniform", "Random"]
     
@@ -194,7 +197,7 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02   
                     ).update()
-                if id == 5:
+                if id == 6:
                     print("do DFSPH")
                     DFSPH(
                         particle = p,
@@ -205,9 +208,31 @@ class FluidSystem:
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02   
                     ).update()
-                if id == 5:
+                if id == 7:
                     print("do FSISPH")
                     FSISPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02   
+                    ).update()
+                if id == 8:
+                    print("do VCSPH")
+                    VCSPH(
+                        particle = p,
+                        search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
+                        hash_table = self.HASH_MAP,
+                        hash_value = p.hash_value,
+                        time_stepping="Euler Cromer",
+                        tank_attrs = self.TANK_ATTRS,
+                        delta_time=0.02   
+                    ).update()
+                if id == 9:
+                    print("do PBF")
+                    PBD(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
