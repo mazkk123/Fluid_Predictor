@@ -99,12 +99,13 @@ class SPH(Particle):
         if self.search_method != "Neighbour":
             for items in self.hash_table[self.hash_value]:
                 self.neighbours_list.append(items)
+            self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
                 self.neighbours_list.append(items)
     
-    def bbox_around_particle(self):
+    def particle_query(self):
             
         bbox_max = self.particle.initial_pos + np.array([self.PARAMETERS["cell_size"],
                                                          self.PARAMETERS["cell_size"],
@@ -114,18 +115,24 @@ class SPH(Particle):
                                                          self.PARAMETERS["cell_size"],
                                                          self.PARAMETERS["cell_size"], dtype="float64")
         
+        position = np.array([0, 0, 0], dtype="float64")
         for i in np.arrange(bbox_min[0], bbox_max[0], self.incremental_step):
             for j in np.arrange(bbox_min[1], bbox_max[1], self.incremental_step):
                 for k in np.arrange(bbox_min[2], bbox_max[2], self.incremental_step):
                     
+                    position[0], position[1], position[2] = i, j, k
                     hash = SpatialHashing(self.PARAMETERS["cell_size"], 5000)
-                    hash_func = hash.hash_function(i, j, k)
+                    hash_value = hash.find_hash_value_pos(position)
                     
-                                                            
+                    if hash_value != self.hash_value and \
+                        hash_value in self.hash_map.keys():
+                        
+                        self.dynamic_list.append(self.hash_map[hash_value])
         
-        
-    def particle_queries(self):
-        pass
+        for nbrs in self.dynamic_list[0]:
+            if np.linalg.norm(self.particle.initial_pos - 
+                nbrs.initial_pos) < self.PARAMETERS["cell_size"]:
+                self.neighbours_list.append(nbrs)
         
     def kernel_gradient(self, position: np.array=None, kernel_type:int = 0):
         """
