@@ -97,8 +97,11 @@ class SPH(Particle):
             global HASH_MAP param
         """
         if self.search_method != "Neighbour":
+            self.particle.neighbour_list = []
             for items in self.hash_table[self.hash_value]:
                 self.neighbours_list.append(items)
+                self.particle.neighbour_list.append(items)
+
             self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
@@ -134,6 +137,7 @@ class SPH(Particle):
             if np.linalg.norm(self.particle.initial_pos - 
                 nbrs.initial_pos) < self.PARAMETERS["cell_size"]:
                 self.neighbours_list.append(nbrs)
+                self.particle.neighbour_list.append(nbrs)
    
     # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
 

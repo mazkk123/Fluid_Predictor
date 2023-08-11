@@ -13,11 +13,11 @@ class DFSPH(SPH):
         "max_iter":1,
         "stiffness_constant":1000,
         "alpha":0.4,
+        "alpha_vorticity":1.2,
         "beta_const":0.25,
         "lambda_const":0.005,
         "stiffness_n":1.5,
         "sound_speed":300
-        
     }
 
     def __init__(self,
@@ -41,6 +41,7 @@ class DFSPH(SPH):
         self.divergence = np.array([0, 0, 0], dtype="float64")
         self.divergence_force = np.array([0, 0, 0], dtype="float64")
         self.density_error = np.array([0, 0, 0], dtype="float64")
+        self.particle.predicted_velocity = self.prediction_update(self.time_stepping, self.particle)[1]
 
     def update(self):
         
@@ -76,6 +77,7 @@ class DFSPH(SPH):
             self.update_divergence_velocity()
 
             iter_step +=1 
+        self.particle.velocity = self.predicted_velocity
 
     def update_non_pressure_f(self):
         
@@ -171,7 +173,7 @@ class DFSPH(SPH):
                     nbr_position=nbr_particle.initial_pos
                  )
             )
-        self.particle.velocity -= (
+        self.particle.predicted_velocity -= (
             self.delta_time*divergence_velocity
         )
 
@@ -187,7 +189,7 @@ class DFSPH(SPH):
                     nbr_position=nbr_particle.initial_pos
                  )
             )
-        self.particle.velocity -= (
+        self.particle.predicted_velocity -= (
             m.pow(self.delta_time, 2) * divergence_density
         )
 

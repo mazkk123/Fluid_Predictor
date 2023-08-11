@@ -18,6 +18,7 @@ class Particle:
         """
         self.initial_pos = init_pos
         self.predicted_initial_pos = init_pos
+        self.neighbour_list = []
 
         self.colour = colour
 
@@ -103,6 +104,16 @@ class Particle:
         self.shear_strain = np.array([[0, 0, 0], 
                                       [0, 0, 0],
                                       [0, 0, 0]], dtype="float64")
+        
+        # attribs for PBF model
+
+        self.constraint_function = 0
+        self.constraint = 0
+        self.del_position = np.array([0, 0, 0], dtype="float64")
+        self.vorticity = np.array([0, 0, 0], dtype="float64")
+        self.vorticity_force = np.array([0, 0, 0], dtype="float64")
+        self.vorticity_del = np.array([0, 0, 0], dtype="float64")
+        self.stream_function = np.array([0, 0, 0], dtype="float64")
 
 
 # ------------------------------------ PROPERTY GETTERS --------------------------------------
