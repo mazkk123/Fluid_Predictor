@@ -12,15 +12,15 @@ from collisions import Collisions
 class BoxCollisions(Collisions):
     
     def __init__(self,
-                 particle: Particle = None,
-                 tank_size: np.array=None,
-                 tank_location: np.array=None,
-                 speed_loss:float = None):
+                 particle:Particle,
+                 tank_size:np.array,
+                 tank_location:np.array):
         
-        self.particle = particle
-        self.tank_size = tank_size
-        self.tank_location = tank_location
-        self.speed_loss = speed_loss
+        super().__init__(particle=particle,
+                         tank_size=tank_size,
+                         tank_location=tank_location)
+        
+        self.speed_loss = self.ATTRIBS["speed_loss"]
         self.collision_detected= [False, False, False, False, False, False]
 
     def collision_detection(self, x, y, z):
@@ -80,7 +80,46 @@ class BoxCollisions(Collisions):
                     self.collision_resolution_pos(id, 2)
 
 class AABB(Collisions):
-    pass
+    
+    def __init__(self,
+                 particle: Particle = None,
+                 tank_size: np.array=None,
+                 tank_location: np.array=None,
+                 speed_loss:float = None):
+        
+        super().__init__(particle=particle,
+                         tank_size=tank_size,
+                         tank_location=tank_location,
+                         speed_loss=speed_loss)
+        
+        self.speed_loss = self.ATTRIBS["speed_loss"]
+        self.collision_resolution_plane = ["XY", "XZ", "YZ"]
+
+    def point_collision_detection(self):
+        return self.particle.initial_pos[0] >= self.tank_location[0] - self.tank_size[0] and \
+               self.particle.initial_pos[0] <= self.tank_location[0] + self.tank_size[0] or \
+               self.particle.initial_pos[1] >= self.tank_location[1] - self.tank_size[1] and \
+               self.particle.initial_pos[1] <= self.tank_location[1] + self.tank_size[1] or \
+               self.particle.initial_pos[2] >= self.tank_location[2] - self.tank_size[2] and \
+               self.particle.initial_pos[2] <= self.tank_location[2] - self.tank_size[2]
+    
+    def point_collision_resolution(self):
+        if self.point_collision_detection():
+            pass
+
 
 class OrientedBBox(Collisions):
-    pass
+    
+    def __init__(self,
+                 particle: Particle = None,
+                 tank_size: np.array=None,
+                 tank_location: np.array=None,
+                 speed_loss:float = None):
+        
+        super().__init__(particle=particle,
+                         tank_size=tank_size,
+                         tank_location=tank_location,
+                         speed_loss=speed_loss)
+        
+        self.speed_loss = self.ATTRIBS["speed_loss"]
+        self.collision_detected= [False, False, False, False, False, False]

@@ -15,7 +15,7 @@ from Fluid_Calculations.compute_IISPH import IISPH
 from Fluid_Calculations.compute_DFSPH import DFSPH
 from Fluid_Calculations.compute_FSISPH import FSISPH
 from Fluid_Calculations.compute_VCSPH import VCSPH
-from Fluid_Calculations.compute_PBD import PBD
+from Fluid_Calculations.compute_PBF import PBF
 
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
@@ -138,7 +138,8 @@ class FluidSystem:
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
-                        temperature= False,
+                        all_particles=self.particle_list,
+                        temperature= True,
                         delta_time=0.02
                     ).update()
                 if id==1:
@@ -187,14 +188,15 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id == 5:
-                    print("do LPSPH")
+                    """ print("do LPSPH") """
                     LPSPH(
-                      particle = p,
+                        particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
+                        all_particles = self.particle_list,
                         delta_time=0.02   
                     ).update()
                 if id == 6:
@@ -232,7 +234,7 @@ class FluidSystem:
                     ).update()
                 if id == 9:
                     print("do PBF")
-                    PBD(
+                    PBF(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,

@@ -3,6 +3,7 @@ import numpy as np
 import random as rd
 import re
 import sys
+import time
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
@@ -17,7 +18,7 @@ class SPH(Particle):
 
     PARAMETERS = {
         "grid_separation":0.1,
-        "cell_size":0.3,
+        "cell_size":0.15,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
@@ -28,8 +29,16 @@ class SPH(Particle):
         "loss_of_speed":0.5,
         "epsilon":0.1,
         "neighbour_num":30,
+        "beta_const":0.25,
+        "stiffness_constant":1000,
+        "alpha":0.4,
+        "v_cutoff":np.array([0.2, 0.2, 0.2], dtype="float64"),
+        "N_cutoff":np.array([0.3, 0.3, 0.3], dtype="float64"),
         "thermal_exp_coeff":4.988,
         "kinematic_visc":0.000006,
+        "lambda_const":0.005,
+        "stiffness_n":1.5,
+        "sound_speed":300
     }
 
     TIME_SCHEMES = {
@@ -59,6 +68,7 @@ class SPH(Particle):
                  time_stepping: str="Euler Cromer",
                  tank_attrs: dict=None,
                  temperature:bool=False,
+                 all_particles:list = None,
                  collision_type: str="box"):
         
         if tank_attrs is not None:
@@ -82,6 +92,14 @@ class SPH(Particle):
 
         self.neighbours_list = []
         self.dynamic_list = []
+
+        self.active = []
+        self.semi_active = []
+        self.passive = []
+        
+        if all_particles is not None:
+            self.all_particles = all_particles
+
         self.incremental_step = self.PARAMETERS["cell_size"] / 4
         
         self.update_particle_neighbours()
@@ -96,9 +114,11 @@ class SPH(Particle):
         """
         if self.search_method != "Neighbour":
             self.particle.neighbour_list = []
+            self.mark_active_neighbours()
             for items in self.hash_table[self.hash_value]:
-                self.neighbours_list.append(items)
-                self.particle.neighbour_list.append(items)
+                if items in self.active or items in self.semi_active:
+                    self.neighbours_list.append(items)
+                    self.particle.neighbour_list.append(items)
 
             self.particle_query()
         else:
@@ -122,7 +142,7 @@ class SPH(Particle):
                 for k in np.arange(bbox_min[2], bbox_max[2], self.incremental_step):
                     
                     position[0], position[1], position[2] = i, j, k
-                    hash = SpatialHashing(self.PARAMETERS["cell_size"], 5000)
+                    hash = SpatialHashing(self.PARAMETERS["cell_size"])
                     hash_value = hash.find_hash_value_pos(position)
                     
                     if hash_value != self.hash_value and \
@@ -136,6 +156,30 @@ class SPH(Particle):
                 nbrs.initial_pos) < self.PARAMETERS["cell_size"]:
                 self.neighbours_list.append(nbrs)
                 self.particle.neighbour_list.append(nbrs)
+
+    def normal_field(self):
+        self.particle.normal_field = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in self.neighbours_list:
+            self.particle.normal_field += (
+                (nbr_particle.mass / nbr_particle.mass_density) *
+                self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 0)
+            )
+    
+    def mark_active_neighbours(self):
+
+        for particle in self.all_particles:
+            if any(particle.velocity) >= any(self.PARAMETERS["v_cutoff"]) or  \
+                any(particle.normal_field)  >= any(self.PARAMETERS["N_cutoff"]):
+                self.active.append(self.particle)
+            else:
+                self.passive.append(self.particle)
+
+        for active_p in self.active:
+            for nbr in active_p.neighbour_list:
+                if any(nbr.velocity) >= any(self.PARAMETERS["v_cutoff"]):
+                    self.active.append(nbr)
+                else:
+                    self.semi_active.append(nbr)
    
     # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
 
@@ -305,7 +349,7 @@ class SPH(Particle):
     def update_gravity(self):
         """
         """
-        self.particle.gravity = self.gravity_const*self.particle.mass
+        self.particle.gravity = self.gravity_const
 
     def update_color_gradient(self):
         """
@@ -386,18 +430,18 @@ class SPH(Particle):
         self.update_viscosity() 
 
         if self.temperature is True:
-            self.update_body_force()
-            self.update_kinematic_viscosity()
+            #self.update_body_force()
+            self.update_dynamic_viscosity()
             self.update_momentum()
         
-        #self.debugging_forces()
+        #self.debugging_forces(0)
 
-        self.all_forces = self.particle.pressure_force + \
+        self.all_forces += self.particle.pressure_force + \
                           self.gravity_const + self.buoyancy + \
                           self.particle.surface_tension + \
                           self.particle.viscosity
     
-    def debugging_forces(self):
+    def debugging_forces(self, secs):
 
         print("Mass: ", self.particle.mass)
         print("Mass Density:", self.particle.mass_density)
@@ -410,6 +454,7 @@ class SPH(Particle):
         print("Thermal:", self.particle.thermal_diffusion)
         print("viscosity:", self.particle.viscosity)
         print("\n\n")
+        time.sleep(secs)
 
     def choose_time_stepping(self, time_step_type:str = "Euler Cromer"):
         """
@@ -502,8 +547,7 @@ class SPH(Particle):
                     BoxCollisions(
                         particle=self.particle,
                         tank_size=self.tank_attrs["dimensions"]["size"],
-                        tank_location=self.tank_attrs["dimensions"]["location"],
-                        speed_loss=self.PARAMETERS["loss_of_speed"]
+                        tank_location=self.tank_attrs["dimensions"]["location"]
                     ).collision_resolution()
             else:
                 if self.TIME_SCHEMES[collision_type] == 1:
@@ -518,13 +562,13 @@ class SPH(Particle):
                     BoxCollisions(
                         particle=self.particle,
                         tank_size=self.tank_attrs["dimensions"]["size"],
-                        tank_location=self.tank_attrs["dimensions"]["location"],
-                        speed_loss=self.PARAMETERS["loss_of_speed"]
+                        tank_location=self.tank_attrs["dimensions"]["location"]
                     ).collision_resolution()
 
     def update(self):
 
         self.update_all_forces()
+        self.normal_field()
         self.XSPH_vel_correction()
 
         self.particle.acceleration = self.all_forces / self.PARAMETERS["mass_density"]
@@ -533,19 +577,20 @@ class SPH(Particle):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
+        self.adapt_to_CFL()
+
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):
-        self.velocity_max = max([nbr_particle.velocity for 
-                             nbr_particle in self.neighbours_list])
-        return self.velocity_max
+        self.velocity_max = [nbr_particle.velocity for nbr_particle in self.neighbours_list]
+        return np.maximum.reduce(self.velocity_max)
     
     def update_Vel_max(self):
         self.update_vel_max()
         self.update_force_max()
         
         self.Vel_max = self.velocity_max + \
-               np.sqrt(self.PARAMETERS["cell_size"]*
-               self.force_max)
+                       np.sqrt(self.PARAMETERS["cell_size"]*
+                       self.force_max)
             
     def update_force_max(self):
         self.force_max = np.array([0, 0, 0], dtype="float64")
@@ -559,40 +604,40 @@ class SPH(Particle):
                nbr_particle.surface_tension
             )
             self.max_force_arr.append(self.force_max)
-        self.force_max = max(self.max_force_arr)
+        self.force_max = np.maximum.reduce(self.max_force_arr)
         
     def CFL_condition(self):
-        return self.OTHER_PARAMS["alpha"] * \
-                (self.PARAMETERS["cell_size"] / np.sqrt(self.OTHER_PARAMS["stiffness_constant"]))
+        return self.PARAMETERS["alpha"] * \
+                (self.PARAMETERS["cell_size"] / np.sqrt(self.PARAMETERS["stiffness_constant"]))
     
     def CFL_force_condition(self):
-        return self.OTHER_PARAMS["beta_const"] * \
-                np.sqrt(self.PARAMETERS["cell_size"]/ self.update_max_force())
+        self.update_force_max()
+        return self.PARAMETERS["beta_const"] * \
+                np.sqrt(self.PARAMETERS["cell_size"]/ np.linalg.norm(self.force_max))
                 
     def update_velocity_divergence(self):
         self.velocity_divergence = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
             self.velocity_divergence += (nbr_particle.mass*
-               self.cubic_spline_kernel_grad(
+               self.cubic_spline_kernel_gradient(
                self.particle.initial_pos - nbr_particle.initial_pos
                )
             )
         
     def CFL_viscosity_condition(self):
         self.update_velocity_divergence()
-        return self.OTHER_PARAMS["lambda_const"] / np.linalg.norm(self.velocity_divergence)
+        return self.PARAMETERS["lambda_const"] / np.linalg.norm(self.velocity_divergence)
     
     def adapt_to_CFL(self):
         self.update_Vel_max()
-        if self.Vel_max < self.OTHER_PARAMS["alpha_const"]* \
-               self.OTHER_PARAMS["sound_speed"]:
-            self.delta_time = self.OTHER_PARAMS["stiffness_n"]*min(self.CFL_condition(), 
-                                  self.CFL_force_condition(),
-                                  self.CFL_viscosity_condition())
+        if any(self.Vel_max[0]) < self.PARAMETERS["alpha"]*self.PARAMETERS["sound_speed"]:
+            self.delta_time = self.PARAMETERS["stiffness_n"]*min([self.CFL_condition(), 
+                                                                  self.CFL_force_condition(),
+                                                                  self.CFL_viscosity_condition()])
         else:
-            self.delta_time = min(self.CFL_condition(), 
+            self.delta_time = min([self.CFL_condition(), 
                                   self.CFL_force_condition(),
-                                  self.CFL_viscosity_condition())
+                                  self.CFL_viscosity_condition()])
 
 # ------------------------------------------------------------------ THERMAL INTEGRATION ---------------------------------------------------------------------------
     def nubla(self):
@@ -606,11 +651,11 @@ class SPH(Particle):
         
     def update_momentum(self):
 
-        for nbr_particle in self.neighbour_list:
+        for nbr_particle in self.neighbours_list:
             
             pressure_term = (
-                (nbr_particle.pressure / m.pow(nbr_particle.pressure, 2) +
-                (self.particle.pressure / m.pow(self.particle.pressure, 2)
+                (nbr_particle.pressure / m.pow(nbr_particle.pressure, 2)) +
+                (self.particle.pressure / m.pow(self.particle.pressure, 2))
             )
             
             thermal_component = (
@@ -646,9 +691,7 @@ class SPH(Particle):
         self.all_forces *= -1 
         self.all_forces += self.particle.gravity + \
                            self.particle.buoyancy + \
-                           self.particle.surface_tension + \
-                           self.particle.body_force
-
+                           self.particle.surface_tension
 # ------------------------------------------------------------------- CUBIC SPLINE KERNEL ---------------------------------------------------------------------------
 
     def cubic_spline_kernel_grad_c(self, position, index_comp:int = 0):
@@ -678,6 +721,3 @@ class SPH(Particle):
     def update_body_force(self):
         self.particle.body_force = self.PARAMETERS["thermal_exp_coeff"]*self.particle.gravity* \
                 (self.particle.temperature - self.PARAMETERS["abs_temperature"])
-        
-    def update_EOS_pressure(self):
-        self.particle.pressure = self.PARAMETERS["sound_speed"] * (self.particle.mass_density - self.PARAMETERS["mass_density"])

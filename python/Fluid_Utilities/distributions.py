@@ -61,8 +61,8 @@ class Uniform:
                               endpoint=False)
         phi = np.linspace(0, np.pi, self.num_particles / 2, 
                               endpoint=False)
-        position = np.array([self.radius*np.cos(rho)*np.sin(phi)
-                             self.radius*np.sin(rho)*np.sim(phi)
+        position = np.array([self.radius*np.cos(rho)*np.sin(phi),
+                             self.radius*np.sin(rho)*np.sin(phi),
                              self.radius*np.cos(phi)])
         positions.append(position)
 

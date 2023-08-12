@@ -9,7 +9,7 @@ class Particle:
     def __init__(self,
                  init_pos : np.array=np.array([0, 0, 0], dtype="float64"),
                  colour : np.array=np.array([0, 0, 0], dtype="float64"),
-                 velocity : np.array=np.array([0, 0, 0], dtype="float64"),
+                 velocity : np.array=np.array([0.2, 0.1, 0.5], dtype="float64"),
                  acceleration: np.array=np.array([0, 0, 0], dtype="float64"),
                  mass: float=0.1, shape : str="circle", size : int=2,
                  phase_number: int=3) -> None:
@@ -32,6 +32,7 @@ class Particle:
         self.next_acceleration = None
         self.mass = mass
         self.hash_value = 0
+        self.normal_field = np.array([0, 0, 0], dtype="float64")
 
         # multi SPH extra attributes
 

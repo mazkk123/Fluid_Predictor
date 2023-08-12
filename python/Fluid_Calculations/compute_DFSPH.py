@@ -9,15 +9,9 @@ from Particles.particles import Particle
 class DFSPH(SPH):
 
     OTHER_PARAMS = {
-        "boundary_threshold":6,
-        "max_iter":1,
-        "stiffness_constant":1000,
-        "alpha":0.4,
+        "boundary_threshold":0.015,
+        "max_iter":2,
         "alpha_vorticity":1.2,
-        "beta_const":0.25,
-        "lambda_const":0.005,
-        "stiffness_n":1.5,
-        "sound_speed":300
     }
 
     def __init__(self,

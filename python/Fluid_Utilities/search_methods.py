@@ -12,10 +12,12 @@ class SpatialHashing:
 
     def __init__(self,
                  cell_size: float=None,
-                 num_particles: int=None):
+                 num_particles: int=5000):
         
-        self.cell_size = cell_size
-        self.num_particles = num_particles
+        if cell_size is not None:
+            self.cell_size = cell_size
+        if num_particles is not None:
+            self.num_particles = num_particles
 
     def is_prime(self, num: int=None):
         return num%2==1
