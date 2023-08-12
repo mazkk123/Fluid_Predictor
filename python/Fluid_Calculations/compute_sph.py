@@ -28,10 +28,8 @@ class SPH(Particle):
         "loss_of_speed":0.5,
         "epsilon":0.1,
         "neighbour_num":30,
-        "thermal_exp_coeff":0.5,
-        "kinematic_visc":2.5,
-        "abs_temperature":173,
-        "sound_speed":300
+        "thermal_exp_coeff":4.988,
+        "kinematic_visc":0.000006,
     }
 
     TIME_SCHEMES = {
@@ -388,16 +386,9 @@ class SPH(Particle):
         self.update_viscosity() 
 
         if self.temperature is True:
-            self.update_EOS_pressure()
             self.update_body_force()
-            self.update_laminar_viscosity()
-            self.update_heat_conduction()
-
-            self.all_forces = self.particle.pressure_force + \
-                              self.gravity_const + self.particle.buoyancy + \
-                              self.particle.surface_tension + \
-                              self.particle.body_force + self.particle.laminar_viscosity + \
-                              self.particle.thermal_diffusion
+            self.update_kinematic_viscosity()
+            self.update_momentum()
         
         #self.debugging_forces()
 
@@ -604,75 +595,67 @@ class SPH(Particle):
                                   self.CFL_viscosity_condition())
 
 # ------------------------------------------------------------------ THERMAL INTEGRATION ---------------------------------------------------------------------------
-    def update_q(self, position:np.array,
-                 nbr_position:np.array):
-        return np.linalg.norm(position - nbr_position) / self.PARAMETERS["cell_size"]
-
-    def update_alpha_factor(self):
-        return 1/(np.power(np.pi, 2/3) * m.pow(self.PARAMETERS["cell_size"], 3))
+    def nubla(self):
+        return self.PARAMETERS["cell_size"]*0.1
     
-    def update_heat_conduction(self):
+    def update_dynamic_viscosity(self):
+        self.particle.viscosity = (
+           self.particle.mass_density*self.PARAMETERS["kinematic_visc"] /
+           self.PARAMETERS["mass_density"]
+        )
+        
+    def update_momentum(self):
 
-        const_term = 1 / (self.particle.pressure * self.particle.specific_heat)
-
-        for nbr_particle in self.neighbours_list:
-            thermal_conduc_term = 4 * nbr_particle.mass * self.particle.thermal_conduc * nbr_particle.thermal_conduc
-            density_term = self.particle.mass_density * nbr_particle.mass_density * (
-                self.particle.thermal_conduc + nbr_particle.thermal_conduc
+        for nbr_particle in self.neighbour_list:
+            
+            pressure_term = (
+                (nbr_particle.pressure / m.pow(nbr_particle.pressure, 2) +
+                (self.particle.pressure / m.pow(self.particle.pressure, 2)
             )
-            temperature_term = self.particle.temperature - nbr_particle.temperature
-            pos_dif = self.particle.initial_pos - nbr_particle.initial_pos
-            kernel_grad_term = pos_dif * self.cubic_spline_kernel(1, nbr_particle.initial_pos) / (np.power(pos_dif, 2) + 
-                                                                                                  m.pow(self.update_nubla(), 2))
-            self.particle.thermal_diffusion += (
-                (thermal_conduc_term / density_term) * temperature_term * kernel_grad_term
+            
+            thermal_component = (
+               self.PARAMETERS["thermal_exp_coeff"] / 
+               (self.particle.mass_density*nbr_particle.mass_density)
             )
-        self.particle.thermal_diffusion *= const_term
-
-    def update_nubla(self):
-        return 0.1 * self.PARAMETERS["cell_size"]
+            
+            visc_component = (
+                4*self.particle.viscosity*nbr_particle.viscosity /
+                (self.particle.viscosity + nbr_particle.viscosity)
+            )
+            
+            velocity_component = (
+               (self.particle.velocity-nbr_particle.velocity)*
+               (self.particle.initial_pos-nbr_particle.initial_pos) /
+               (np.power((self.particle.initial_pos-nbr_particle.initial_pos), 2) +
+               m.pow(self.nubla(), 2))
+            )
+            
+            kernel_term = (
+               self.cubic_spline_kernel_gradient(
+                 self.particle.initial_pos - nbr_particle.initial_pos
+               )
+            )
+            
+            self.all_forces = nbr_particle.mass* \
+                              (pressure_term + \
+                              thermal_component* \
+                              visc_component* \
+                              velocity_component)* \
+                              kernel_term
+                            
+        self.all_forces *= -1 
+        self.all_forces += self.particle.gravity + \
+                           self.particle.buoyancy + \
+                           self.particle.surface_tension + \
+                           self.particle.body_force
 
 # ------------------------------------------------------------------- CUBIC SPLINE KERNEL ---------------------------------------------------------------------------
-    def update_laminar_viscosity(self):
-        for nbr_particle in self.neighbours_list:
-            viscosity_term = 4 * nbr_particle.mass * self.PARAMETERS["kinematic_visc"] * (self.particle.initial_pos - 
-                                                                                          nbr_particle.initial_pos)
-            velocity_term = self.particle.velocity - nbr_particle.velocity
-            kernel_grad_term = self.cubic_spline_kernel(1, nbr_particle.initial_pos)
-            density_term = self.particle.mass_density + nbr_particle.mass_density
-            position_dif = self.particle.initial_pos - nbr_particle.initial_pos
-            positional_term = (np.power(position_dif, 2) + np.power(self.update_nubla(), 2))
-            self.particle.laminar_viscosity += (
-                    (viscosity_term * kernel_grad_term)  / (density_term + positional_term) * velocity_term
-            )
 
-    def cubic_spline_kernel(self, kernel_type:int = 0,
-                            nbr_position:np.array=np.array([0, 0, 0])):
-        
-        if kernel_type==0:
-            if self.update_q(self.particle.initial_pos, nbr_position) >=0 and \
-                self.update_q(self.particle.initial_pos, nbr_position) <= 1:
-                    return self.update_alpha_factor() * (1 - 3/2*np.power(self.update_q(self.particle.initial_pos, nbr_position), 2) +  \
-                        3/4*np.power(self.update_q(self.particle.initial_pos, nbr_position), 3) )
-            if self.update_q(self.particle.initial_pos, nbr_position) >= 1 and \
-                self.update_q(self.particle.initial_pos, nbr_position) <= 2:
-                return 1/4 * np.power(2 - self.update_q(self.particle.initial_pos, nbr_position), 3)
-            if self.update_q(self.particle.initial_pos, nbr_position) >= 2:
-                return 0
-        if kernel_type==1:
-            return self.update_alpha_factor() * (-3 * (1- np.power(self.update_q(self.particle.initial_pos, nbr_position), 2)) *
-                    ((2*self.update_q(self.particle.initial_pos, nbr_position) + 1 )/ self.PARAMETERS["cell_size"])) * \
-                    self.particle.initial_pos - nbr_position
-        
     def cubic_spline_kernel_grad_c(self, position, index_comp:int = 0):
-        
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<=1:
-            return -3*q + 9/4*m.pow(q, 2) * position[index_comp]
-        if q>=1 and q<= 2:
-            return -3/4 * m.pow(2 - q, 2) * position[index_comp]
-        if q>2:
-            return 0
+        const_term = 15 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
+        kernel_term = (position[index_comp] / np.linalg.norm(position)) * \
+                    m.pow((self.PARAMETERS["cell_size"] - np.linalg.norm(position)), 2)
+        return const_term*kernel_term
         
     def cubic_spline_kernel_pos(self, position):
         q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
@@ -684,22 +667,13 @@ class SPH(Particle):
             return 0
         
     def cubic_spline_kernel_gradient(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<=1:
-            return -3*q + 9/4*m.pow(q, 2)
-        if q>=1 and q<= 2:
-            return -3/4 * m.pow(2 - q, 2)
-        if q>2:
-            return 0
+        const_term = 15 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
+        kernel_term = (position / np.linalg.norm(position)) * \
+                    m.pow((self.PARAMETERS["cell_size"] - np.linalg.norm(position)), 2)
+        return const_term*kernel_term
 
     def cubic_spline_kernel_gradient_mag(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<=1:
-            return np.abs(-3*q + 9/4*m.pow(q, 2))
-        if q>=1 and q<= 2:
-            return np.abs(-3/4 * m.pow(2 - q, 2))
-        if q>2:
-            return 0
+        return self.cubic_spline_kernel_gradient(np.abs(position))
         
     def update_body_force(self):
         self.particle.body_force = self.PARAMETERS["thermal_exp_coeff"]*self.particle.gravity* \
