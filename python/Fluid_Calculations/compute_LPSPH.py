@@ -89,7 +89,7 @@ class LPSPH(SPH):
             except ZeroDivisionError:
                 density_term = 0
 
-            self.pressure_far += density_term
+            self.pressure_far += far_nbr.mass*density_term
         return self.pressure_far
 
     def calculate_density_error(self):
@@ -130,7 +130,7 @@ class LPSPH(SPH):
                 mass_d = 0
             mass_density += (
                 nbr_particle.mass * self.cubic_spline_kernel_pos(self.particle.initial_pos - 
-                                                       nbr_particle.initial_pos)
+                                                                 nbr_particle.initial_pos)
             )
             mass_density_denom += (
                 mass_d * self.cubic_spline_kernel_pos(
@@ -145,7 +145,16 @@ class LPSPH(SPH):
         self.particle.predicted_density = final_mass_d
         
     def update_viscosity(self):
-        return super().update_viscosity()
+        viscosity = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in self.neighbours_list:
+            viscosity += (
+               nbr_particle.mass * 
+               ((nbr_particle.velocity - self.particle.velocity) /
+                nbr_particle.mass_density) *
+                self.kernel_laplacian(self.particle.initial_pos -
+                                      nbr_particle.initial_pos, 2)
+            )
+        self.particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
     
     def update_predicted_attrs(self):
         self.particle.predicted_velocity += self.delta_time * self.all_forces / self.particle.mass
@@ -163,6 +172,7 @@ class LPSPH(SPH):
 
         self.all_forces = self.particle.gravity + self.particle.buoyancy + self.particle.surface_tension + \
                           self.particle.viscosity + self.particle.surface_tension
+        self.particle.acceleration = self.all_forces / self.particle.mass
 
     def update_pressure_force(self):
         pressure_force = np.array([0, 0, 0], dtype="float64")
@@ -177,8 +187,7 @@ class LPSPH(SPH):
     def update(self):
 
         self.update_advective_forces()
-        self.particle.acceleration = self.all_forces / self.particle.mass
-
+    
         self.particle.predicted_velocity += self.particle.acceleration
         self.particle.predicted_initial_pos += self.delta_time*self.particle.predicted_velocity
         
@@ -198,10 +207,8 @@ class LPSPH(SPH):
 
             self.update_predicted_attrs()
             
-        
         self.particle.initial_pos = self.particle.predicted_initial_pos
         self.particle.velocity = self.particle.predicted_velocity 
         
         self.XSPH_vel_correction()
         self.choose_collision_types("Cuboid", "Normal")
-
