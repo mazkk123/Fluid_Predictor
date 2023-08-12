@@ -50,6 +50,7 @@ class Particle:
         # particle force attributes
 
         self.mass_density = 0
+        self.predicted_density = 0
 
         self.pressure = 0
         self.prev_pressure = 0
