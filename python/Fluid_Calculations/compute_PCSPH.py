@@ -158,20 +158,39 @@ class PCSPH(SPH):
         """
         """
         particle.gravity = self.gravity_const
+    
+    def update_surface_tension(self, particle):
+        """
+        """
+        normal_field = self.update_normal_field()
+        surface_curvature = self.update_surface_curvature()
+        normal_field_magnitude = np.linalg.norm(normal_field)
         
+        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
+            particle.surface_tension = (
+                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
+            )
+
+    def update_buoyancy(self, particle):
+        """
+        """
+        buoyancy = self.PARAMETERS["buoyancy"] * (self.particle.mass_density - self.PARAMETERS["mass_density"])
+        buoyancy *= self.gravity_const
+        particle.buoyancy = buoyancy
+    
     def update_advective_forces(self):
         
         for particle in self.all_particles:
             self.update_mass_density()
             self.update_gravity(particle)
-            self.update_surface_tension()
+            self.update_surface_tension(particle)
             self.update_viscosity(particle)
-            self.update_buoyancy()
+            self.update_buoyancy(particle)
     
             self.all_forces = particle.gravity + \
-                              self.particle.surface_tension + \
+                              particle.surface_tension + \
                               particle.viscosity + \
-                              self.particle.buoyancy
+                              particle.buoyancy
 
     def update_predicted_attrs(self):
 
