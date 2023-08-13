@@ -104,6 +104,7 @@ class SPH(Particle):
         
         self.update_particle_neighbours()
         self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
+        self.all_forces = np.array([0, 0, 0], dtype="float64")
 
     # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------
 
@@ -120,7 +121,7 @@ class SPH(Particle):
                     self.neighbours_list.append(items)
                     self.particle.neighbour_list.append(items)
 
-            self.particle_query()
+            #self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():

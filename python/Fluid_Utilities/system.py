@@ -139,7 +139,7 @@ class FluidSystem:
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
                         all_particles=self.particle_list,
-                        temperature= True,
+                        temperature= False,
                         delta_time=0.02
                     ).update()
                 if id==1:
@@ -166,7 +166,7 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id==3:
-                    print("do WCSPH")
+                    """ print("do WCSPH") """
                     WCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -174,6 +174,7 @@ class FluidSystem:
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
+                        all_particles=self.particle_list,
                         delta_time=0.02 
                     ).update()
                 if id==4:

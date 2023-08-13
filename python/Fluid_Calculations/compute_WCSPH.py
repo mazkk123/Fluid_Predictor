@@ -18,17 +18,22 @@ class WCSPH(SPH):
     }
 
     def __init__(self,
-                 p: Particle=None,
+                 particle: Particle=None,
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
-                 delta_time:float = None
-                 ):
+                 time_stepping:str = "Euler Cromer",
+                 all_particles:list = None,
+                 tank_attrs:dict = None,
+                 delta_time:float = None):
         
-        super().__init__(particle=p,
+        super().__init__(particle=particle,
+                        all_particles=all_particles, 
+                        time_stepping=time_stepping,
                         search_method=search_method,
                         hash_table=hash_table,
                         hash_value=hash_value,
+                        tank_attrs=tank_attrs,
                         delta_time=delta_time)
 
         self.compute_K()
@@ -41,30 +46,13 @@ class WCSPH(SPH):
         if self.particle.mass_density>2*self.PARAMETERS["mass_density"]:
             pressure_val_1 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
             pressure_val_2 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
-            self.pressure = pressure_val_1 - pressure_val_2
+            self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         if self.particle.mass_density >= (self.PARAMETERS["mass_density"]) and self.particle.mass_density < 2*self.PARAMETERS["mass_density"]:
             pressure_val_1 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
             pressure_val_2 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
-            self.pressure = pressure_val_1 - pressure_val_2
+            self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         else:
             self.particle.pressure = 0
-
-    def CFL_condition(self, delta_time):
-        
-        self.velocity_max = np.linalg.norm(self.particle.velocity)
-        return delta_time <= self.EXTRA_PARAMS["lambda_v"]*(self.PARAMETERS["cell_spacing"]/self.velocity_max)
-
-    def viscous_CFL_condition(self, delta_time):
-        return delta_time <= self.EXTRA_PARAMS["lambda_vis"]*(self.PARAMETERS["cell_spacing"]/(
-                0.6*(self.EXTRA_PARAMS["SSF"]*self.PARAMETERS["viscosity"]) + self.EXTRA_PARAMS["SSF"]
-        ))
-
-    def force_CFL_condition(self, delta_time):
-        return delta_time <= self.EXTRA_PARAMS["lambda_f"]*(np.sqrt(self.PARAMETERS["cell_spacing"] / np.linalg.norm(self.acceleration)))
-
-    def adaptive_time_stepping(self):
-        if self.CFL_condition(self.delta_time) and self.viscous_CFL_condition(self.delta_time) and self.force_CFL_condition(self.delta_time):
-            pass
 
     def update(self):
         return super().update()
