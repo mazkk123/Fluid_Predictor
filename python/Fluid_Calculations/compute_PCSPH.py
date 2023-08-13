@@ -139,19 +139,39 @@ class PCSPH(SPH):
         self.particle.pressure_force *= m.pow(self.particle.mass, 2)
 
     # -------------------------------------------------------------------- UPDATE CALLS ------------------------------------------------------------------------------
+    def update_viscosity(self, particle):
+        """
+        """
+        viscosity = np.array([0, 0, 0], dtype="float64")
+        for id, nbr_particle in enumerate(self.neighbours_list):
+            vel_dif = nbr_particle.velocity - self.particle.velocity
+            kernel_laplacian = self.kernel_laplacian(self.particle.initial_pos - nbr_particle.initial_pos, 2)
+            try:
+                mass_pressure = self.particle.mass/nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_pressure = 0
+            viscosity += vel_dif*mass_pressure*kernel_laplacian
 
+        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
+
+    def update_gravity(self, particle):
+        """
+        """
+        particle.gravity = self.gravity_const
+        
     def update_advective_forces(self):
-
-        self.update_mass_density()
-        self.update_gravity()
-        self.update_surface_tension()
-        self.update_viscosity()
-        self.update_buoyancy()
-
-        self.all_forces = self.particle.gravity + \
-                          self.particle.surface_tension + \
-                          self.particle.viscosity + \
-                          self.particle.buoyancy
+        
+        for particle in self.all_particles:
+            self.update_mass_density()
+            self.update_gravity(particle)
+            self.update_surface_tension()
+            self.update_viscosity(particle)
+            self.update_buoyancy()
+    
+            self.all_forces = particle.gravity + \
+                              self.particle.surface_tension + \
+                              particle.viscosity + \
+                              self.particle.buoyancy
 
     def update_predicted_attrs(self):
 
