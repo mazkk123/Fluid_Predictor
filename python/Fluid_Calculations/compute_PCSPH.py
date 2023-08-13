@@ -2,6 +2,7 @@ import math as m
 import numpy as np
 import random as rd
 import re
+import time
 
 from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
@@ -11,103 +12,203 @@ class PCSPH(SPH):
     OTHER_PARAMS = {
         "max_iterations":2,
         "min_iterations":1,
-        "predictor_threshold":0.5,
-        "k_stiffness":7,
-        "lambda_const":1
+        "stiffness_k":0.1,
+        "lambda_const":7
     }
+
     def __init__(self,
                  particle: Particle=None,
                  search_method: str=None,
-                 hash_table: dict=None,
-                 hash_value: int=None,
-                 tank_attrs: dict=None,
+                 hash_table:dict=None,
+                 hash_value:int=None,
                  time_stepping:str = "Euler Cromer",
+                 all_particles:list = None,
+                 tank_attrs:dict = None,
                  delta_time:float = 0.02):
         
         super().__init__(particle=particle,
-                         search_method=search_method,
-                         hash_table=hash_table,
-                         hash_value=hash_value,
-                         time_stepping=time_stepping,
-                         delta_time=delta_time,
-                         tank_attrs=tank_attrs)
-
-        self.particle = particle
-        self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
-        self.particle.pressure = 0
-
-    def update_pressure(self):
-        k_const = (self.OTHER_PARAMS["k_stiffness"]*self.PARAMETERS["mass_density"]) / self.OTHER_PARAMS["lambda_const"]
-        pressure_term = ((self.particle.mass_density / self.PARAMETERS["mass_density"]) - 1)
-        self.particle.pressure = k_const*pressure_term
-    
-    def update_pressure_force(self):
-        return super().update_pressure_force()
-    
-    def calculate_density_error(self, predicted_density:float =None):
-        if predicted_density is not None:
-            return predicted_density - self.PARAMETERS["mass_density"]
+                        all_particles=all_particles, 
+                        time_stepping=time_stepping,
+                        search_method=search_method,
+                        hash_table=hash_table,
+                        hash_value=hash_value,
+                        tank_attrs=tank_attrs,
+                        delta_time=delta_time)
     
     def find_beta_const(self):
         return m.pow(self.delta_time, 2)*m.pow(self.particle.mass, 2)* \
             2 / m.pow(self.PARAMETERS["mass_density"], 2)
     
-    def sum_kernel_grad_dot(self):
-        kernel_grad_sum = 0
-        for id, nbr_particle in enumerate(self.neighbours_list):
-            kernel_grad_sum += (
-                np.dot(self.cubic_spline_kernel(nbr_position=nbr_particle.initial_pos, kernel_type=1), 
-                       self.cubic_spline_kernel(nbr_position=nbr_particle.initial_pos, kernel_type=1))
+    def cubic_spline_kernel_gradient(self, position):
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        kernel_const = 1 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 4))
+        if q>=0 and q<=1:
+            kernel_val = 9/4*m.pow(q, 2) - 3*q
+        if q>=1 and q<=2:
+            kernel_val = -3/4*m.pow((2 - q), 2)
+        if q>=2:
+            return 0
+        return kernel_val*kernel_const
+
+
+    # ---------------------------------------------------------------------- PREDICT DENSITY -----------------------------------------------------------------------------
+
+    def update_del_x(self):
+        pressure_const = 2*self.particle.pressure_correction / m.pow(self.PARAMETERS["mass_density"], 2)
+        constant = -1*m.pow(self.delta_time, 2)*self.particle.mass*pressure_const
+
+        for nbr_particle in self.neighbours_list:
+            self.particle.delta_x += (
+                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.initial_pos)
             )
-        return kernel_grad_sum
+        self.particle.delta_x *= constant
 
-    def kernel_grad_sum(self):
-        kernel_grad_sum = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(self.neighbours_list):
-            kernel_grad_sum += self.cubic_spline_kernel(nbr_position=nbr_particle.initial_pos, kernel_type=1)
-        return kernel_grad_sum
+    def update_density_change(self):
+        sum_del_neighbour_x, sum_weights = 0, 0
+        self.particle.density_change = 0
 
-    def find_kronecker_delta(self, density_error:float = None):
+        for nbr_particle in self.neighbours_list:
+            sum_weights += (
+                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - 
+                                                  nbr_particle.initial_pos)
+            )
+            sum_del_neighbour_x += (
+                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - 
+                                                  nbr_particle.initial_pos)*nbr_particle.delta_x
+            )
+        self.particle.density_change = self.particle.mass*(self.particle.delta_x*sum_weights - sum_del_neighbour_x)
+
+    def update_next_density(self):
+        self.update_del_x()
+        self.update_density_change()
+        self.particle.predicted_density += self.particle.density_change
+
+    def calculate_density_error(self):
+        return self.particle.predicted_density - self.PARAMETERS["mass_density"]
+
+    # -------------------------------------------------------------------- COMPUTE PRESSURE -----------------------------------------------------------------------------
+
+    def find_kronecker_delta(self):
+        beta_value = self.find_beta_const()
+        accum_denom, denom = 0, 0
+        for nbr_particle in self.neighbours_list:
+            accum_denom += (
+                m.pow(self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.initial_pos), 2)
+            )
+            denom += (
+                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.initial_pos)
+            )
+
+        print("Denom", denom)
+        print("Accum", accum_denom)
+        time.sleep(0.5)
+
+        try:
+            kronecker = -1 / (
+                beta_value * (
+                    -denom*denom - accum_denom
+                )
+            )
+        except ZeroDivisionError:
+            kronecker = 0
+
+        return kronecker
+
+    def update_pressure_correction(self):
+        self.particle.pressure_correction += self.find_kronecker_delta()*self.calculate_density_error()
+
+        """ print("Pressure correction kronecker is: ", self.find_kronecker_delta())
+        print("Density error is: ", self.calculate_density_error()) """
+        time.sleep(0.5)
+    
+    def update_pressure(self):
+        self.particle.pressure = (
+            (self.OTHER_PARAMS["k_stiffness"]*self.PARAMETERS["mass_density"] /
+            self.OTHER_PARAMS["lambda_const"]) *
+            (m.pow(self.particle.predicted_density / self.PARAMETERS["mass_density"], self.OTHER_PARAMS["lambda_const"]) - 1)
+        )
+    
+    def update_pressure_force(self):
+        for nbr_particle in self.neighbours_list:
+            self.particle.pressure_force += (
+                ((self.particle.pressure / np.power(self.particle.predicted_density, 2)) + 
+                 (nbr_particle.pressure / np.power(nbr_particle.predicted_density,2))) *
+                  self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos -
+                                                    nbr_particle.predicted_initial_pos)
+            )
+        self.particle.pressure_force *= m.pow(self.particle.mass, 2)
+
+    # -------------------------------------------------------------------- UPDATE CALLS ------------------------------------------------------------------------------
+
+    def update_advective_forces(self):
+
+        self.update_mass_density()
+        self.update_gravity()
+        self.update_surface_tension()
+        self.update_viscosity()
+        self.update_buoyancy()
+
+        self.all_forces = self.particle.gravity + \
+                          self.particle.surface_tension + \
+                          self.particle.viscosity + \
+                          self.particle.buoyancy
+
+    def update_predicted_attrs(self):
+
+        self.particle.acceleration = self.all_forces / self.particle.mass
+
+        self.particle.predicted_velocity = self.particle.velocity + self.delta_time*self.particle.acceleration
+        self.particle.predicted_initial_pos = self.particle.predicted_velocity + self.particle.predicted_velocity*self.delta_time
+    
+    def update_all_forces(self):
         
-        beta_const = self.find_beta_const()
-        kernel_grad_sum = self.sum_kernel_grad_dot()
-        kernel_grad_dot_sum = np.dot(-1*self.kernel_grad_sum(), self.kernel_grad_sum())
+        self.update_pressure()
+        self.update_pressure_force()
+        self.update_viscosity()
+        self.update_buoyancy()
+        self.update_surface_tension()
+        self.update_gravity()
 
-        """ print("Dot: " , kernel_grad_dot_sum)
-        print("Kernel", kernel_grad_sum)
-        print("\n\n\n\n") """
-
-        denom = beta_const * (kernel_grad_dot_sum - kernel_grad_sum)
-
-        """ print("Denom is: ", denom) """
-
-        if denom == 0:
-            kronecker_delta = 0
-        else:
-            kronecker_delta = -1 / denom
-
-        return kronecker_delta
+        self.all_forces = self.particle.pressure_force + \
+                          self.particle.viscosity + \
+                          self.particle.gravity + \
+                          self.particle.surface_tension + \
+                          self.particle.buoyancy
 
     def update(self):
         
+        self.update_advective_forces()
         iterations = 0
-        while (self.calculate_density_error(self.density_prediction()) > self.OTHER_PARAMS["predictor_threshold"]):
+        
+        self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
+        self.particle.pressure = 0
 
-            if (iterations <= self.OTHER_PARAMS["max_iterations"]):
-                break
+        self.update_predicted_attrs()
 
-            self.velocity_prediction = self.prediction_update(particle=self.particle)[1]
-            self.position_prediction = self.prediction_update(particle=self.particle)[0]
+        """ print("Predicted position is: ", self.particle.predicted_initial_pos)
+        print("Predicted velocity is: ", self.particle.predicted_velocity)
+        print("Predicted density is: ", self.particle.predicted_density)
+        time.sleep(0.5) """
 
-            self.predicted_density = self.density_prediction()
-            self.density_error = self.calculate_density_error(self.predicted_density)
+        while (self.calculate_density_error() > 0.1*self.PARAMETERS["mass_density"]) or \
+            iterations < self.OTHER_PARAMS["max_iterations"]:
 
-            self.pressure_correction = self.find_kronecker_delta()*self.density_error
+            self.update_pressure_correction()
+            self.update_next_density()
 
-            self.particle.pressure += self.pressure_correction
-
-            self.update_pressure_force()
+            """ print("Density error is: ", self.calculate_density_error()) """
 
             iterations += 1
-        
-        return super().update()
+
+        """ print("Density corrected")
+        print("Corrected density is: ", self.particle.predicted_density)
+        time.sleep(0.5) """
+
+        """ self.update_all_forces()
+
+        self.particle.acceleration = self.all_forces / self.particle.mass
+
+        self.choose_time_stepping()
+        self.adapt_to_CFL()        
+        self.XSPH_vel_correction()
+        self.choose_collision_types() """

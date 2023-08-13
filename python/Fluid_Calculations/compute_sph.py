@@ -32,8 +32,8 @@ class SPH(Particle):
         "beta_const":0.25,
         "stiffness_constant":1000,
         "alpha":0.4,
-        "v_cutoff":np.array([0.2, 0.2, 0.2], dtype="float64"),
-        "N_cutoff":np.array([0.3, 0.3, 0.3], dtype="float64"),
+        "v_cutoff":np.array([0, 0, 0], dtype="float64"),
+        "N_cutoff":np.array([0, 0, 0], dtype="float64"),
         "thermal_exp_coeff":4.988,
         "kinematic_visc":0.000006,
         "lambda_const":0.005,
@@ -117,11 +117,11 @@ class SPH(Particle):
             self.particle.neighbour_list = []
             self.mark_active_neighbours()
             for items in self.hash_table[self.hash_value]:
-                if items in self.active or items in self.semi_active:
+                if not items==self.particle:
                     self.neighbours_list.append(items)
                     self.particle.neighbour_list.append(items)
 
-            #self.particle_query()
+            self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
@@ -161,9 +161,12 @@ class SPH(Particle):
     def normal_field(self):
         self.particle.normal_field = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
+            try:
+                mass_d = nbr_particle.mass / nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_d = 0
             self.particle.normal_field += (
-                (nbr_particle.mass / nbr_particle.mass_density) *
-                self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 0)
+                mass_d * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 0)
             )
     
     def mark_active_neighbours(self):
@@ -578,7 +581,7 @@ class SPH(Particle):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        self.adapt_to_CFL()
+        #self.adapt_to_CFL()
 
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):

@@ -42,7 +42,7 @@ class FluidSystem:
     }
 
     ATTRS = {
-        "cell_size":0.15
+        "cell_size":0.5
     }
 
     PHASE_INFORMATION = {
@@ -185,6 +185,7 @@ class FluidSystem:
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
+                        all_particles=self.particle_list,
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02 
                     ).update()

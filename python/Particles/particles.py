@@ -51,9 +51,13 @@ class Particle:
 
         self.mass_density = 0
         self.predicted_density = 0
+        self.density_change = 0
+        self.delta_x = 0
+        self.pressure_correction = 0
 
         self.pressure = 0
         self.prev_pressure = 0
+        self.predicted_pressure = 0
         self.iter_pressure = 0
 
         self.viscosity = np.array([0, 0, 0], dtype="float64")
