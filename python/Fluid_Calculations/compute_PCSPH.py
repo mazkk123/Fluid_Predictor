@@ -99,10 +99,6 @@ class PCSPH(SPH):
                 self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.initial_pos)
             )
 
-        print("Denom", denom)
-        print("Accum", accum_denom)
-        time.sleep(0.5)
-
         try:
             kronecker = -1 / (
                 beta_value * (
@@ -116,10 +112,6 @@ class PCSPH(SPH):
 
     def update_pressure_correction(self):
         self.particle.pressure_correction += self.find_kronecker_delta()*self.calculate_density_error()
-
-        """ print("Pressure correction kronecker is: ", self.find_kronecker_delta())
-        print("Density error is: ", self.calculate_density_error()) """
-        time.sleep(0.5)
     
     def update_pressure(self):
         self.particle.pressure = (
@@ -139,15 +131,26 @@ class PCSPH(SPH):
         self.particle.pressure_force *= m.pow(self.particle.mass, 2)
 
     # -------------------------------------------------------------------- UPDATE CALLS ------------------------------------------------------------------------------
+    
+    def update_mass_density(self, particle):
+        """
+        """
+        density = 0 
+        for id, nbr_particle in enumerate(particle.neighbour_list):
+            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
+            density += kernel_value*nbr_particle.mass
+
+        particle.mass_density = self.PARAMETERS["mass_density"] + density
+    
     def update_viscosity(self, particle):
         """
         """
         viscosity = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(self.neighbours_list):
-            vel_dif = nbr_particle.velocity - self.particle.velocity
-            kernel_laplacian = self.kernel_laplacian(self.particle.initial_pos - nbr_particle.initial_pos, 2)
+        for id, nbr_particle in enumerate(particle.neighbour_list):
+            vel_dif = nbr_particle.velocity - particle.velocity
+            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
             try:
-                mass_pressure = self.particle.mass/nbr_particle.mass_density
+                mass_pressure = particle.mass/nbr_particle.mass_density
             except ZeroDivisionError:
                 mass_pressure = 0
             viscosity += vel_dif*mass_pressure*kernel_laplacian
@@ -162,8 +165,8 @@ class PCSPH(SPH):
     def update_surface_tension(self, particle):
         """
         """
-        normal_field = self.update_normal_field()
-        surface_curvature = self.update_surface_curvature()
+        normal_field = self.update_normal_field(particle)
+        surface_curvature = self.update_surface_curvature(particle)
         normal_field_magnitude = np.linalg.norm(normal_field)
         
         if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
@@ -174,14 +177,14 @@ class PCSPH(SPH):
     def update_buoyancy(self, particle):
         """
         """
-        buoyancy = self.PARAMETERS["buoyancy"] * (self.particle.mass_density - self.PARAMETERS["mass_density"])
+        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
         buoyancy *= self.gravity_const
         particle.buoyancy = buoyancy
     
-    def update_advective_forces(self):
+    def update_predicted_attrs(self):
         
         for particle in self.all_particles:
-            self.update_mass_density()
+            self.update_mass_density(particle)
             self.update_gravity(particle)
             self.update_surface_tension(particle)
             self.update_viscosity(particle)
@@ -191,14 +194,12 @@ class PCSPH(SPH):
                               particle.surface_tension + \
                               particle.viscosity + \
                               particle.buoyancy
+                            
+            particle.acceleration = self.all_forces / particle.mass
 
-    def update_predicted_attrs(self):
+            particle.predicted_velocity = particle.velocity + self.delta_time*particle.acceleration
+            particle.predicted_initial_pos = particle.predicted_velocity + particle.predicted_velocity*self.delta_time
 
-        self.particle.acceleration = self.all_forces / self.particle.mass
-
-        self.particle.predicted_velocity = self.particle.velocity + self.delta_time*self.particle.acceleration
-        self.particle.predicted_initial_pos = self.particle.predicted_velocity + self.particle.predicted_velocity*self.delta_time
-    
     def update_all_forces(self):
         
         self.update_pressure()
@@ -216,7 +217,6 @@ class PCSPH(SPH):
 
     def update(self):
         
-        self.update_advective_forces()
         iterations = 0
         
         self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
@@ -224,30 +224,19 @@ class PCSPH(SPH):
 
         self.update_predicted_attrs()
 
-        """ print("Predicted position is: ", self.particle.predicted_initial_pos)
-        print("Predicted velocity is: ", self.particle.predicted_velocity)
-        print("Predicted density is: ", self.particle.predicted_density)
-        time.sleep(0.5) """
-
         while (self.calculate_density_error() > 0.1*self.PARAMETERS["mass_density"]) or \
             iterations < self.OTHER_PARAMS["max_iterations"]:
 
             self.update_pressure_correction()
             self.update_next_density()
-
-            """ print("Density error is: ", self.calculate_density_error()) """
-
+            
             iterations += 1
 
-        """ print("Density corrected")
-        print("Corrected density is: ", self.particle.predicted_density)
-        time.sleep(0.5) """
-
-        """ self.update_all_forces()
+        self.update_all_forces()
 
         self.particle.acceleration = self.all_forces / self.particle.mass
 
         self.choose_time_stepping()
         self.adapt_to_CFL()        
         self.XSPH_vel_correction()
-        self.choose_collision_types() """
+        self.choose_collision_types()
