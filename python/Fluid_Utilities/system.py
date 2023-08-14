@@ -3,6 +3,7 @@ import numpy as np
 import random as rd
 import re
 import sys
+import time
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Calculations\\")
 
@@ -42,7 +43,7 @@ class FluidSystem:
     }
 
     ATTRS = {
-        "cell_size":0.5
+        "cell_size":0.3
     }
 
     PHASE_INFORMATION = {
@@ -182,8 +183,9 @@ class FluidSystem:
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
-                        all_particles=self.particle_list,
                         tank_attrs = self.TANK_ATTRS,
+                        all_particles=self.particle_list,
+                        temperature=False,
                         delta_time=0.02 
                     ).update()
                 if id == 5:

@@ -18,11 +18,11 @@ class SPH(Particle):
 
     PARAMETERS = {
         "grid_separation":0.1,
-        "cell_size":0.15,
+        "cell_size":0.4,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
-        "buoyancy":0.15,
+        "buoyancy":0.3,
         "tension_coefficient":0.0728,
         "tension_threshold":6,
         "pressure_const":7,
@@ -115,13 +115,11 @@ class SPH(Particle):
         """
         if self.search_method != "Neighbour":
             self.particle.neighbour_list = []
-            self.mark_active_neighbours()
             for items in self.hash_table[self.hash_value]:
                 if not items==self.particle:
                     self.neighbours_list.append(items)
                     self.particle.neighbour_list.append(items)
-
-            self.particle_query()
+            #self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
@@ -170,21 +168,22 @@ class SPH(Particle):
             )
     
     def mark_active_neighbours(self):
-
+        
         for particle in self.all_particles:
-            if any(particle.velocity) >= any(self.PARAMETERS["v_cutoff"]) or  \
-                any(particle.normal_field)  >= any(self.PARAMETERS["N_cutoff"]):
+            if (particle.velocity >= self.PARAMETERS["v_cutoff"]).any() or  \
+                (particle.normal_field >= self.PARAMETERS["N_cutoff"]).any():
                 self.active.append(self.particle)
             else:
                 self.passive.append(self.particle)
 
         for active_p in self.active:
-            for nbr in active_p.neighbour_list:
-                if any(nbr.velocity) >= any(self.PARAMETERS["v_cutoff"]):
-                    self.active.append(nbr)
-                else:
-                    self.semi_active.append(nbr)
-   
+            if len(active_p.neighbour_list)>0:
+                for nbr in active_p.neighbour_list:
+                    if (nbr.velocity >= self.PARAMETERS["v_cutoff"]).any():
+                            self.active.append(nbr)
+                    else:
+                        self.semi_active.append(nbr)
+                
     # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
 
     def kernel_gradient(self, position: np.array=None, kernel_type:int = 0):
@@ -434,11 +433,10 @@ class SPH(Particle):
         self.update_viscosity() 
 
         if self.temperature is True:
-            #self.update_body_force()
             self.update_dynamic_viscosity()
             self.update_momentum()
         
-        #self.debugging_forces(0)
+        """ self.debugging_forces(0) """
 
         self.all_forces += self.particle.pressure_force + \
                           self.gravity_const + self.buoyancy + \
@@ -496,50 +494,6 @@ class SPH(Particle):
                 self.delta_time
             ).exec_time_scheme(self.delta_time)
 
-    def density_prediction(self):
-
-        density = 0 
-        for id, nbr_particle in enumerate(self.neighbours_list):
-            kernel_value = self.kernel_linear(self.particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*self.particle.mass
-
-        return self.PARAMETERS["mass_density"] + density
-    
-    def prediction_update(self, time_step_type:str = "Euler Cromer",
-                             particle: Particle=None):
-        if particle is not None:
-            if self.TIME_SCHEMES[time_step_type] == 0:
-                ForwardEuler(
-                    particle,
-                    self.delta_time
-                )
-            if self.TIME_SCHEMES[time_step_type] == 1:
-                return EulerCromer(
-                    particle,
-                    self.delta_time
-                ).get_time_scheme_values(self.delta_time)
-            if self.TIME_SCHEMES[time_step_type] == 2:
-                return LeapFrog(
-                    particle,
-                    self.delta_time
-                ).get_time_scheme_values(self.delta_time)
-            if self.TIME_SCHEMES[time_step_type] == 3:
-                return Verlet(
-                    particle,
-                    self.delta_time
-                ).get_time_scheme_values(self.delta_time)
-            if self.TIME_SCHEMES[time_step_type] == 4:
-                IndependentTime()
-            if self.TIME_SCHEMES[time_step_type] == 5:
-                RegionalShortTime()
-            if self.TIME_SCHEMES[time_step_type] == 6:
-                RungeKutta()
-            else:
-                return EulerCromer(
-                    particle,
-                    self.delta_time
-                ).get_time_scheme_values()
-
     def choose_collision_types(self, collision_type:str = "Cuboid",
                                secondary_type:str = "Normal"):
             if isinstance(self.COLLISION_TYPES[collision_type], dict):
@@ -581,12 +535,16 @@ class SPH(Particle):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        #self.adapt_to_CFL()
+        self.adapt_to_CFL()
 
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):
-        self.velocity_max = [nbr_particle.velocity for nbr_particle in self.neighbours_list]
-        return np.maximum.reduce(self.velocity_max)
+        try:
+            self.velocity_max = np.array([0, 0, 0], dtype="float64")
+            self.velocity_max = [nbr_particle.velocity for nbr_particle in self.neighbours_list]
+            return np.maximum.reduce(self.velocity_max)
+        except ValueError:
+            self.velocity_max = self.particle.velocity
     
     def update_Vel_max(self):
         self.update_vel_max()
@@ -608,7 +566,10 @@ class SPH(Particle):
                nbr_particle.surface_tension
             )
             self.max_force_arr.append(self.force_max)
-        self.force_max = np.maximum.reduce(self.max_force_arr)
+        try:
+            self.force_max = np.maximum.reduce(self.max_force_arr)
+        except ValueError:
+            self.force_max = self.all_forces
         
     def CFL_condition(self):
         return self.PARAMETERS["alpha"] * \
@@ -634,14 +595,25 @@ class SPH(Particle):
     
     def adapt_to_CFL(self):
         self.update_Vel_max()
-        if any(self.Vel_max[0]) < self.PARAMETERS["alpha"]*self.PARAMETERS["sound_speed"]:
-            self.delta_time = self.PARAMETERS["stiffness_n"]*min([self.CFL_condition(), 
-                                                                  self.CFL_force_condition(),
-                                                                  self.CFL_viscosity_condition()])
-        else:
-            self.delta_time = min([self.CFL_condition(), 
-                                  self.CFL_force_condition(),
-                                  self.CFL_viscosity_condition()])
+        if len(self.Vel_max)==1:
+            if (self.Vel_max[0] < self.PARAMETERS["alpha"]*self.PARAMETERS["sound_speed"]).any():
+                self.delta_time = self.PARAMETERS["stiffness_n"]*min([self.CFL_condition(), 
+                                                                    self.CFL_force_condition(),
+                                                                    self.CFL_viscosity_condition()])
+            else:
+                self.delta_time = min([self.CFL_condition(), 
+                                    self.CFL_force_condition(),
+                                    self.CFL_viscosity_condition()])
+        elif len(self.Vel_max)==3:
+            if (self.Vel_max < self.PARAMETERS["alpha"]*self.PARAMETERS["sound_speed"]).any():
+                self.delta_time = self.PARAMETERS["stiffness_n"]*min([self.CFL_condition(), 
+                                                                    self.CFL_force_condition(),
+                                                                    self.CFL_viscosity_condition()])
+            else:
+                self.delta_time = min([self.CFL_condition(), 
+                                    self.CFL_force_condition(),
+                                    self.CFL_viscosity_condition()])
+        
 
 # ------------------------------------------------------------------ THERMAL INTEGRATION ---------------------------------------------------------------------------
     def nubla(self):

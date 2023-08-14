@@ -19,18 +19,26 @@ class SpatialHashing:
         if num_particles is not None:
             self.num_particles = num_particles
 
-    def is_prime(self, num: int=None):
-        return num%2==1
+    def is_prime(self, n):
+        if n <= 1:
+            return False
+        if n <= 3:
+            return True
+        if n % 2 == 0 or n % 3 == 0:
+            return False
+        i = 5
+        while i * i <= n:
+            if n % i == 0 or n % (i + 2) == 0:
+                return False
+            i += 6
+        return True
 
     def find_next_prime(self, num):
-        
-        counter = 1
-        num_to_check = num
-
-        while self.is_prime(num_to_check) is False:
-            num_to_check += counter
-        
-        return num
+        num += 1
+        while True:
+            if self.is_prime(num):
+                return num
+            num += 1
 
     def hash_function(self, x, y, z):
         return np.array([m.floor(x/self.cell_size),

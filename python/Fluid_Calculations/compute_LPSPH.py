@@ -2,6 +2,7 @@ import math as m
 import numpy as np
 import random as rd
 import re
+import time
 
 from Particles.particles import Particle
 from Fluid_Calculations.compute_sph import SPH
@@ -9,8 +10,7 @@ from Fluid_Calculations.compute_sph import SPH
 class LPSPH(SPH):
 
     OTHER_PARAMS = {
-        "min_threshold":0.2,
-        "max_threshold":0.015
+        "max_iterations":3
     }
 
     def __init__(self, ref_radius:float=None,
@@ -35,7 +35,7 @@ class LPSPH(SPH):
         if ref_radius is not None:
             self.ref_radius = ref_radius
         
-        self.ref_radius = self.PARAMETERS["cell_size"] / 2
+        self.ref_radius = self.PARAMETERS["cell_size"] / 4
         self.epsilon = 2/3*self.ref_radius
 
         self.near_particles = []
@@ -44,11 +44,12 @@ class LPSPH(SPH):
         self.pressure_far = np.array([0, 0, 0], dtype="float64")
         self.pressure_near = np.array([0, 0, 0], dtype="float64")
 
-        self.pressure_neighbourhood()
+        self.pressure_neighbourhood(self.particle)
 
-        self.density_error = 0
+        self.iterations = 0
 
-    def pressure_neighbourhood(self):
+    # ------------------------------------------------------------- PRESSURE CORRECTION ------------------------------------------------------------------------
+    def pressure_neighbourhood(self, particle):
         for id, nbr_particle in enumerate(self.neighbours_list):
             if self.is_near_particle(nbr_particle.initial_pos):
                 self.near_particles.append(nbr_particle)
@@ -63,8 +64,9 @@ class LPSPH(SPH):
         if position is not None:
             return self.epsilon > np.linalg.norm(self.particle.initial_pos - position )
         
-    def near_pressure(self):
+    def near_pressure(self, particle):
         pressure_near = 0
+        self.pressure_near = np.array([0, 0, 0], dtype="float64")
         for id, near_nbr in enumerate(self.near_particles):
             density_diff = (near_nbr.predicted_density - self.PARAMETERS["mass_density"]) * near_nbr.predicted_density * \
                             m.pow(self.ref_radius, 2)
@@ -77,13 +79,14 @@ class LPSPH(SPH):
             self.pressure_near += pressure_near
         return self.pressure_near
     
-    def far_pressure(self):
+    def far_pressure(self, particle):
         density_term = 0
+        self.pressure_far = np.array([0, 0, 0], dtype="float64")
         for id, far_nbr in enumerate(self.far_particles):
             density_diff = far_nbr.predicted_density - self.PARAMETERS["mass_density"]
             div_const = 4 * np.pi * self.PARAMETERS["mass_density"] *  \
-                        m.pow(self.delta_time, 2) * np.linalg.norm(self.particle.initial_pos - 
-                                                                   far_nbr.initial_pos)
+                        m.pow(self.delta_time, 2) * np.linalg.norm(self.particle.predicted_initial_pos - 
+                                                                   far_nbr.predicted_initial_pos)
             try:
                 density_term = density_diff/div_const
             except ZeroDivisionError:
@@ -97,115 +100,167 @@ class LPSPH(SPH):
     
     def update_pressure(self):
         self.particle.pressure = self.near_pressure() + self.far_pressure()
-
-    def update_mass_density(self):
-        mass_density, mass_density_denom = 0, 0
-        for nbr_particle in self.neighbours_list:
-            try:
-                mass_d = nbr_particle.mass / nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_d = 0
-            mass_density += (
-                nbr_particle.mass * self.cubic_spline_kernel_pos(self.particle.initial_pos - 
-                                                       nbr_particle.initial_pos)
-            )
-            mass_density_denom += (
-                mass_d * self.cubic_spline_kernel_pos(
-                    self.particle.initial_pos - nbr_particle.initial_pos
-                )
-            )
-        try:
-            final_mass_d = mass_density / mass_density_denom
-        except ZeroDivisionError:
-            final_mass_d = 0
-
-        self.particle.mass_density = final_mass_d
     
-    def update_predicted_density(self):
-        mass_density, mass_density_denom = 0, 0
-        for nbr_particle in self.neighbours_list:
-            try:
-                mass_d = nbr_particle.mass / nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_d = 0
-            mass_density += (
-                nbr_particle.mass * self.cubic_spline_kernel_pos(self.particle.initial_pos - 
-                                                                 nbr_particle.initial_pos)
-            )
-            mass_density_denom += (
-                mass_d * self.cubic_spline_kernel_pos(
-                    self.particle.initial_pos - nbr_particle.initial_pos
-                )
-            )
-        try:
-            final_mass_d = mass_density / mass_density_denom
-        except ZeroDivisionError:
-            final_mass_d = 0
-
-        self.particle.predicted_density = final_mass_d
-        
-    def update_viscosity(self):
-        viscosity = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
-            viscosity += (
-               nbr_particle.mass * 
-               ((nbr_particle.velocity - self.particle.velocity) /
-                nbr_particle.mass_density) *
-                self.kernel_laplacian(self.particle.initial_pos -
-                                      nbr_particle.initial_pos, 2)
-            )
-        self.particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
-    
-    def update_predicted_attrs(self):
-        self.particle.predicted_velocity += self.delta_time * self.all_forces / self.particle.mass
-        self.particle.predicted_initial_pos += m.pow(self.delta_time, 2) * (self.all_forces / self.particle.mass)
-
-    def update_advective_forces(self):
-
-        self.update_mass_density()
-        self.update_gravity()
-        self.update_buoyancy()
-        self.update_surface_tension()
-        self.update_viscosity()
-
-        self.debugging_forces(0.5)
-
-        self.all_forces = self.particle.gravity + self.particle.buoyancy + self.particle.surface_tension + \
-                          self.particle.viscosity + self.particle.surface_tension
-        self.particle.acceleration = self.all_forces / self.particle.mass
-
     def update_pressure_force(self):
         pressure_force = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
             pressure_force += (
                 nbr_particle.mass *
                 ((nbr_particle.pressure + self.particle.pressure) / 2*nbr_particle.pressure ) *
-                self.cubic_spline_kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
+                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.predicted_initial_pos)
             )
         self.particle.pressure_force = pressure_force*-1
 
+    # ----------------------------------------------------------------- PREDICTING ATTRIBS ------------------------------------------------------------------------
+
+    def update_predicted_density(self, particle):
+        density = 0 
+        for nbr_particle in particle.neighbours_list:
+            kernel_value = self.kernel_linear(particle.predicted_initial_pos - nbr_particle.predicted_initial_pos, 0)
+            density += kernel_value*nbr_particle.mass
+
+        particle.predicted_density = self.PARAMETERS["mass_density"] + density
+
+    def update_predicted_mass_density(self, particle):
+        """
+        """
+        density = 0 
+        for nbr_particle in particle.neighbour_list:
+            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
+            density += kernel_value*nbr_particle.mass
+
+        particle.mass_density = self.PARAMETERS["mass_density"] + density
+
+    def update_predicted_viscosity(self, particle):
+        """
+        """
+        viscosity = np.array([0, 0, 0], dtype="float64")
+        for id, nbr_particle in enumerate(particle.neighbour_list):
+            vel_dif = nbr_particle.velocity - particle.velocity
+            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
+            try:
+                mass_pressure = particle.mass/nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_pressure = 0
+            viscosity += vel_dif*mass_pressure*kernel_laplacian
+
+        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
+
+    def update_predicted_gravity(self, particle):
+        """
+        """
+        particle.gravity = self.gravity_const
+    
+    def update_predicted_normal_field(self, particle):
+        """
+        """
+        normal_field = np.array([0, 0, 0],  dtype="float64")
+        for id, nbr_particle in enumerate(particle.neighbour_list):
+            pos_difference = particle.initial_pos - nbr_particle.initial_pos
+            normal_field += (
+                particle.mass * 1/particle.mass_density * self.kernel_gradient(pos_difference, 0)
+            )
+        return normal_field
+
+    def update_predicted_surface_curvature(self, particle):
+        """        
+        """
+        surface_curvature = 0
+        for id, nbr_particle in enumerate(particle.neighbour_list):
+            surface_curvature += (
+                particle.mass * 1/particle.mass_density * self.kernel_laplacian(
+                particle.initial_pos - nbr_particle.initial_pos, 0)
+            )
+        return surface_curvature
+    
+    def update_predicted_surface_tension(self, particle):
+        """
+        """
+        normal_field = self.update_predicted_normal_field(particle)
+        surface_curvature = self.update_predicted_surface_curvature(particle)
+        normal_field_magnitude = np.linalg.norm(normal_field)
+        
+        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
+            particle.surface_tension = (
+                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
+            )
+
+    def update_predicted_buoyancy(self, particle):
+        """
+        """
+        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
+        buoyancy *= self.gravity_const
+        particle.buoyancy = buoyancy
+
+    def find_neighbour_list(self, particle):
+        particle.neighbour_list = []
+        for nbr in self.hash_table[particle.hash_value]:
+            if particle is not nbr:
+                particle.neighbour_list.append(nbr)
+
+    def predict_attrs(self):
+
+        for particle in self.all_particles:
+
+            self.find_neighbour_list(particle)
+            self.update_predicted_mass_density(particle)
+            self.update_predicted_gravity(particle)
+            self.update_predicted_buoyancy(particle)
+            self.update_predicted_surface_tension(particle)
+            self.update_predicted_viscosity(particle)
+
+            self.all_forces = particle.gravity + \
+                              particle.buoyancy + \
+                              particle.surface_tension + \
+                              particle.viscosity
+            
+            particle.predicted_velocity = particle.velocity + self.all_forces*self.delta_time
+            particle.predicted_initial_pos = particle.initial_pos + particle.predicted_velocity*self.delta_time
+            particle.predicted_density = particle.mass_density
+
+    def update_predicted_attrs(self):
+
+        for particle in self.all_particles:
+
+            self.update_predicted_density(particle)
+            self.update_pressure()
+            self.update_pressure_force()
+            self.update_predicted_attrs()
+
+            particle.predicted_velocity += self.delta_time * particle.pressure_force / particle.mass
+            particle.predicted_initial_pos += m.pow(self.delta_time, 2) * (particle.pressure_force / particle.mass)
+
+    def debug_predicted_attrs(self, secs:float):
+
+        print("Mass Density:", self.particle.predicted_density)
+        print("Pressure:", self.particle.pressure)
+        print("Pressure Force:", self.particle.pressure_force)
+        print("Buoyancy:", self.particle.buoyancy)
+        print("surface tension:", self.particle.surface_tension)
+        print("viscosity:", self.particle.viscosity)
+        print("\n\n")
+        time.sleep(secs)
+    # --------------------------------------------------------------------- UPDATE STEP ------------------------------------------------------------------------------
     def update(self):
 
-        self.update_advective_forces()
+        self.predict_attrs()
     
-        self.particle.predicted_velocity += self.particle.acceleration
-        self.particle.predicted_initial_pos += self.delta_time*self.particle.predicted_velocity
+        self.particle.pressure = np.array([0, 0, 0], dtype="float64")
+        self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
+
+        self.debug_predicted_attrs(0)
         
-        self.particle.predicted_density = self.particle.mass_density
-        self.density_error = self.calculate_density_error()
-        
-        while self.density_error > self.OTHER_PARAMS["max_threshold"]:
+        while self.calculate_density_error()> 0.01*self.PARAMETERS["mass_density"]:
+            
+            print("Entering pressure correction")
+            self.debug_predicted_attrs(0.2)
 
             self.update_predicted_density()
             self.update_pressure()
-
-            self.density_error = self.calculate_density_error()
-
             self.update_pressure_force()
-
-            self.all_forces = self.particle.pressure_force
-
             self.update_predicted_attrs()
+
+            self.iterations += 1
             
         self.particle.initial_pos = self.particle.predicted_initial_pos
         self.particle.velocity = self.particle.predicted_velocity 

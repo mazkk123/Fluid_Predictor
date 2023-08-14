@@ -39,10 +39,6 @@ class WCSPH(SPH):
 
         self.compute_K()
 
-        print("Particle", self.particle)
-        print("Neighbours", self.neighbours_list)
-        time.sleep(0.1)
-
     def compute_K(self):
         self.K = m.pow(self.EXTRA_PARAMS["SSF"], 2) * self.PARAMETERS["mass_density"] / (self.EXTRA_PARAMS["alpha"] + self.EXTRA_PARAMS["beta"])
 

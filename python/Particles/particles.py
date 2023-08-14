@@ -55,6 +55,9 @@ class Particle:
         self.delta_x = 0
         self.pressure_correction = 0
 
+        self.near_particles = []
+        self.far_particles = []
+
         self.pressure = 0
         self.prev_pressure = 0
         self.predicted_pressure = 0
