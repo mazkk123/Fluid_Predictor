@@ -125,9 +125,6 @@ class FluidSystem:
                 
                 self.update_hash(p)
 
-                """ for key, item in self.HASH_MAP.items():
-                    print(key, ":", item) """
-
                 id = self.choose_simulation_type()
                 if id==0:
                     """ print("do SPH") """
