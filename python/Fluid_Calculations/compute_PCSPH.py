@@ -59,7 +59,7 @@ class PCSPH(SPH):
 
         for nbr_particle in particle.neighbour_list:
             particle.delta_x += (
-                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.initial_pos)
+                self.cubic_spline_kernel_gradient(particle.predicted_initial_pos - nbr_particle.initial_pos)
             )
         particle.delta_x *= constant
 
@@ -76,7 +76,7 @@ class PCSPH(SPH):
                 self.cubic_spline_kernel_gradient(particle.predicted_initial_pos - 
                                                   nbr_particle.predicted_initial_pos)*nbr_particle.delta_x
             )
-        particle.density_change = self.particle.mass*(self.particle.delta_x*sum_weights - sum_del_neighbour_x)
+        particle.density_change = particle.mass*(particle.delta_x*sum_weights - sum_del_neighbour_x)
 
     def update_next_density(self):
         
@@ -214,7 +214,7 @@ class PCSPH(SPH):
     
     def update_predicted_attrs(self):
         
-        for particle in self.neighbours_list:
+        for particle in self.all_particles:
             self.update_mass_density(particle)
             self.update_gravity(particle)
             self.update_surface_tension(particle)
