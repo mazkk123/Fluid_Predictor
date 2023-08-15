@@ -43,8 +43,13 @@ class LPSPH(SPH):
 
         self.pressure_far = np.array([0, 0, 0], dtype="float64")
         self.pressure_near = np.array([0, 0, 0], dtype="float64")
-
+        
+        self.pressure = np.array([0, 0, 0], dtype="float64")
+        self.pressure_force = np.array([0, 0, 0], dtype="float64")
+        
         self.pressure_neighbourhood()
+        
+        self.iterations = 0
 
     # ------------------------------------------------------------- PRESSURE CORRECTION ------------------------------------------------------------------------
     def pressure_neighbourhood(self):
@@ -56,9 +61,9 @@ class LPSPH(SPH):
     
     def pressure_neighbourhoods(self, particle):
         for id, nbr_particle in enumerate(particle.neigbours_list):
-            if self.is_near_particle(nbr_particle.predicted_initial_pos):
+            if self.is_near_particle_nbr(nbr_particle.predicted_initial_pos):
                 particle.near_particles.append(nbr_particle)
-            if self.is_far_particle(nbr_particle.predicted_initial_pos):
+                if self.is_far_particle_nbr(nbr_particle.predicted_initial_pos):
                 particle.far_particles.append(nbr_particle)
                 
     def is_near_particle(self, position: np.array=None):
@@ -112,15 +117,15 @@ class LPSPH(SPH):
     def update_pressure(self, particle):
         particle.pressure = self.near_pressure(particle) + self.far_pressure(particle)
     
-    def update_pressure_force(self):
+    def update_pressure_force(self, particle):
         pressure_force = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
+        for nbr_particle in particle.neighbour_list:
             pressure_force += (
                 nbr_particle.mass *
-                ((nbr_particle.pressure + self.particle.pressure) / 2*nbr_particle.pressure ) *
-                self.cubic_spline_kernel_gradient(self.particle.predicted_initial_pos - nbr_particle.predicted_initial_pos)
+                ((nbr_particle.pressure + particle.pressure) / 2*nbr_particle.pressure ) *
+                self.cubic_spline_kernel_gradient(particle.predicted_initial_pos - nbr_particle.predicted_initial_pos)
             )
-        self.particle.pressure_force = pressure_force*-1
+        self.pressure_force = pressure_force*-1
 
     # ----------------------------------------------------------------- PREDICTING ATTRIBS ------------------------------------------------------------------------
 
@@ -232,10 +237,14 @@ class LPSPH(SPH):
     def update_predicted_attrs(self):
 
         for particle in self.all_particles:
-
-            particle.predicted_velocity += self.delta_time * particle.pressure_force / particle.mass
-            particle.predicted_initial_pos += m.pow(self.delta_time, 2) * (particle.pressure_force / particle.mass)
+            
             self.update_predicted_density(particle)
+            self.update_pressure_neighbourhoods(particle)
+            self.update_pressure(particle)
+            self.update_pressure_force(particle)
+            
+            particle.predicted_velocity += self.delta_time * self.pressure_force / particle.mass
+            particle.predicted_initial_pos += m.pow(self.delta_time, 2) * (self.pressure_force / particle.mass)
             
     def debug_predicted_attrs(self, secs:float):
 
@@ -251,20 +260,16 @@ class LPSPH(SPH):
     def update(self):
 
         self.predict_attrs()
-    
-        self.particle.pressure = np.array([0, 0, 0], dtype="float64")
-        self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
-
         self.debug_predicted_attrs(0)
         
-        while self.calculate_density_error()> 0.01*self.PARAMETERS["mass_density"]:
+        while self.calculate_density_error()> 0.05*self.PARAMETERS["mass_density"] and \
+            self.iterations < self.OTHER_PARAMS["max_iterations"]:
             
             print("Entering pressure correction")
-            self.debug_predicted_attrs(0.2)
-
-            self.update_pressure()
-            self.update_pressure_force()
+            self.debug_predicted_attrs(0.25)
             self.update_predicted_attrs()
+            
+            self.iterations += 1
             
         self.particle.initial_pos = self.particle.predicted_initial_pos
         self.particle.velocity = self.particle.predicted_velocity 
