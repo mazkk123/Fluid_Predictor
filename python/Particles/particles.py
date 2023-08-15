@@ -60,8 +60,6 @@ class Particle:
 
         self.pressure = 0
         self.prev_pressure = 0
-        self.predicted_pressure = 0
-        self.iter_pressure = 0
 
         self.viscosity = np.array([0, 0, 0], dtype="float64")
         self.laminar_viscosity = np.array([0, 0, 0], dtype="float64")

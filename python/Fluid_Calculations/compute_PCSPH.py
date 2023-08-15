@@ -291,4 +291,4 @@ class PCSPH(SPH):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        #self.adapt_to_CFL()
+        self.adapt_to_CFL()
