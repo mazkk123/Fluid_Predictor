@@ -136,11 +136,13 @@ individual pressures is added to the main pressure calculation as
 the compensation step to ensure pressure stability.
 
 ### IISPH - Implicit Incompressible SPH
-When particles reach solid boundaries or frontiers,
-the normal SPH model assumes uniform velocities and particle
-separation. With this model, drift velocity and velocity advection
-is taken into account whenever particles interact with solid 
-boundaries and reach above a certain velocity threshold.
+To ensure the simulation of inviscid incompressible fluids, 
+pressure correction is applied whenever density error surpasses a certain
+error threshold. This ensures the incompressibility condition,
+by maintaining fluid density as close to the target fluid density as 
+possible. Using an implicit velocity advection amd pressure 
+correction steps to ensure this stability is maintained.
+
 
 ### FSISPH - Fluid Solid Interface SPH
 Enforcing incompressibility and density variance near interfacial
