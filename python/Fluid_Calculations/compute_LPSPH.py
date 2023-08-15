@@ -48,12 +48,19 @@ class LPSPH(SPH):
 
     # ------------------------------------------------------------- PRESSURE CORRECTION ------------------------------------------------------------------------
     def pressure_neighbourhood(self):
-        for id, nbr_particle in enumerate(self.neighbours_list):
+        for id, nbr_particle in enumerate(self.neigbours_list):
             if self.is_near_particle(nbr_particle.initial_pos):
                 self.near_particles.append(nbr_particle)
             if self.is_far_particle(nbr_particle.initial_pos):
                 self.far_particles.append(nbr_particle)
-
+    
+    def pressure_neighbourhoods(self, particle):
+        for id, nbr_particle in enumerate(particle.neigbours_list):
+            if self.is_near_particle(nbr_particle.predicted_initial_pos):
+                particle.near_particles.append(nbr_particle)
+            if self.is_far_particle(nbr_particle.predicted_initial_pos):
+                particle.far_particles.append(nbr_particle)
+                
     def is_near_particle(self, position: np.array=None):
         if position is not None:
             return self.epsilon <= np.linalg.norm(self.particle.initial_pos - position )
@@ -61,11 +68,18 @@ class LPSPH(SPH):
     def is_far_particle(self, position: np.array=None):
         if position is not None:
             return self.epsilon > np.linalg.norm(self.particle.initial_pos - position )
-        
+    
+    def is_near_particle_nbr(self, position: np.array=None, particle):
+        if position is not None:
+            return self.epsilon <= np.linalg.norm(particle.prdicted_initial_pos - position )
+
+    def is_far_particle_nbr(self, position: np.array=None, particle):
+        if position is not None:
+            return self.epsilon > np.linalg.norm(particle.predicted_initial_pos - position )
+            
     def near_pressure(self, particle):
         pressure_near = 0
-        self.pressure_near = np.array([0, 0, 0], dtype="float64")
-        for id, near_nbr in enumerate(self.near_particles):
+        for id, near_nbr in enumerate(particle.near_particles):
             density_diff = (near_nbr.predicted_density - self.PARAMETERS["mass_density"]) * near_nbr.predicted_density * \
                             m.pow(self.ref_radius, 2)
             div_const = 2 *self.PARAMETERS["mass_density"] * m.pow(self.delta_time, 2)
@@ -79,11 +93,10 @@ class LPSPH(SPH):
     
     def far_pressure(self, particle):
         density_term = 0
-        self.pressure_far = np.array([0, 0, 0], dtype="float64")
-        for id, far_nbr in enumerate(self.far_particles):
+        for id, far_nbr in enumerate(particle.far_particles):
             density_diff = far_nbr.predicted_density - self.PARAMETERS["mass_density"]
             div_const = 4 * np.pi * self.PARAMETERS["mass_density"] *  \
-                        m.pow(self.delta_time, 2) * np.linalg.norm(self.particle.predicted_initial_pos - 
+                        m.pow(self.delta_time, 2) * np.linalg.norm(particle.predicted_initial_pos - 
                                                                    far_nbr.predicted_initial_pos)
             try:
                 density_term = density_diff/div_const
@@ -96,8 +109,8 @@ class LPSPH(SPH):
     def calculate_density_error(self):
         return self.particle.predicted_density - self.PARAMETERS["mass_density"]
     
-    def update_pressure(self):
-        self.particle.pressure = self.near_pressure() + self.far_pressure()
+    def update_pressure(self, particle):
+        particle.pressure = self.near_pressure(particle) + self.far_pressure(particle)
     
     def update_pressure_force(self):
         pressure_force = np.array([0, 0, 0], dtype="float64")
