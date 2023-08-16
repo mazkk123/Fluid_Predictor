@@ -288,10 +288,10 @@ class DFSPH(SPH):
 
         for nbr in self.particle.neighbour_list:
             self.update_divergence(nbr)
-            self.update_stiffness_k(nbr)
+            self.update_stiffness_k_v(nbr)
 
         self.update_divergence(self.particle)
-        self.update_stiffness_k(self.particle)
+        self.update_stiffness_k_v(self.particle)
 
         divergence_velocity = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.particle.neighbour_list:
