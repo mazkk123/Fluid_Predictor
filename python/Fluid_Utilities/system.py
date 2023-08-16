@@ -128,7 +128,6 @@ class FluidSystem:
 
                 id = self.choose_simulation_type()
                 if id==0:
-                    """ print("do SPH") """
                     SPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -141,7 +140,6 @@ class FluidSystem:
                         delta_time=0.02
                     ).update()
                 if id==1:
-                    """ print("do Multi") """
                     MultiSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -153,7 +151,6 @@ class FluidSystem:
                         phase_info=self.PHASE_INFORMATION
                     ).update()
                 if id==2:
-                    print("do IISPH")
                     IISPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -164,7 +161,6 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id==3:
-                    """ print("do WCSPH") """
                     WCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -176,7 +172,6 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id==4:
-                    """ print("do PCSPH") """
                     PCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -189,7 +184,6 @@ class FluidSystem:
                         delta_time=0.02 
                     ).update()
                 if id == 5:
-                    """ print("do LPSPH") """
                     LPSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],

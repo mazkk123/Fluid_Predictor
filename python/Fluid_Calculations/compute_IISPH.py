@@ -2,6 +2,7 @@ import math as m
 import numpy as np
 import random as rd
 import re
+import time
 
 from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
@@ -9,8 +10,6 @@ from Particles.particles import Particle
 class IISPH(SPH):
 
     OTHER_PARAMS = {
-        "lambda_stiffness":7,
-        "k_stiffness":7,
         "max_iterations":2,
         "relaxation_factor":0.5
     }
@@ -22,7 +21,7 @@ class IISPH(SPH):
                  time_stepping:str = "Euler Cromer",
                  tank_attrs:dict = None,
                  hash_value:int=None,
-                 params:dict = None,
+
                  delta_time:float = None):
         
         super().__init__(particle=particle,
@@ -31,10 +30,10 @@ class IISPH(SPH):
                         tank_attrs=tank_attrs,
                         hash_table=hash_table,
                         hash_value=hash_value,
-                        params=params,
                         delta_time=delta_time)
         
         self.predict_advection()
+        self.iteration = 0
 
     def calculate_density_error(self):
         return self.particle.mass_density - self.PARAMETERS["mass_density"]
@@ -129,24 +128,26 @@ class IISPH(SPH):
     def predict_advection(self):
 
         self.mass_density_adv = 0
-        self.acceleration_adv = 0
 
         for nbr in self.neighbours_list:
-            self.predict_displacement(nbr)
             self.predict_velocity_advection(nbr)
+            self.predict_displacement(nbr)
             self.update_acceleration_advection(nbr)
 
-        self.predict_displacement(self.particle)
         self.predict_velocity_advection(self.particle)
+        self.predict_displacement(self.particle)
         self.update_acceleration_advection(self.particle)
 
         self.particle.pressure  = self.particle.prev_pressure*0.5
         self.update_mass_density_advection()
     
     def predict_displacement(self, particle):
-        displacement = np.array([0, 0, 0])
+        displacement = 0
         for id, nbr_particle in enumerate(particle.neighbour_list):
-            density_div = -nbr_particle.mass/ m.pow(particle.mass_density, 2)
+            try:
+                density_div = -nbr_particle.mass/ m.pow(particle.mass_density, 2)
+            except ZeroDivisionError:
+                density_div = 0
             kernel_gradient = self.cubic_spline_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
             displacement += density_div*kernel_gradient
 
@@ -176,15 +177,15 @@ class IISPH(SPH):
     
     def update_mass_density_advection(self):
 
-        advection_amt = np.array([0, 0, 0])
+        advection_amt = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
-            mass_advection = nbr_particle.mass * (self.particle.advected_velocity - self.particle.velocity)
+            mass_advection = nbr_particle.mass * (self.particle.advected_velocity - nbr_particle.advected_velocity)
             kernel_gradient = self.cubic_spline_kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
             advection_amt += mass_advection*kernel_gradient
         self.mass_density_adv = advection_amt*self.delta_time + self.particle.mass_density
 
     def update_acceleration_advection(self, particle):
-        acc_adv = np.array([0, 0 , 0])
+        acc_adv = 0
         for id, nbr_particle in enumerate(particle.neighbour_list):
             acc_adv += (
                 nbr_particle.mass * (particle.displacement - nbr_particle.displacement ) *
@@ -194,26 +195,43 @@ class IISPH(SPH):
     
     # ------------------------------------------------------------------------ PRESSURE SOLVE ---------------------------------------------------------------------------------
 
-    def pressure_solve(self):
-        iteration = 0
-        while self.calculate_density_error() < 0.01*self.PARAMETERS["mass_density"] \
-                and iteration<self.OTHER_PARAMS["max_iterations"]:
-            
-            self.update_displacement_iter()
-            self.update_iter_pressure()
-            self.particle.pressure = self.particle.iter_pressure
+    def debugging_forces(self, secs):
 
-            iteration +=1 
-            
+        print("Mass Density:", self.particle.mass_density)
+        print("Pressure:", self.particle.pressure)
+        print("Pressure Force:", self.particle.pressure_force)
+        print("Buoyancy:", self.particle.buoyancy)
+        print("Gravity:", self.particle.gravity)
+        print("viscosity:", self.particle.viscosity)
+        print("\n\n")
+        time.sleep(secs)
+
+    def pressure_solve(self):
+
+        self.iteration = 0
+
+        while self.calculate_density_error() > 0.01*self.PARAMETERS["mass_density"] \
+                and self.iteration<self.OTHER_PARAMS["max_iterations"]:
+
+            self.update_iter_pressure()
+
+            self.iteration +=1 
+
         self.particle.prev_pressure = self.particle.pressure
         self.update_pressure_force()
 
+    def update_pressure_force(self):
+        return super().update_pressure_force()
+    
     def update_displacement_iter(self, particle):
-        displacement = np.array([0, 0, 0])
+        displacement = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
-            density_div = -1* nbr_particle.mass/ m.pow(particle.mass_density, 2)
+            try:
+                density_div = -1* nbr_particle.mass/ m.pow(nbr_particle.mass_density, 2)
+            except ZeroDivisionError:
+                density_div = 0
             kernel_gradient = self.cubic_spline_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
-            displacement += density_div*particle.pressure*kernel_gradient
+            displacement += density_div*nbr_particle.pressure*kernel_gradient
 
         particle.displacement_iter = displacement*m.pow(self.delta_time, 2)
     
@@ -224,7 +242,7 @@ class IISPH(SPH):
             for nbrs_nbr in nbr.neighbour_list:
                 self.update_displacement_iter(nbrs_nbr)
                 
-        nbr_displacement_diff = np.array([0, 0, 0], dtype="float64")
+        nbr_displacement_diff = 0
         for nbr in self.neighbours_list:
             for nbrs_nbr in nbr.neighbour_list:
                 nbr_displacement_diff += (
@@ -237,25 +255,36 @@ class IISPH(SPH):
             self.update_displacement_iter(nbr)
         
         self.update_displacement_iter(self.particle)
-        displacement_diff = np.array([0, 0, 0], dtype="float64")
+
+        displacement_diff = 0
         for nbr in self.neighbours_list:
             displacement_diff += (
-                self.displacement_iter - nbr.displacement_iter
+                self.particle.displacement_iter - nbr.displacement_iter
             )
         return displacement_diff
         
-    def update_iter_pressure(self, particle):
-        relaxation_const = (1 - self.OTHER_PARAMS["relaxation_factor"])*particle.pressure
-        acceleration_adv_const = self.OTHER_PARAMS["relaxation_factor"] * 1/self.acceleration_adv
-        disp_final = np.array([0, 0, 0])
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            displacement_difference = self.displacement_diff()
-            nbr_displacement_difference = self.neighbour_dis_diff()
+    def update_iter_pressure(self):
+        relaxation_const = (1 - self.OTHER_PARAMS["relaxation_factor"])*self.particle.pressure
+
+        acc_adv = 0
+        try:
+            if self.particle.acceleration_adv == 0:
+                acc_adv = 0
+            else:
+                1/self.particle.acceleration_adv
+        except ZeroDivisionError:
+            acc_adv = 0
+
+        acceleration_adv_const = self.OTHER_PARAMS["relaxation_factor"] * acc_adv
+        disp_final = 0
+        for nbr_particle in self.particle.neighbour_list:
+            displacement_diff = self.displacement_diff()
+            nbr_displacement_diff = self.neighbour_dis_diff()
             disp_final += (displacement_diff - nbr_displacement_diff) * \
                         self.cubic_spline_kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos) * \
                         nbr_particle.mass
             
-        self.particle.prev_pressure = (self.mass_density_adv - self.PARAMETERS["mass_density"] - disp_final) \
+        self.particle.pressure = (self.PARAMETERS["mass_density"] - self.mass_density_adv - disp_final) \
                                     *acceleration_adv_const + relaxation_const
     
     # -------------------------------------------------------------------------- UPDATE STEP ----------------------------------------------------------------------------------
@@ -266,6 +295,8 @@ class IISPH(SPH):
         
         self.particle.velocity = self.particle.advected_velocity + self.delta_time*self.particle.pressure_force/self.particle.mass
         self.particle.initial_pos += self.particle.velocity*self.delta_time
+        
         self.XSPH_vel_correction()
+        self.choose_collision_types("Cuboid", "Normal")
 
-        self.choose_collision_types("Cuboid", secondary_type="Normal", particle=self.particle)
+        self.adapt_to_CFL()

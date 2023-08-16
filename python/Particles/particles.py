@@ -60,6 +60,9 @@ class Particle:
 
         self.pressure = 0
         self.prev_pressure = 0
+        self.displacement = 0
+        self.displacement_iter = 0
+        self.acceleration_adv = 0
 
         self.viscosity = np.array([0, 0, 0], dtype="float64")
         self.laminar_viscosity = np.array([0, 0, 0], dtype="float64")
@@ -67,9 +70,6 @@ class Particle:
         self.pressure_force = np.array([0, 0, 0], dtype="float64")
         self.buoyancy = np.array([0, 0, 0], dtype="float64")
         self.surface_tension = np.array([0, 0 ,0], dtype="float64")
-        self.displacement = np.array([0, 0, 0], dtype="float64")
-        self.displacement_iter = np.array([0, 0, 0], dtype="float64")
-        self.acceleration_adv = np.array([0, 0, 0], dtype="float64")
         self.gravity = np.array([0, 0, 0], dtype="float64")
         self.divergence_factor = np.array([0, 0, 0], dtype="float64")
         self.stiffness_k = np.array([0, 0, 0], dtype="float64")
