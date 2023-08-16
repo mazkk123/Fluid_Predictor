@@ -249,10 +249,10 @@ class IISPH(SPH):
         acceleration_adv_const = self.OTHER_PARAMS["relaxation_factor"] * 1/self.acceleration_adv
         disp_final = np.array([0, 0, 0])
         for id, nbr_particle in enumerate(particle.neighbour_list):
-            nbr_displacement_difference = self.neighbour_dis_diff()
             displacement_difference = self.displacement_diff()
+            nbr_displacement_difference = self.neighbour_dis_diff()
             disp_final += (displacement_diff - nbr_displacement_diff) * \
-                        self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos) * \
+                        self.cubic_spline_kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos) * \
                         nbr_particle.mass
             
         self.particle.prev_pressure = (self.mass_density_adv - self.PARAMETERS["mass_density"] - disp_final) \
