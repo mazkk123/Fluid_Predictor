@@ -30,7 +30,7 @@ from Particles.error_handling import *
 class FluidSystem:
     
     SIMULATION_TYPES = ["SPH", "MultiSPH", "IISPH", "WCSPH", "PCSPH", 
-                       "LPSPH", "DFSPH", "FSISPH", "VCSPH", "PBD"]
+                       "LPSPH", "DFSPH", "VCSPH", "FSISPH", "PBF"]
     NEIGHBOUR_SEARCHES = ["Neighbour", "Spatial Hashing", "Compact Hashing", "Z-Sorting"]
     ORIENTATION_TYPE = ["Uniform", "Random"]
     
@@ -195,7 +195,6 @@ class FluidSystem:
                         delta_time=0.02   
                     ).update()
                 if id == 6:
-                    print("do DFSPH")
                     DFSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
@@ -203,11 +202,12 @@ class FluidSystem:
                         hash_value = p.hash_value,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
+                        num_particles=self.num_particles,
                         delta_time=0.02   
                     ).update()
                 if id == 7:
-                    print("do FSISPH")
-                    FSISPH(
+                    print("do VCSPH")
+                    VCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
@@ -217,8 +217,8 @@ class FluidSystem:
                         delta_time=0.02   
                     ).update()
                 if id == 8:
-                    print("do VCSPH")
-                    VCSPH(
+                    print("do FSISPH")
+                    FSISPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
