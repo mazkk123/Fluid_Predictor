@@ -36,9 +36,8 @@ class IISPH(SPH):
         
         self.predict_advection()
 
-
     def calculate_density_error(self):
-        return self.particle.predicted_density - self.PARAMETERS["mass_density"]
+        return self.particle.mass_density - self.PARAMETERS["mass_density"]
 
     def cubic_spline_kernel_gradient(self, position):
         q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
@@ -205,7 +204,8 @@ class IISPH(SPH):
             self.particle.pressure = self.particle.iter_pressure
 
             iteration +=1 
-        
+            
+        self.particle.prev_pressure = self.particle.pressure
         self.update_pressure_force()
 
     def update_displacement_iter(self, particle):
@@ -216,14 +216,42 @@ class IISPH(SPH):
             displacement += density_div*particle.pressure*kernel_gradient
 
         particle.displacement_iter = displacement*m.pow(self.delta_time, 2)
-
+    
+    def neighbour_dis_diff(self):
+        
+        for nbr in self.neighbours_list:
+            self.find_neighbour_list(nbr)
+            for nbrs_nbr in nbr.neighbour_list:
+                self.update_displacement_iter(nbrs_nbr)
+                
+        nbr_displacement_diff = np.array([0, 0, 0], dtype="float64")
+        for nbr in self.neighbours_list:
+            for nbrs_nbr in nbr.neighbour_list:
+                nbr_displacement_diff += (
+                    nbrs_nbr.displacement_iter - nbr.displacement_iter
+                )
+        return nbr_displacement_diff
+        
+    def displacement_diff(self):
+        for nbr in self.neighbours_list:
+            self.update_displacement_iter(nbr)
+        
+        self.update_displacement_iter(self.particle)
+        displacement_diff = np.array([0, 0, 0], dtype="float64")
+        for nbr in self.neighbours_list:
+            displacement_diff += (
+                self.displacement_iter - nbr.displacement_iter
+            )
+        return displacement_diff
+        
     def update_iter_pressure(self, particle):
         relaxation_const = (1 - self.OTHER_PARAMS["relaxation_factor"])*particle.pressure
         acceleration_adv_const = self.OTHER_PARAMS["relaxation_factor"] * 1/self.acceleration_adv
         disp_final = np.array([0, 0, 0])
         for id, nbr_particle in enumerate(particle.neighbour_list):
-            displacement_difference = particle.displacement_iter-nbr_particle.displacement_iter
-            disp_final += displacement_difference * \
+            nbr_displacement_difference = self.neighbour_dis_diff()
+            displacement_difference = self.displacement_diff()
+            disp_final += (displacement_diff - nbr_displacement_diff) * \
                         self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos) * \
                         nbr_particle.mass
             
