@@ -12,8 +12,8 @@ class DFSPH(SPH):
 
     OTHER_PARAMS = {
         "max_iterations":2,
-        "max_iterations_div":1,
-        "divergence_error":5
+        "max_iterations_div":2,
+        "divergence_error":0.0003
     }
 
     def __init__(self,
@@ -71,7 +71,7 @@ class DFSPH(SPH):
     def update_gravity(self, particle):
         """
         """
-        particle.gravity = self.gravity_const
+        particle.gravity = self.gravity_const*particle.mass
     
     def update_normal_field(self, particle):
         """
@@ -132,8 +132,6 @@ class DFSPH(SPH):
                 particle.buoyancy +
                 particle.surface_tension
             )
-
-            self.adapt_to_CFL()
 
             particle.predicted_velocity = particle.velocity + self.delta_time*(self.all_forces/particle.mass)
         
@@ -207,26 +205,26 @@ class DFSPH(SPH):
         particle.predicted_density *= self.delta_time
         particle.predicted_density += particle.mass_density
 
-    def update_predicted_density_velocity(self):
+    def update_predicted_density_velocity(self, particle):
 
-        for nbr in self.neighbours_list:
+        for nbr in particle.neighbour_list:
             self.update_stiffness_k(nbr)
 
-        self.update_stiffness_k(self.particle)
+        self.update_stiffness_k(particle)
 
         divergence_density = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
             divergence_density += (
                 nbr_particle.mass*
                 (
-                    self.particle.stiffness_k / self.particle.mass_density +
+                    particle.stiffness_k / particle.mass_density +
                     nbr_particle.stiffness_k / nbr_particle.mass_density
                 )*
                 self.cubic_spline_kernel_gradient(
-                    self.particle.initial_pos - nbr_particle.initial_pos
+                    particle.initial_pos - nbr_particle.initial_pos
                 )
             )
-        self.particle.predicted_velocity -= (
+        particle.predicted_velocity -= (
             self.delta_time * divergence_density
         )
 
@@ -238,13 +236,14 @@ class DFSPH(SPH):
         if self.calculate_density_error() > 0.01*self.PARAMETERS["mass_density"] and \
             iter_step < self.OTHER_PARAMS["max_iterations"]:
 
-            print("Entering density correction")
+            """ print("Entering density correction") """
 
             for nbr in self.neighbours_list:
                 self.update_predicted_density(nbr)
+                self.update_predicted_density_velocity(nbr)
 
             self.update_predicted_density(self.particle)
-            self.update_predicted_density_velocity()
+            self.update_predicted_density_velocity(self.particle)
 
             """ self.debugging_forces(0.1) """
 
@@ -295,7 +294,7 @@ class DFSPH(SPH):
         self.update_stiffness_k(self.particle)
 
         divergence_velocity = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
+        for nbr_particle in self.particle.neighbour_list:
             divergence_velocity += (
                 nbr_particle.mass *
                 (
@@ -342,8 +341,8 @@ class DFSPH(SPH):
         
         self.correct_density_error()
         self.update_attrs()
+
         self.correct_divergence_error()
-        #self.debugging_forces(0.1)
 
         self.XSPH_vel_correction()
         self.choose_collision_types()
