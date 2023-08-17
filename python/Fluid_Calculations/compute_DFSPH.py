@@ -13,7 +13,7 @@ class DFSPH(SPH):
     OTHER_PARAMS = {
         "max_iterations":2,
         "max_iterations_div":2,
-        "divergence_error":0.0003
+        "divergence_error":5
     }
 
     def __init__(self,
@@ -71,7 +71,7 @@ class DFSPH(SPH):
     def update_gravity(self, particle):
         """
         """
-        particle.gravity = self.gravity_const*particle.mass
+        particle.gravity = self.gravity_const
     
     def update_normal_field(self, particle):
         """
@@ -123,13 +123,11 @@ class DFSPH(SPH):
             self.update_mass_density(particle)
             self.update_viscosity(particle)
             self.update_gravity(particle)
-            self.update_buoyancy(particle)
             self.update_surface_tension(particle)
 
             self.all_forces += (
                 particle.viscosity +
                 particle.gravity +
-                particle.buoyancy +
                 particle.surface_tension
             )
 
@@ -233,10 +231,10 @@ class DFSPH(SPH):
         iter_step = 0
         self.particle.predicted_density = self.particle.mass_density
 
-        if self.calculate_density_error() > 0.01*self.PARAMETERS["mass_density"] and \
+        if self.calculate_density_error() > 0.05*self.PARAMETERS["mass_density"] and \
             iter_step < self.OTHER_PARAMS["max_iterations"]:
 
-            """ print("Entering density correction") """
+            print("Entering density correction")
 
             for nbr in self.neighbours_list:
                 self.update_predicted_density(nbr)
@@ -245,8 +243,6 @@ class DFSPH(SPH):
             self.update_predicted_density(self.particle)
             self.update_predicted_density_velocity(self.particle)
 
-            """ self.debugging_forces(0.1) """
-
             iter_step += 1
     
     # --------------------------------------------------------------- DIVERGENCE CORRECTION ----------------------------------------------------------------------------
@@ -254,13 +250,12 @@ class DFSPH(SPH):
     def correct_divergence_error(self):
 
         iter_step = 0
-        while self.particle.divergence > self.OTHER_PARAMS["divergence_error"] and \
+        while any(self.particle.divergence) > self.OTHER_PARAMS["divergence_error"] or \
             iter_step < self.OTHER_PARAMS["max_iterations_div"]:
 
             print("Entering divergence correction")
 
             self.update_divergence_velocity()
-            self.debugging_forces(0.1)
 
             iter_step +=1 
         
@@ -274,6 +269,7 @@ class DFSPH(SPH):
         )
 
     def update_divergence(self, particle):
+        particle.divergence = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in particle.neighbour_list:
             particle.divergence += (
                 nbr_particle.mass * (
@@ -346,4 +342,6 @@ class DFSPH(SPH):
 
         self.XSPH_vel_correction()
         self.choose_collision_types()
-        self.choose_time_stepping() 
+        self.choose_time_stepping()
+
+        self.adapt_to_CFL()

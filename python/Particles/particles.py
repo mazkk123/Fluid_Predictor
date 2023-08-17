@@ -72,7 +72,7 @@ class Particle:
         self.surface_tension = np.array([0, 0 ,0], dtype="float64")
         self.gravity = np.array([0, 0, 0], dtype="float64")
         self.divergence_factor = 0
-        self.divergence = 0
+        self.divergence = np.array([0, 0, 0], dtype="float64")
         self.stiffness_k = np.array([0, 0, 0], dtype="float64")
         self.stiffness_k_v = np.array([0, 0, 0], dtype="float64")
 
