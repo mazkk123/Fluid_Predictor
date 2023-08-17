@@ -13,76 +13,92 @@ class VCSPH(DFSPH):
                 particle: Particle=None,
                 search_method:str = None,
                 hash_table:dict = None,
+                all_particles:list = None,
                 hash_value:int = None,
                 time_stepping:str = "Euler Cromer",
                 tank_attrs:dict = None,
+                num_particles:int = None,
                 delta_time:int = 0.02):
         
         super().__init__(particle=particle,
                          search_method=search_method,
+                         all_particles=all_particles,
+                         num_particles=num_particles,
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_stepping=time_stepping,
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
         
-    def vorticity(self):
-        for nbr_particle in self.neighbour_list:
-            self.particle.vorticity += (
+    # ---------------------------------------------------------------------- VORTICITY REFINEMENT --------------------------------------------------------------------------
+        
+    def vorticity(self, particle):
+        for nbr_particle in particle.neighbour_list:
+            particle.vorticity += (
                 (nbr_particle.mass / nbr_particle.mass_density)*
-                np.cross((self.particle.velocity - nbr_particle.velocity),
-                        self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                          nbr_particle.initial_pos))
+                np.cross((particle.predicted_velocity - nbr_particle.predicted_velocity),
+                        self.kernel_gradient(particle.initial_pos - nbr_particle.initial_pos, 1))
             )
 
     def update_vorticity(self):
-        self.particle.vorticity += self.delta_time*self.update_vorticity_dt()
+
+        for nbr in self.particle.neighbour_list:
+            self.find_neighbour_list(nbr)
+            self.vorticity(nbr)
+        
+        self.vorticity(self.particle)
+
+        for nbr in self.particle.neighbour_list:
+            nbr.vorticity_new += self.delta_time*self.update_vorticity_dt(nbr)
+
+        self.particle.vorticity_new += self.delta_time*self.update_vorticity_dt(self.particle)
+
+    # --------------------------------------------------------------------- VORTICITY CALCULATIONS ------------------------------------------------------------------------
 
     def update_vorticity_del(self):
-        self.update_vorticity()
-        self.velocity_curl = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbour_list:
-            self.velocity_curl += (
-                (nbr_particle.mass / nbr_particle.mass_density)*
-                -(self.particle.predicted_velocity - nbr_particle.predicted_velocity)*
-                self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                  nbr_particle.initial_pos)
-            )
-        self.particle.vorticity_del = self.particle.vorticity - self.velocity_curl
 
-    def update_vorticity_velocity_grad(self):
+        self.update_vorticity()
+
+        for nbr in self.particle.neighbour_list:
+            nbr.vorticity_del = nbr.vorticity_new - nbr.vorticity
+
+        self.particle.vorticity_del = self.particle.vorticity_new - self.particle.vorticity
+
+    def update_vorticity_velocity_grad(self, particle):
         self.vorticity_grad = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbour_list:
+        for nbr_particle in particle.neighbour_list:
             self.vorticity_grad += (
                 (nbr_particle.mass / nbr_particle.mass_density)*
-                (nbr_particle.velocity - self.particle.velocity)*
-                self.cubic_spline_kernel_gradient( self.particle.initial_pos - 
-                                                  nbr_particle.initial_pos)
+                (nbr_particle.predicted_velocity - self.particle.predicted_velocity)*
+                self.kernel_gradient( particle.initial_pos - nbr_particle.initial_pos, 1)
             )
-        self.vorticity_grad *= self.particle.vorticity
+        self.vorticity_grad *= particle.vorticity
 
-    def update_vorticity_laplacian(self):
+    def update_vorticity_laplacian(self, particle):
+        
         dimension_const = 10
         viscosity_force = self.PARAMETERS["viscosity"]
         self.vorticity_laplacian = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbour_list:
+
+        for nbr_particle in particle.neighbour_list:
             self.vorticity_laplacian += (
                 (nbr_particle.mass / nbr_particle.mass_density)*
-                ((self.particle.vorticity - nbr_particle.vorticity) / (
-                    np.power(self.particle.initial_pos - nbr_particle.initial_pos,2) +
+                ((particle.vorticity - nbr_particle.vorticity) / (
+                    np.power(particle.initial_pos - nbr_particle.initial_pos,2) +
                     0.01*m.pow(self.PARAMETERS["cell_size"], 2)
                 ))*
-                self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                  nbr_particle.initial_pos)
+                self.kernel_gradient(particle.initial_pos - nbr_particle.initial_pos, 1)
             )
         self.vorticity_laplacian *= dimension_const*viscosity_force
     
-    def update_vorticity_dt(self):
+    def update_vorticity_dt(self, particle):
 
-        self.update_vorticity_velocity_grad()
-        self.update_vorticity_laplacian()
+        self.update_vorticity_velocity_grad(particle)
+        self.update_vorticity_laplacian(particle)
         return self.vorticity_grad*self.vorticity_laplacian
     
+    # ------------------------------------------------------------------- STREAM RELATED FUNCTIONS ------------------------------------------------------------------------
+
     def update_volume(self):
         
         for nbr in self.particle.neighbour_list:
@@ -90,30 +106,34 @@ class VCSPH(DFSPH):
             
         self.particle.volume = self.particle.mass / self.particle.mass_density
 
-    def update_stream_function(self):
+    def update_stream_function(self, particle):
         
         self.update_vorticity_del()
         self.update_volume()
 
         size_const = 1 / (4*np.pi)
-        for nbr_particle in self.neighbour_list:
-            if np.linalg.norm(self.particle.initial_pos - nbr_particle.initial_pos) < self.PARAMETERS["cell_size"]:
-                self.particle.stream_function += (
+        particle.stream_function = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in particle.neighbour_list:
+            if np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos) < self.PARAMETERS["cell_size"]:
+                particle.stream_function += (
                     (nbr_particle.vorticity_del*nbr_particle.volume) / 
-                    (np.linalg.norm(self.particle.initial_pos - nbr_particle.initial_pos))
+                    (np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos))
                 )
-        self.particle.stream_function *= size_const
+        particle.stream_function *= size_const
 
     def update_velocity_del(self):
 
-        self.update_stream_function()
+        for nbr in self.particle.neighbour_list:
+            self.update_stream_function(nbr)
+        
+        self.update_stream_function(self.particle)
+
         self.velocity_del = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbour_list:
+        for nbr_particle in self.particle.neighbour_list:
             self.velocity_del += (
                 (nbr_particle.mass / nbr_particle.mass_density) *
                 np.cross((self.particle.stream_function - nbr_particle.stream_function),
-                         self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                           nbr_particle.initial_pos)
+                         self.kernel_gradient(self.particle.initial_pos -  nbr_particle.initial_pos, 1)
                 )
             )
 
@@ -122,18 +142,12 @@ class VCSPH(DFSPH):
         self.update_velocity_del()
         self.particle.velocity = self.particle.predicted_velocity + self.OTHER_PARAMS["alpha_vorticity"]*self.velocity_del
 
+    # --------------------------------------------------------------------------- UPDATE ------------------------------------------------------------------------------------
+
     def update(self):
 
-        self.update_non_pressure_f()
-        self.adapt_to_CFL()
-
-        self.update_divergence()
-        self.correct_density_error()
-        self.correct_divergence_error()
+        super().update_errors()
         self.update_velocity()
-
-        self.acceleration = self.non_pressure_f + self.particle.pressure_force
 
         self.XSPH_vel_correction()
         self.choose_collision_types("Cuboid", "Normal")
-        self.choose_time_stepping(self.time_stepping)

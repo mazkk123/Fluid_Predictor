@@ -119,6 +119,7 @@ class Particle:
         self.constraint = 0
         self.del_position = np.array([0, 0, 0], dtype="float64")
         self.vorticity = np.array([0, 0, 0], dtype="float64")
+        self.vorticity_new = np.array([0, 0, 0], dtype="float64")
         self.vorticity_force = np.array([0, 0, 0], dtype="float64")
         self.vorticity_del = np.array([0, 0, 0], dtype="float64")
         self.stream_function = np.array([0, 0, 0], dtype="float64")

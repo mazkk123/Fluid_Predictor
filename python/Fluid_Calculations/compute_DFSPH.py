@@ -13,7 +13,8 @@ class DFSPH(SPH):
     OTHER_PARAMS = {
         "max_iterations":5,
         "max_iterations_div":5,
-        "divergence_error":0.06
+        "divergence_error":0.06,
+        "alpha_vorticity":0.5
     }
 
     def __init__(self,
@@ -349,12 +350,16 @@ class DFSPH(SPH):
         self.update_mass_density(self.particle)
         self.update_divergence_factor(self.particle)
 
-    def update(self):
-        
+    def update_errors(self):
+
         self.correct_density_error()
         self.update_attrs()
 
         self.correct_divergence_error()
+
+    def update(self):
+        
+        self.update_errors()
 
         self.XSPH_vel_correction()
         self.choose_collision_types()

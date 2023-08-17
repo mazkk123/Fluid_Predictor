@@ -17,6 +17,7 @@ class IISPH(SPH):
     def __init__(self, 
                  particle: Particle=None,
                  search_method: str=None,
+                 all_particles:list = None,
                  hash_table:dict=None,
                  time_stepping:str = "Euler Cromer",
                  tank_attrs:dict = None,
@@ -26,6 +27,7 @@ class IISPH(SPH):
         
         super().__init__(particle=particle,
                         search_method=search_method,
+                        all_particles=all_particles,
                         time_stepping=time_stepping,
                         tank_attrs=tank_attrs,
                         hash_table=hash_table,
@@ -129,14 +131,10 @@ class IISPH(SPH):
 
         self.mass_density_adv = 0
 
-        for nbr in self.neighbours_list:
+        for nbr in self.all_particles:
             self.predict_velocity_advection(nbr)
             self.predict_displacement(nbr)
             self.update_acceleration_advection(nbr)
-
-        self.predict_velocity_advection(self.particle)
-        self.predict_displacement(self.particle)
-        self.update_acceleration_advection(self.particle)
 
         self.particle.pressure  = self.particle.prev_pressure*0.5
         self.update_mass_density_advection()
