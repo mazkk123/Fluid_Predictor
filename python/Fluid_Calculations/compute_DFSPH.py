@@ -266,8 +266,6 @@ class DFSPH(SPH):
             self.update_divergence_velocity()
 
             iterations +=1 
-        
-        self.particle.velocity = self.particle.predicted_velocity
 
     def update_stiffness_k_v(self, particle):
 
@@ -360,6 +358,8 @@ class DFSPH(SPH):
     def update(self):
         
         self.update_errors()
+        
+        self.particle.velocity = self.particle.predicted_velocity
 
         self.XSPH_vel_correction()
         self.choose_collision_types()
