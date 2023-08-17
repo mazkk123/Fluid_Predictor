@@ -291,16 +291,19 @@ class DFSPH(SPH):
 
         divergence_velocity = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.particle.neighbour_list:
-            divergence_velocity += (
-                nbr_particle.mass *
-                (
-                    (self.particle.stiffness_k_v / self.particle.mass_density) +
-                    (nbr_particle.stiffness_k_v / nbr_particle.mass_density)
-                ) *
-                self.cubic_spline_kernel_gradient(
-                    self.particle.initial_pos - nbr_particle.initial_pos
+            try:
+                divergence_velocity += (
+                    nbr_particle.mass *
+                    (
+                        (self.particle.stiffness_k_v / self.particle.mass_density) +
+                        (nbr_particle.stiffness_k_v / nbr_particle.mass_density)
+                    ) *
+                    self.cubic_spline_kernel_gradient(
+                        self.particle.initial_pos - nbr_particle.initial_pos
+                    )
                 )
-            )
+            except (ValueError, TypeError):
+                divergence_velocity += np.array([0, 0, 0], dtype="float64")
         self.particle.predicted_velocity -= (
             self.delta_time * divergence_velocity
         )
@@ -323,7 +326,10 @@ class DFSPH(SPH):
     def update_attrs(self):
 
         self.particle.initial_pos += self.delta_time*self.particle.predicted_velocity
-
+        
+        for nbr in self.neighbours_list:
+            nbr.initial_pos += self.delta_time*nbr.predicted_velocity
+            
         self.recompute_neighbour_list(self.particle)
 
         for nbr in self.particle.neighbour_list:
