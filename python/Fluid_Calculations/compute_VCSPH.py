@@ -29,7 +29,18 @@ class VCSPH(DFSPH):
                          time_stepping=time_stepping,
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
+    
+    def normalize(self, vector):
+        return vector / np.linalg.norm(vector)
         
+    def wedland_4_kernel_gradient(self, position:np.array=None):
+        q = np.linalg.norm(position)
+        kernel_const = -30 / np.pi*m.pow(self.PARAMETERS["cell_size"], 5)
+        kernel_term_1 = m.pow(1 - q / self.PARAMETERS["cell_size"], 4)
+        kernel_term_2 = 2*q / self.PARAMETERS["cell_size"] + 1
+        r_value = self.normalize(position)
+        return kernel_const*kernel_term_1*kernel_term_2*r_value
+    
     # ---------------------------------------------------------------------- VORTICITY REFINEMENT --------------------------------------------------------------------------
         
     def vorticity(self, particle):
@@ -37,7 +48,7 @@ class VCSPH(DFSPH):
             particle.vorticity += (
                 (nbr_particle.mass / nbr_particle.mass_density)*
                 np.cross((particle.predicted_velocity - nbr_particle.predicted_velocity),
-                        self.kernel_gradient(particle.initial_pos - nbr_particle.initial_pos, 1))
+                        self.wedland_4_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos))
             )
 
     def update_vorticity(self):
@@ -70,7 +81,7 @@ class VCSPH(DFSPH):
             self.vorticity_grad += (
                 (nbr_particle.mass / nbr_particle.mass_density)*
                 (nbr_particle.predicted_velocity - self.particle.predicted_velocity)*
-                self.kernel_gradient( particle.initial_pos - nbr_particle.initial_pos, 1)
+                self.wedland_4_kernel_gradient( particle.initial_pos - nbr_particle.initial_pos)
             )
         self.vorticity_grad *= particle.vorticity
 
@@ -87,7 +98,7 @@ class VCSPH(DFSPH):
                     np.power(particle.initial_pos - nbr_particle.initial_pos,2) +
                     0.01*m.pow(self.PARAMETERS["cell_size"], 2)
                 ))*
-                self.kernel_gradient(particle.initial_pos - nbr_particle.initial_pos, 1)
+                self.wedland_4_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
             )
         self.vorticity_laplacian *= dimension_const*viscosity_force
     
@@ -133,7 +144,7 @@ class VCSPH(DFSPH):
             self.velocity_del += (
                 (nbr_particle.mass / nbr_particle.mass_density) *
                 np.cross((self.particle.stream_function - nbr_particle.stream_function),
-                         self.kernel_gradient(self.particle.initial_pos -  nbr_particle.initial_pos, 1)
+                         self.wedland_4_kernel_gradient(self.particle.initial_pos -  nbr_particle.initial_pos)
                 )
             )
 
