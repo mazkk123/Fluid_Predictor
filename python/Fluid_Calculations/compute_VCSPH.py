@@ -26,9 +26,6 @@ class VCSPH(DFSPH):
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
         
-        self.trapezoidal_amt = 100
-        self.trapezoidal_increment = 0.05
-        
     def vorticity(self):
         for nbr_particle in self.neighbour_list:
             self.particle.vorticity += (
@@ -87,21 +84,11 @@ class VCSPH(DFSPH):
         return self.vorticity_grad*self.vorticity_laplacian
     
     def update_volume(self):
-        trapezoidal_amt = self.trapezoidal_amt
-        for nbr_particle in self.neighbour_list:
-
-            self.volume = 0
-            self.trapezoidal_amt = trapezoidal_amt
-            while (self.trapezoidal_amt > 0):
-
-                if (self.trapezoidal_amt == trapezoidal_amt):
-                    self.volume += self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                                              nbr_particle.initial_pos)
-                self.volume += 2*self.cubic_spline_kernel_gradient(self.particle.initial_pos - 
-                                                                          nbr_particle.initial_pos)
-                self.trapezoidal_amt -= 1
-
-            self.particle.volume += self.volume*self.incremental_step/2
+        
+        for nbr in self.particle.neighbour_list:
+            nbr.volume = nbr.mass / nbr.mass_density
+            
+        self.particle.volume = self.particle.mass / self.particle.mass_density
 
     def update_stream_function(self):
         
