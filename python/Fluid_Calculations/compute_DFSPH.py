@@ -330,7 +330,10 @@ class DFSPH(SPH):
     def update_attrs(self):
 
         self.particle.initial_pos += self.delta_time*self.particle.predicted_velocity
-
+        
+        for nbr in self.neighbours_list:
+            nbr.initial_pos += self.delta_time*nbr.predicted_velocity
+            
         self.recompute_neighbour_list(self.particle)
 
         for nbr in self.particle.neighbour_list:
