@@ -68,7 +68,7 @@ class FluidSystem:
         self.particle_list = []
         self.search_method = search_method
   
-        self.num_frames = 100
+        self.num_frames = 24
 
         self.init_particle_attrs()
 
@@ -200,6 +200,7 @@ class FluidSystem:
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
+                        all_particles=self.particle_list,
                         time_stepping="Euler Cromer",
                         tank_attrs = self.TANK_ATTRS,
                         num_particles=self.num_particles,

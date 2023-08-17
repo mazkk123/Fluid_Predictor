@@ -11,9 +11,9 @@ from  Fluid_Utilities.search_methods import SpatialHashing
 class DFSPH(SPH):
 
     OTHER_PARAMS = {
-        "max_iterations":2,
-        "max_iterations_div":2,
-        "divergence_error":5
+        "max_iterations":5,
+        "max_iterations_div":5,
+        "divergence_error":0.06
     }
 
     def __init__(self,
@@ -22,12 +22,14 @@ class DFSPH(SPH):
                 hash_table:dict = None,
                 hash_value:int = None,
                 time_stepping:str = "Euler Cromer",
+                all_particles:list = None,
                 tank_attrs:dict = None,
                 num_particles:int = None,
                 delta_time:int = 0.02):
         
         super().__init__(particle=particle,
                          search_method=search_method,
+                         all_particles=all_particles,
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_stepping=time_stepping,
@@ -118,15 +120,17 @@ class DFSPH(SPH):
 
     def predict_advective_forces(self):
         
-        for particle in self.neighbours_list:
+        for particle in self.all_particles:
             self.find_neighbour_list(particle)
             self.update_mass_density(particle)
             self.update_viscosity(particle)
             self.update_gravity(particle)
+            self.update_buoyancy(particle)
             self.update_surface_tension(particle)
 
             self.all_forces += (
                 particle.viscosity +
+                particle.buoyancy +
                 particle.gravity +
                 particle.surface_tension
             )
@@ -231,10 +235,9 @@ class DFSPH(SPH):
         iter_step = 0
         self.particle.predicted_density = self.particle.mass_density
 
-        if self.calculate_density_error() > 0.05*self.PARAMETERS["mass_density"] and \
-            iter_step < self.OTHER_PARAMS["max_iterations"]:
+        self.adapt_to_CFL()
 
-            print("Entering density correction")
+        if self.calculate_density_error() > 0.01*self.PARAMETERS["mass_density"] and iter_step < self.OTHER_PARAMS["max_iterations"]:
 
             for nbr in self.neighbours_list:
                 self.update_predicted_density(nbr)
@@ -244,28 +247,38 @@ class DFSPH(SPH):
             self.update_predicted_density_velocity(self.particle)
 
             iter_step += 1
+
+        if iter_step > self.OTHER_PARAMS["max_iterations"]:
+            print("Corrected density is:", self.particle.predicted_density)
+            time.sleep(0.1)
     
     # --------------------------------------------------------------- DIVERGENCE CORRECTION ----------------------------------------------------------------------------
 
     def correct_divergence_error(self):
 
-        iter_step = 0
-        while any(self.particle.divergence) > self.OTHER_PARAMS["divergence_error"] or \
-            iter_step < self.OTHER_PARAMS["max_iterations_div"]:
+        iterations = 0
+        while any(self.particle.divergence) > self.OTHER_PARAMS["divergence_error"] and \
+            iterations < self.OTHER_PARAMS["max_iterations_div"]:
 
             print("Entering divergence correction")
 
             self.update_divergence_velocity()
 
-            iter_step +=1 
+            iterations +=1 
         
         self.particle.velocity = self.particle.predicted_velocity
 
     def update_stiffness_k_v(self, particle):
+
+        divergence_factor = 1 / particle.divergence_factor
+
+        if particle.divergence_factor == 0:
+            divergence_factor = 0
+
         particle.stiffness_k_v = (
             1 / self.delta_time * 
             particle.divergence * 
-            1 / particle.divergence_factor
+            1 / divergence_factor
         )
 
     def update_divergence(self, particle):
@@ -326,9 +339,6 @@ class DFSPH(SPH):
     def update_attrs(self):
 
         self.particle.initial_pos += self.delta_time*self.particle.predicted_velocity
-        
-        for nbr in self.neighbours_list:
-            nbr.initial_pos += self.delta_time*nbr.predicted_velocity
             
         self.recompute_neighbour_list(self.particle)
 
@@ -348,6 +358,3 @@ class DFSPH(SPH):
 
         self.XSPH_vel_correction()
         self.choose_collision_types()
-        self.choose_time_stepping()
-
-        self.adapt_to_CFL()
