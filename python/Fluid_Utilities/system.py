@@ -146,6 +146,7 @@ class FluidSystem:
                         hash_table = self.HASH_MAP,
                         hash_value = p.hash_value,
                         time_stepping = "Euler Cromer",
+                        all_particles = self.particle_list,
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02,
                         phase_info=self.PHASE_INFORMATION
@@ -208,7 +209,6 @@ class FluidSystem:
                         delta_time=0.02   
                     ).update()
                 if id == 7:
-                    """ print("do VCSPH") """
                     VCSPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],

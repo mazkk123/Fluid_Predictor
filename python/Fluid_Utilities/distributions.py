@@ -42,7 +42,7 @@ class Uniform:
         positions = []
         
         for i in range(self.num_layers):
-            rho = np.linspace(0, 2*np.pi, self.num_particles_per_layer, 
+            rho = np.linspace(0, 2*np.pi, num_particles_per_layer, 
                               endpoint=False)
             position = np.array([self.radius*np.cos(rho),
                                  self.radius*np.sin(rho),

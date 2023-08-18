@@ -21,6 +21,7 @@ class MultiSPH(SPH):
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
+                 all_particles:list = None,
                  time_stepping:str="Euler Cromer",
                  tank_attrs:dict=None,
                  delta_time:float = None,
@@ -28,6 +29,7 @@ class MultiSPH(SPH):
         
         super().__init__(particle=particle,
                          search_method=search_method,
+                         all_particles=all_particles,
                          hash_table=hash_table,
                          hash_value=hash_value,
                          tank_attrs=tank_attrs,
@@ -54,33 +56,7 @@ class MultiSPH(SPH):
     def update_interp_density(self):
         for nbr_particle in self.neighbours_list:
             self.particle.interp_density += (
-                self.particle.mass * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
-            )
-
-    def update_drift_velocity(self):
-
-        self.mass_frac_density()
-        self.mass_frac_pressure_grad()
-        self.mass_frac_volume_grad()
-        self.update_acceleration()
-
-        tau = self.PHASE_CONSTANTS["tau"]
-        delta = self.PHASE_CONSTANTS["delta"]
-
-        for i in range(self.particle.phase_number):
-            tau_density_const = tau * (self.phase_info["mass_density"][i] - self.frac_mass_density) * \
-                    self.acceleration
-            tau_pressure_const = tau * (self.pressure_gradient[i] - self.frac_mass_pressure_grad)
-            try:
-                volume_frac_grad_phase = self.volume_frac_gradient[i]/ self.particle.phase_volume_fraction[i]
-            except ZeroDivisionError:
-                volume_frac_grad_phase = np.array([0, 0, 0], dtype="float64")
-
-            delta_volume_frac_const = delta * ((volume_frac_grad_phase) \
-                                               - self.frac_mass_volume_grad)
-
-            self.particle.drift_velocities[i] = (
-                tau_density_const - tau_pressure_const - delta_volume_frac_const
+                self.particle.mass * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 1)
             )
 
     def update_phase_volume_frac(self):
@@ -161,7 +137,7 @@ class MultiSPH(SPH):
                 pressure_term = (self.particle.pressure + nbr_particle.pressure) / 2 * nbr_particle.interp_density
             except ZeroDivisionError:
                 pressure_term = 0
-            kernel_grad = self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
+            kernel_grad = self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 1)
             self.pressure_laplacian += (
                 nbr_particle.mass * pressure_term * kernel_grad
             )
@@ -187,6 +163,8 @@ class MultiSPH(SPH):
 
 
         self.acceleration = -1*pressure_term + self.particle.gravity + viscous_term + convective_term
+
+    # --------------------------------------------------------------- VOLUME CORRECTION ---------------------------------------------------------------
 
     def volume_frac_detection(self, volume_fraction:float = None):
         if volume_fraction is not None:
@@ -217,6 +195,8 @@ class MultiSPH(SPH):
             )
         self.particle.pressure += self.adjusted_pressure
 
+    # ------------------------------------------------------------ PARTICLE VELOCITY CALCS ------------------------------------------------------------
+
     def volume_frac_grad_mixture_vel(self, phase_num:int = None):
         if phase_num is not None:
             for nbr_particle in self.neighbours_list:
@@ -242,42 +222,10 @@ class MultiSPH(SPH):
                     (nbr_mass_over_interp) *
                     (nbr_particle.phase_volume_fraction[phase_num] * nbr_particle.drift_velocities[phase_num] +
                      self.particle.phase_volume_fraction[phase_num] * self.particle.drift_velocities[phase_num]) *
-                     self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
+                     self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 1)
                 )
 
-    def mass_frac_density(self):
-        for i in range(self.particle.phase_number):
-            self.update_mass_fraction(i)
-            self.frac_mass_density += (
-                self.particle.mass_fractions[i] * self.phase_info["mass_density"][i]
-            )
-
-    def mass_frac_pressure_grad(self):
-        for i in range(self.particle.phase_number):
-            self.pressure_grad(i)
-            self.frac_mass_pressure_grad += (
-                self.pressure_gradient[i] * self.particle.mass_fractions[i]
-            )
-
-    def mass_frac_volume_grad(self):
-        for i in range(self.particle.phase_number):
-            self.volume_fraction_grad(i)
-            self.frac_mass_volume_grad += (
-                self.particle.mass_fractions[i] * (self.volume_frac_gradient[i] / self.particle.phase_volume_fraction[i])
-            )
-
-    def update_convective_acc(self):
-        convective_acc = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
-            try:
-                nbr_mass_over_interp = nbr_particle.mass / nbr_particle.interp_density
-            except ZeroDivisionError:
-                nbr_mass_over_interp = 0
-            convective_acc += (
-               nbr_mass_over_interp *
-                self.particle.velocity * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos)
-            )
-        self.convective_acc = self.particle.velocity * convective_acc
+    # ---------------------------------------------------------- DRIFT VELOCITY CALCULATIONS ----------------------------------------------------------
 
     def update_gravity(self):
         return super().update_gravity()
@@ -307,7 +255,26 @@ class MultiSPH(SPH):
                 self.particle.phase_volume_fraction[i]*
                 self.phase_info["mass_density"][i]
             )
+
+    def update_mixture_velocity(self):
+        intermediate_vel = np.array([0, 0, 0], dtype="float64")
+        for i in range(self.particle.phase_number):
+            intermediate_vel += (
+                self.particle.phase_volume_fraction[i]*self.phase_info["mass_density"][i] *
+                self.particle.phase_velocities[i]
+            )
+        self.particle.velocity = (1/self.particle.mass_density) * intermediate_vel
     
+    def update_acceleration(self):
+        
+        self.update_gravity()
+        self.acceleration = self.particle.gravity - self.particle.acceleration
+
+    def update_mass_fraction(self, phase_num:int = None):
+        if phase_num is not None:
+            self.particle.mass_fractions[phase_num] = self.particle.phase_volume_fraction[phase_num] * \
+                            self.phase_info["mass_density"][phase_num] / self.particle.mass_density
+            
     def pressure_grad(self, phase_num:int = None):
         pressure_gradient = np.array([0, 0, 0], dtype="float64")
         if phase_num is not None:
@@ -334,27 +301,55 @@ class MultiSPH(SPH):
                 )
             self.volume_frac_gradient[phase_num] = volume_fraction_gradient
 
-    def update_mixture_velocity(self):
-        intermediate_vel = np.array([0, 0, 0], dtype="float64")
+    def mass_frac_pressure_grad(self):
         for i in range(self.particle.phase_number):
-            intermediate_vel += (
-                self.particle.phase_volume_fraction[i]*self.phase_info["mass_density"][i] *
-                self.particle.phase_velocities[i]
+            self.pressure_grad(i)
+            self.frac_mass_pressure_grad += (
+                self.pressure_gradient[i] * self.particle.mass_fractions[i]
             )
-        self.particle.velocity = (1/self.particle.mass_density) * intermediate_vel
 
-    def update_mass_fraction(self, phase_num:int = None):
-        if phase_num is not None:
-            self.particle.mass_fractions[phase_num] = self.particle.phase_volume_fraction[phase_num] * \
-                            self.phase_info["mass_density"][phase_num] / self.particle.mass_density
-            
-    def update_acceleration(self):
-        
-        self.update_gravity()
-        self.update_convective_acc()
+    def mass_frac_volume_grad(self):
+        for i in range(self.particle.phase_number):
+            self.volume_fraction_grad(i)
+            self.frac_mass_volume_grad += (
+                self.particle.mass_fractions[i] * (self.volume_frac_gradient[i] / self.particle.phase_volume_fraction[i])
+            )
 
-        self.acceleration = self.particle.gravity - self.convective_acc - self.particle.acceleration
-    
+    def mass_frac_density(self):
+        for i in range(self.particle.phase_number):
+            self.update_mass_fraction(i)
+            self.frac_mass_density += (
+                self.particle.mass_fractions[i] * self.phase_info["mass_density"][i]
+            )
+
+    def update_drift_velocity(self):
+
+        self.mass_frac_density()
+        self.mass_frac_pressure_grad()
+        self.mass_frac_volume_grad()
+        self.update_acceleration()
+
+        tau = self.PHASE_CONSTANTS["tau"]
+        delta = self.PHASE_CONSTANTS["delta"]
+
+        for i in range(self.particle.phase_number):
+            tau_density_const = tau * (self.phase_info["mass_density"][i] - self.frac_mass_density) * \
+                    self.acceleration
+            tau_pressure_const = tau * (self.pressure_gradient[i] - self.frac_mass_pressure_grad)
+            try:
+                volume_frac_grad_phase = self.volume_frac_gradient[i]/ self.particle.phase_volume_fraction[i]
+            except ZeroDivisionError:
+                volume_frac_grad_phase = np.array([0, 0, 0], dtype="float64")
+
+            delta_volume_frac_const = delta * ((volume_frac_grad_phase) \
+                                               - self.frac_mass_volume_grad)
+
+            self.particle.drift_velocities[i] = (
+                tau_density_const - tau_pressure_const - delta_volume_frac_const
+            )
+
+    # ------------------------------------------------------------------- TIMESTEP --------------------------------------------------------------------
+
     def update(self):
         self.update_acceleration_force()
         self.XSPH_vel_correction()
