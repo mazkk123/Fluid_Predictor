@@ -360,6 +360,7 @@ class DFSPH(SPH):
         self.update_errors()
         
         self.particle.velocity = self.particle.predicted_velocity
+        self.debugging_forces(0.1)
 
         self.XSPH_vel_correction()
         self.choose_collision_types()
