@@ -41,7 +41,7 @@ class DFSPH(SPH):
         self.divergence_force = np.array([0, 0, 0], dtype="float64")
         self.num_particles = num_particles
 
-        self.predict_advective_forces()
+        self.predict_advective_forces(self.particle, 4)
         self.update_divergence_factor(self.particle)
         
     # ------------------------------------------------------------------- PREDICT FORCES -------------------------------------------------------------------------------
@@ -119,24 +119,29 @@ class DFSPH(SPH):
 
     # ----------------------------------------------------------------- UTILITY FUNCTIONS -----------------------------------------------------------------------------
 
-    def predict_advective_forces(self):
+    def predict_advective_forces(self, particle, depth:int=4):
         
-        for particle in self.all_particles:
-            self.find_neighbour_list(particle)
-            self.update_mass_density(particle)
-            self.update_viscosity(particle)
-            self.update_gravity(particle)
-            self.update_buoyancy(particle)
-            self.update_surface_tension(particle)
+        if depth==0:
+            return
+        
+        self.find_neighbour_list(particle)
+        self.update_mass_density(particle)
+        self.update_viscosity(particle)
+        self.update_gravity(particle)
+        self.update_buoyancy(particle)
+        self.update_surface_tension(particle)
 
-            self.all_forces += (
-                particle.viscosity +
-                particle.buoyancy +
-                particle.gravity +
-                particle.surface_tension
-            )
+        self.all_forces += (
+            particle.viscosity +
+            particle.buoyancy +
+            particle.gravity +
+            particle.surface_tension
+        )
 
-            particle.predicted_velocity = particle.velocity + self.delta_time*(self.all_forces/particle.mass)
+        particle.predicted_velocity = particle.velocity + self.delta_time*(self.all_forces/particle.mass)
+        
+        for nbr in particle.neighbour_list:
+            return self.predict_advective_forces( nbr , depth-1 )
         
     def update_divergence_factor(self, particle):
         particle.divergence_factor = 0
@@ -360,7 +365,6 @@ class DFSPH(SPH):
         self.update_errors()
         
         self.particle.velocity = self.particle.predicted_velocity
-        self.debugging_forces(0.1)
 
         self.XSPH_vel_correction()
         self.choose_collision_types()

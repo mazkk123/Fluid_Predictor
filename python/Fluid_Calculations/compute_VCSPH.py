@@ -66,14 +66,19 @@ class VCSPH(DFSPH):
 
     # --------------------------------------------------------------------- VORTICITY CALCULATIONS ------------------------------------------------------------------------
 
-    def update_vorticity(self):
+    def update_vorticity(self, particle, depth:int = 3):
 
-        for particle in self.all_particles:
-            self.vorticity(particle)
-            particle.vorticity_new = particle.vorticity + self.delta_time*self.update_vorticity_dt(particle)
-            self.update_vorticity_del(particle)
-            self.update_volume(particle)
-            self.update_stream_function(particle)
+        if depth==0:
+            return
+        
+        self.vorticity(particle)
+        particle.vorticity_new = particle.vorticity + self.delta_time*self.update_vorticity_dt(particle)
+        self.update_vorticity_del(particle)
+        self.update_volume(particle)
+        self.update_stream_function(particle)
+
+        for nbr in particle.neighbour_list:
+            self.update_vorticity(nbr, depth-1)
 
     def update_vorticity_del(self, particle):
         particle.vorticity_del = particle.vorticity_new - particle.vorticity
@@ -131,7 +136,7 @@ class VCSPH(DFSPH):
 
     def update_velocity_del(self):
 
-        self.update_vorticity
+        self.update_vorticity(self.particle, 3)
 
         self.velocity_del = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.particle.neighbour_list:

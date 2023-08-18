@@ -127,14 +127,23 @@ class IISPH(SPH):
 
     # ----------------------------------------------------------------------- PREDICT ADVECTION -----------------------------------------------------------------------------
 
+    def predict_nbr_advection(self, particle, depth:int=3):
+
+        if depth==0:
+            return
+        
+        self.find_neighbour_list(particle)
+        self.predict_velocity_advection(particle)
+        self.predict_displacement(particle)
+        self.update_acceleration_advection(particle)
+
+        for nbr in particle.neighbour_list:
+            return self.predict_nbr_advection(nbr, depth-1)
+
     def predict_advection(self):
 
         self.mass_density_adv = 0
-
-        for nbr in self.all_particles:
-            self.predict_velocity_advection(nbr)
-            self.predict_displacement(nbr)
-            self.update_acceleration_advection(nbr)
+        self.predict_nbr_advection(self.particle, 4)
 
         self.particle.pressure  = self.particle.prev_pressure*0.5
         self.update_mass_density_advection()

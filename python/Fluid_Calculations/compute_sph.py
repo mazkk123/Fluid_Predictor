@@ -32,8 +32,8 @@ class SPH(Particle):
         "beta_const":0.25,
         "stiffness_constant":1000,
         "alpha":0.4,
-        "v_cutoff":np.array([0, 0, 0], dtype="float64"),
-        "N_cutoff":np.array([0, 0, 0], dtype="float64"),
+        "v_cutoff":0.02,
+        "N_cutoff":0.01,
         "thermal_exp_coeff":4.988,
         "kinematic_visc":0.000006,
         "lambda_const":0.005,
@@ -101,6 +101,8 @@ class SPH(Particle):
             self.all_particles = all_particles
 
         self.incremental_step = self.PARAMETERS["cell_size"] / 4
+
+        self.normal_field()
         
         self.update_particle_neighbours()
         self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
@@ -115,10 +117,18 @@ class SPH(Particle):
         """
         if self.search_method != "Neighbour":
             self.particle.neighbour_list = []
+            self.mark_active_neighbours()
             for items in self.hash_table[self.hash_value]:
                 if not items==self.particle:
-                    self.neighbours_list.append(items)
-                    self.particle.neighbour_list.append(items)
+                    if items in self.active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
+                    elif items in self.semi_active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
+                    elif items in self.other_active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
             #self.particle_query()
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
@@ -167,22 +177,40 @@ class SPH(Particle):
                 mass_d * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 0)
             )
     
+    def find_neighbour_list(self, particle):
+        particle.neighbour_list = []
+        for nbr in self.hash_table[particle.hash_value]:
+            if particle is not nbr:
+                particle.neighbour_list.append(nbr)
+
+    def mark_active_members(self, particle, depth:int=3):
+
+        if depth==0:
+            return
+        
+        self.find_neighbour_list(particle)
+        for nbr in particle.neighbour_list:
+            if any(nbr.velocity) >= self.PARAMETERS["v_cutoff"] or  \
+                any(nbr.normal_field) >= self.PARAMETERS["N_cutoff"]:
+                self.active.append(nbr)
+                return self.mark_active_members(nbr, depth-1)
+            else:
+                self.passive.append(nbr)
+                return self.mark_active_members(nbr, depth-1)
+
     def mark_active_neighbours(self):
         
-        for particle in self.all_particles:
-            if (particle.velocity >= self.PARAMETERS["v_cutoff"]).any() or  \
-                (particle.normal_field >= self.PARAMETERS["N_cutoff"]).any():
-                self.active.append(self.particle)
-            else:
-                self.passive.append(self.particle)
+        self.mark_active_members(self.particle, 2)
 
+        self.other_active = []
         for active_p in self.active:
-            if len(active_p.neighbour_list)>0:
-                for nbr in active_p.neighbour_list:
-                    if (nbr.velocity >= self.PARAMETERS["v_cutoff"]).any():
-                            self.active.append(nbr)
-                    else:
-                        self.semi_active.append(nbr)
+            self.find_neighbour_list(active_p)
+            for nbr in active_p.neighbour_list:
+                if any(nbr.velocity) >= self.PARAMETERS["v_cutoff"]:
+                    self.other_active.append(nbr)
+                else:
+                    self.semi_active.append(nbr)
+        
                 
     # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
 

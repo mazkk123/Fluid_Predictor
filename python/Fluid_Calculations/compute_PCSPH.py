@@ -40,7 +40,9 @@ class PCSPH(SPH):
         self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
         self.particle.pressure = 0
 
-        self.update_predicted_attrs()
+        self.update_predicted_attrs(self.particle, 4)
+
+        self.particle.predicted_density = self.particle.mass_density
     
     def find_beta_const(self):
         return m.pow(self.delta_time, 2)*m.pow(self.particle.mass, 2)* \
@@ -232,27 +234,29 @@ class PCSPH(SPH):
             if particle is not nbr:
                 particle.neighbour_list.append(nbr)
 
-    def update_predicted_attrs(self):
+    def update_predicted_attrs(self, particle, depth:int=3):
         
-        for particle in self.all_particles:
-            
-            self.find_neighbour_list(particle)
+        if depth==0:
+            return 
+        
+        self.find_neighbour_list(particle)
 
-            self.update_predicted_mass_density(particle)
-            self.update_predicted_gravity(particle)
-            self.update_predicted_surface_tension(particle)
-            self.update_predicted_viscosity(particle)
-            self.update_predicted_buoyancy(particle)
-    
-            self.all_forces = particle.gravity + \
-                              particle.surface_tension + \
-                              particle.viscosity + \
-                              particle.buoyancy
+        self.update_predicted_mass_density(particle)
+        self.update_predicted_gravity(particle)
+        self.update_predicted_surface_tension(particle)
+        self.update_predicted_viscosity(particle)
+        self.update_predicted_buoyancy(particle)
 
-            particle.predicted_velocity = particle.velocity + self.delta_time*self.all_forces / particle.mass
-            particle.predicted_initial_pos = particle.initial_pos + particle.predicted_velocity*self.delta_time
+        self.all_forces = particle.gravity + \
+                            particle.surface_tension + \
+                            particle.viscosity + \
+                            particle.buoyancy
 
-        self.particle.predicted_density = self.particle.mass_density
+        particle.predicted_velocity = particle.velocity + self.delta_time*self.all_forces / particle.mass
+        particle.predicted_initial_pos = particle.initial_pos + particle.predicted_velocity*self.delta_time
+
+        for nbr in particle.neighbour_list:
+            return self.update_predicted_attrs(nbr, depth-1)
 
     def update_all_forces(self):
         
