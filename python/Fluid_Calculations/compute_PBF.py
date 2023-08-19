@@ -1,7 +1,6 @@
 import math as m
 import numpy as np
-import random as rd
-import re
+import time
 
 from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
@@ -37,9 +36,27 @@ class PBF(SPH):
         self.all_particles = all_particles
         self.constraint_grad = np.array([0, 0, 0], dtype="float64")
         self.iter = 0
+        self.depth_lvl = 5
+        self.main_depth_lvl = 5
         
-        self.predict_positions(self.particle, 4)
+        self.predict_positions(self.particle, self.main_depth_lvl)
     
+    def normalize(self, vector):
+
+        if np.linalg.norm(vector) == 0:
+            return 0
+        
+        return vector / np.linalg.norm(vector)
+        
+    def new_cubic_spline_kernel_gradient(self, position:np.array=None):
+        if np.linalg.norm(position) == 0: q = 0
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q>=0 and q<1:
+            kernel_val = m.pow(1 - q, 2) * self.normalize(position)
+            return kernel_val
+        if q>=1:
+            return 0
+        
     def predict_positions(self, particle, depth:int=4):
         
         if depth==0:
@@ -137,18 +154,11 @@ class PBF(SPH):
         buoyancy *= self.gravity_const
         particle.buoyancy = buoyancy
         
-    def update_constraint_function(self, particle, depth:int=4):
+    def update_constraint_function(self, particle):
         
-        if depth==0:
-            return 
-        
-        self.find_neighbour_list(particle)
         particle.constraint_function = (
             particle.mass_density / self.PARAMETERS["mass_density"] - 1
         )
-        
-        for nbr in particle.neighbour_list:
-            return self.update_constraint_function(nbr, depth-1)
 
     def update_constraint_grad(self, particle):
 
@@ -161,22 +171,16 @@ class PBF(SPH):
         self.constraint_grad *= 1/self.PARAMETERS["mass_density"]
         return self.constraint_grad
 
-    def update_constraint(self, particle, depth:int=4):
+    def update_constraint(self, particle):
         
-        if depth==0:
-            return 
-            
         constraint_sum = 0
         for p in particle.neighbour_list:
             constraint_sum += (
                 m.pow(np.linalg.norm(self.update_constraint_grad(p)), 2)
             )
         particle.constraint = particle.constraint_function / (constraint_sum + self.OTHER_PARAMS["relaxation_factor"])
-        
-        for nbr in particle.neighbour_list:
-            return self.update_constraint(nbr, depth-1)
-        
-    def update_s_corr(self, id):
+
+    def update_s_corr(self, particle, id):
         delta_q_const = np.array([0.1*self.PARAMETERS["cell_size"],
                                   0.1*self.PARAMETERS["cell_size"],
                                   0.1*self.PARAMETERS["cell_size"]], dtype="float64")
@@ -191,33 +195,20 @@ class PBF(SPH):
         ), self.OTHER_PARAMS["n_const"])
         return s_corr
     
-    def update_del_position(self, particle, depth:int=4):
+    def update_del_position(self, particle):
         
-        if depth==0:
-            return 
-            
         constraint_term = np.array([0, 0, 0], dtype="float64")
         for id, nbr_particle in enumerate(particle.neighbour_list):
             constraint_term += (
-                self.particle.constraint + nbr_particle.constraint + self.update_s_corr(id)*
+                self.particle.constraint + nbr_particle.constraint + self.update_s_corr(particle, id)*
                 self.cubic_spline_kernel_gradient(particle.predicted_initial_pos - nbr_particle.predicted_initial_pos)
             )
         particle.del_position = 1/self.PARAMETERS["mass_density"]*constraint_term
-        
-        for nbr in particle.neighbour_list:
-            self.update_del_position(nbr, depth-1)
 
-    def update_position(self, particle, depth):
-        
-        if depth==0:
-            return 
-            
+    def update_position(self, particle):
         particle.predicted_initial_pos += particle.del_position
-        
-        for nbr in particle.neighbour_list:
-            return self.update_position(nbr, depth-1)
             
-    def update_vorticity(self):
+    def update_vorticity(self, particle):
         for nbr_particle in particle.neighbour_list:
             particle.vorticity += (
                 np.cross((nbr_particle.velocity - particle.velocity),
@@ -225,35 +216,26 @@ class PBF(SPH):
             )
 
     def n_const(self, particle):
-        return self.cubic_spline_kernel_gradient(np.linalg.norm(particle.vorticity))
+        return self.new_cubic_spline_kernel_gradient(np.linalg.norm(particle.vorticity))
     
-    def update_vorticity_force(self):
+    def update_vorticity_force(self, particle):
+        try:
+            curl_term = np.cross(self.n_const(particle)/ np.linalg.norm(self.n_const(particle)), particle.vorticity)
+        except np.AxisError:
+            curl_term = np.array([0, 0, 0], dtype="float64")
         particle.vorticity_force = (
-            self.OTHER_PARAMS["relaxation_factor"]*
-            np.cross(self.n_const(particle)/ np.linalg.norm(self.n_const()), particle.vorticity)
+            self.OTHER_PARAMS["relaxation_factor"]*curl_term
         )
         
-    def update_vorticity_forces(self, particle, depth:int=4):
-        
-        if depth==0:
-            return 
-            
+    def update_vorticity_forces(self, particle):
+
         self.update_vorticity(particle)
         self.update_vorticity_force(particle)
-        for nbr in particle.neighbour_list:
-            return self.update_vorticity_forces(nbr, depth-1)
     
-    def update_velocity(self, particle, depth:int=4):
-        
-        if depth==0:
-            return
-            
+    def update_velocity(self, particle):
         particle.predicted_velocity = 1 / self.delta_time * (particle.predicted_initial_pos - particle.initial_pos)
-        
-        for nbr in particle.neigbour_list:
-            return self.update_velocity(nbr, depth-1)
     
-    def XSPH_viscosity(self):
+    def XSPH_viscosity_correction(self):
         correction_term = np.array([0, 0, 0], dtype="float64")
         for nbr in self.particle.neighbour_list:
             correction_term += (
@@ -276,22 +258,50 @@ class PBF(SPH):
         particle.acceleration = self.all_forces / particle.mass
         particle.velocity = particle.predicted_velocity + self.delta_time*particle.acceleration
         particle.initial_pos = particle.predicted_initial_pos + self.delta_time*particle.velocity
+    
+    def update_secondary_forces(self, particle, depth:int = 2):
+
+        if depth==0:
+            return
         
+        self.update_velocity(particle)
+        self.update_vorticity_forces(particle)
+
+        for nbr in particle.neighbour_list:
+            return self.update_secondary_forces(nbr, depth-1)
+    
+    def debugging_forces(self, secs):
+        print("Vorticity is:", self.particle.vorticity)
+        print("\n\n")
+        time.sleep(secs)
+
+    def update_constraints(self, particle, depth:int=4):
+
+        if depth==0:
+            return
+        
+        self.find_neighbour_list(particle)
+        self.update_constraint_function(particle)
+        self.update_constraint(particle)
+        self.update_del_position(particle)
+        self.update_position(particle)
+
+        for nbr in particle.neighbour_list:
+            return self.update_constraints(nbr, depth-1)
+
     def update(self):
 
         while(self.iter < self.OTHER_PARAMS["solver_iterations"]):
 
-            self.update_constraint_function(self.particle, 4)
-            self.update_constraint(self.particle, 4)
-            self.update_del_position(self.particle, 4)
-            self.update_position(self.particle, 4)
+            self.update_constraints(self.particle, self.depth_lvl)
             
             self.iter += 1
 
-        self.update_velocity(self.particle, 4)
-        self.update_vorticity_forces(self.particle, 4)
+        self.update_secondary_forces(self.particle, self.depth_lvl)
         
         self.update_forces(self.particle)
         self.XSPH_vel_correction()
         self.XSPH_viscosity_correction()
+
+        self.adapt_to_CFL()
         

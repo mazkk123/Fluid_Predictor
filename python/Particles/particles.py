@@ -41,7 +41,7 @@ class Particle:
             self.mass_fractions = [0.1 for i in range(phase_number)]
             self.phase_pressures = [0 for i in range(phase_number)]
             self.phase_stress_tensor = [0 for i in range(phase_number)]
-            self.phase_volume_fraction = [0 for i in range(phase_number)]
+            self.phase_volume_fraction = [1/phase_number for i in range(phase_number)]
             self.phase_viscosities= [0 for i in range(phase_number)]
             self.drift_velocities = [np.array([0, 0, 0], dtype="float64") for i in range(phase_number)]
             self.interp_density = 0

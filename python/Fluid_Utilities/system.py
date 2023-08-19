@@ -50,7 +50,7 @@ class FluidSystem:
         "phase_number":3,
         "mass_density":[998.2, 1010, 700],
         "viscosity":[3.5, 10, 23],
-        "mass":[0.1, 5, 6]
+        "mass":[0.1, 0.1, 0.1]
     }
 
     HASH_MAP = {}
@@ -232,7 +232,6 @@ class FluidSystem:
                         delta_time=0.02   
                     ).update()
                 if id == 9:
-                    print("do PBF")
                     PBF(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],

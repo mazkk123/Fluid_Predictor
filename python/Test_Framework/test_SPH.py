@@ -7,11 +7,11 @@ sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\
 
 from Fluid_Utilities.system import FluidSystem
 
-system_obj = FluidSystem(type="SPH",search_method="Spatial Hashing", num_particles=20000)
+system_obj = FluidSystem(type="MultiSPH", search_method="Spatial Hashing", num_particles=250)
 
 for i in range(system_obj.num_frames):
     
-    print("Position particle 1 is: ", system_obj.particle_list[0].initial_pos)
+    """ print("Position particle 1 is: ", system_obj.particle_list[0].initial_pos) """
     system_obj.update() 
 
 
