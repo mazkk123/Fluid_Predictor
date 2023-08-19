@@ -51,6 +51,8 @@ class MultiSPH(SPH):
         self.convective_tensor = np.array([0, 0, 0], dtype="float64")
         self.viscous_tensor = np.array([0, 0, 0], dtype="float64")
         self.pressure_laplacian = np.array([0, 0, 0], dtype="float64")
+        
+        self.sound_speed = m.sqrt(self.PARAMETERS["cell_size"])
 
     def find_neighbour_list(self, particle):
         particle.neighbour_list = []
@@ -425,7 +427,33 @@ class MultiSPH(SPH):
         print("\n\n")
         time.sleep(secs)
     # ------------------------------------------------------------------- TIMESTEP --------------------------------------------------------------------
-
+    
+    def drift_velocity_CFL(self):
+        const_term = 0.3*self.PARAMETERS["cell_size"]
+        max_drift_term = np.array([0, 0, 0], dtype="float64"])
+        for i in range(self.particle.phase_number):
+            drift_term = self.particle.drift_velocities[i]
+            if (drift_term > max_drift_term).any():
+                max_drift_term = drift_term
+        return const_term / np.linalg.norm(max_drift_term)
+    
+    def viscosity_CFL(self):
+        const_term = 0.4*self.PARAMETERS["cell_size"]
+        maximum_visc = 2*max(self.phase_info["viscosity"])
+        visc_term = self.sound_speed + 0.6*(self.sound_speed + maximum_visc)
+        return const_term / maximum_visc
+        
+    def main_CFL(self):
+        const_term = 0.25*self.PARAMETERS["cell_size"]
+        gravity_mag = np.linalg.norm(self.gravity_const)
+        return const_term / gravity_mag
+            
+    def adapt_to_CFL(self):
+        conditions = [self.main_CFL(),
+                      self.viscosity_CFL(),
+                      self.drift_velocity_CFL()]
+        self.delta_time = min(conditions)
+        
     def perform_calculations(self):
 
         for nbr in self.neighbours_list:
@@ -449,4 +477,6 @@ class MultiSPH(SPH):
 
         self.choose_time_stepping(self.time_stepping)
         self.choose_collision_types("Cuboid", "Normal")
+        
+        self.adapt_to_CFL()
 
