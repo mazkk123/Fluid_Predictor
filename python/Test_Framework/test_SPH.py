@@ -7,7 +7,7 @@ sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\
 
 from Fluid_Utilities.system import FluidSystem
 
-system_obj = FluidSystem(type="LPSPH", search_method="Spatial Hashing", num_particles=20000)
+system_obj = FluidSystem(type="FSISPH", search_method="Spatial Hashing", num_particles=250)
 
 for i in range(system_obj.num_frames):
     

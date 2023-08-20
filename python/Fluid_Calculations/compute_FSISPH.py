@@ -1,7 +1,6 @@
 import math as m
 import numpy as np
-import random as rd
-import re
+import time
 
 from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
@@ -35,8 +34,8 @@ class FSISPH(SPH):
                          delta_time=delta_time)
 
         self.velocity_grad_tensor = np.array([[0, 0, 0],
-                                             [0, 0, 0],
-                                             [0, 0, 0]], dtype="float64")
+                                              [0, 0, 0],
+                                              [0, 0, 0]], dtype="float64")
 
         self.interface_velocity = np.array([5.2, 0.1, 3.2], dtype="float64")
         self.force = np.array([0, 0, 0], dtype="float64")
@@ -44,47 +43,8 @@ class FSISPH(SPH):
         self.interface_neighbrs = []
         self.slip_condition = slip_condition
 
-        self.trapezoidal_sub_interval_amt = 100
-        self.delta_x = 0.01
+    # --------------------------------------------------------------- UTILITY CALCULATIONS -------------------------------------------------------------------
 
-    # ------------------------------------------------------------- MATHEMATICAL CALCULATIONS -----------------------------------------------------------------
-
-    def deformation(self):
-        return 1/2 * (self.velocity_grad_tensor - self.velocity_grad_tensor.transpose())
-    
-    def rotation(self):
-        return 1/2 * (self.velocity_grad_tensor + self.velocity_grad_tensor.transpose())
-    
-    def update_velocity_grad(self):
-        self.velocity_grad = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
-            self.velocity_grad += (
-                nbr_particle.mass  * (
-                self.particle.velocity - nbr_particle.velocity
-                )
-                * self.cubic_spline_kernel(kernel_type=1,
-                                           nbr_position=nbr_particle.initial_pos)
-            )
-        return self.velocity_grad
-
-    def update_velocity_grad_c(self, index_c, index_kernel):
-        self.velocity_grad = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
-            self.velocity_grad[index_c] += (
-                nbr_particle.mass  * (
-                self.particle.velocity[index_c] - nbr_particle.velocity[index_c]
-                )
-                * self.cubic_spline_kernel_c(self.particle.initial_pos - nbr_particle.initial_pos, index_kernel)
-            )
-        return self.velocity_grad[index_c]
-    
-    def update_velocity_grad_t(self):
-        for i in range(np.shape(self.velocity_grad_tensor)[0]):
-            for j in range(np.shape(self.velocity_grad_tensor)[1]):
-                self.velocity_grad_tensor[i][j] = (
-                    self.update_velocity_grad_c(i, j)
-                )
-    
     @staticmethod
     def kronecker_delta(i, j):
         if (i==j): return 1 
@@ -95,6 +55,40 @@ class FSISPH(SPH):
         if (i==j): return 0
         else: return 1
 
+    @staticmethod
+    def normalize(position):
+
+        if np.linalg.norm(position)==0:
+            position = np.array([0, 0, 0], dtype="float64"
+                                )
+        return position / np.linalg.norm(position)
+    
+    def cubic_spline_kernel_gradient(self, position):
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        kernel_const = 1 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 4))
+        if q>=0 and q<=1:
+            kernel_val = 9/4*m.pow(q, 2) - 3*q
+            return kernel_val*kernel_const
+        if q>=1 and q<=2:
+            kernel_val = -3/4*m.pow((2 - q), 2)
+            return kernel_val*kernel_const
+        if q>=2:
+            return 0
+
+    def find_neighbour_list(self, particle):
+        particle.neighbour_list = []
+        for nbr in self.hash_table[particle.hash_value]:
+            if particle is not nbr:
+                particle.neighbour_list.append(nbr)
+
+    # ---------------------------------------------------------------- TENSOR ATTRIBUTES ----------------------------------------------------------------------
+
+    def deformation(self):
+        return 1/2 * (self.velocity_grad_tensor - self.velocity_grad_tensor.transpose())
+    
+    def rotation(self):
+        return 1/2 * (self.velocity_grad_tensor + self.velocity_grad_tensor.transpose())
+    
     def deviatoric_stress(self):
         for i in range(np.shape(self.particle.deviatoric_stress_tensor)[0]):
             for j in range(np.shape(self.particle.deviatoric_stress_tensor)[1]):
@@ -113,17 +107,33 @@ class FSISPH(SPH):
                     self.PARAMETERS["viscosity"]
                 )
         return self.particle.cauchy_stress_tensor
-
-    def isotropic_pressure_component(self):
-        return (self.particle.cauchy_stress_tensor.trace()) / 3
     
+    def update_shear_stress(self):
+        for i in range(np.shape(self.particle.cauchy_stress_tensor)[0]):
+            for j in range(np.shape(self.particle.cauchy_stress_tensor)[1]):
+                self.particle.shear_stress[i][j] = (
+                    self.particle.cauchy_stress_tensor[i][j] *
+                    self.reverse_kronecker_delta(i, j)
+                )
+        return self.particle.shear_stress
+    
+    def update_shear_strain(self, id):
+        for i in range(np.shape(self.particle.shear_strain)[0]):
+            for j in range(np.shape(self.particle.shear_strain)[1]):
+                self.particle.shear_strain[i][j] = (
+                    (self.neighbours_list[id].initial_pos[j] - self.particle.initial_pos[j]) / 
+                    (self.neighbours_list[id].initial_pos[i] - self.particle.initial_pos[i]) 
+                )
+        return self.particle.shear_strain
+
     def update_deviatoric_stress(self):
         self.update_velocity_grad_t()
+        trace_matrix = self.deformation().trace()*np.identity(3)
         for i in range(np.shape(self.particle.deviatoric_stress_tensor)[0]):
             for j in range(np.shape(self.particle.deviatoric_stress_tensor)[1]):
                 self.particle.deviatoric_stress_tensor[i][j] = (
                     2 * self.PARAMETERS["viscosity"] *
-                    (self.deformation()[i][j] - self.deformation().trace()*np.identity(3)) +
+                    (self.deformation()[i][j] - trace_matrix[i][j]) +
                     self.deviatoric_stress()[i][j]*self.rotation().transpose()[i][j] +
                     self.rotation()[i][j]*self.deviatoric_stress().transpose()[i][j]
                 )
@@ -133,11 +143,47 @@ class FSISPH(SPH):
         self.update_velocity_grad_t()
         self.update_deviatoric_stress()
 
+        trace_pressure_matrix = self.particle.pressure*np.identity(3)
         for i in range(np.shape(self.particle.cauchy_stress_tensor)[0]):
             for j in range(np.shape(self.particle.cauchy_stress_tensor)[1]):
                 self.particle.cauchy_stress_tensor[i][j] = (
                     self.particle.deviatoric_stress_tensor[i][j] - 
-                    self.particle.pressure*np.identity(3)
+                    trace_pressure_matrix[i][j]
+                )
+
+    def isotropic_pressure_component(self):
+        return (self.particle.cauchy_stress_tensor.trace()) / 3
+
+    # ------------------------------------------------------------- MATHEMATICAL CALCULATIONS -----------------------------------------------------------------
+
+    def update_velocity_grad(self):
+        self.velocity_grad = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in self.neighbours_list:
+            self.velocity_grad += (
+                nbr_particle.mass  * (
+                self.particle.velocity - nbr_particle.velocity
+                )
+                * self.cubic_spline_kernel(kernel_type=1,
+                                           nbr_position=nbr_particle.initial_pos)
+            )
+        return self.velocity_grad
+
+    def update_velocity_grad_c(self, index_c, kernel_index):
+        self.velocity_grad = np.array([0, 0, 0], dtype="float64")
+        for nbr_particle in self.neighbours_list:
+            self.velocity_grad[index_c] += (
+                nbr_particle.mass  * (
+                self.particle.velocity[index_c] - nbr_particle.velocity[index_c]
+                )
+                * self.cubic_spline_kernel_grad_c(self.particle.initial_pos - nbr_particle.initial_pos, kernel_index)
+            )
+        return self.velocity_grad[index_c]
+    
+    def update_velocity_grad_t(self):
+        for i in range(np.shape(self.velocity_grad_tensor)[0]):
+            for j in range(np.shape(self.velocity_grad_tensor)[1]):
+                self.velocity_grad_tensor[i][j] = (
+                    self.update_velocity_grad_c(i, j)
                 )
 
     def update_acceleration_force(self):
@@ -148,10 +194,14 @@ class FSISPH(SPH):
             self.update_artificial_viscosity_no_slip()
         
         for nbr_particle in self.neighbours_list:
+            try:
+                divisor = self.particle.cauchy_stress_tensor / (self.particle.mass_density*nbr_particle.mass_density)
+            except ZeroDivisionError:
+                divisor = np.array([[0, 0, 0],
+                                    [0, 0, 0],
+                                    [0, 0, 0]], dtype="float64")
             tensor_term = ( 
-            self.particle.cauchy_stress_tensor / 
-            (self.particle.mass_density*nbr_particle.mass_density) -
-            (self.particle.artificial_viscosity / 2)
+            divisor - (self.particle.artificial_viscosity / 2)
             )
             
             kernel_term = (
@@ -171,29 +221,13 @@ class FSISPH(SPH):
             self.particle.shear_modulus += self.particle.shear_stress / self.update_shear_strain(id)
 
     def update_bulk_modulus(self):
+        try:
+            const_term = np.power((self.particle.mass_density/ self.PARAMETERS["mass_density"]), self.OTHER_PARAMS["lambda_const"]) - 1
+        except ZeroDivisionError:
+            const_term = 0
         self.particle.bulk_modulus = (
-            self.particle.pressure / (
-            m.pow((self.particle.mass_density/ self.PARAMETERS["mass_density"]), self.OTHER_PARAMS["lambda_const"]) - 1
-            )
+            self.particle.pressure / const_term
         )
-
-    def update_shear_stress(self):
-        for i in range(np.shape(self.particle.cauchy_stress_tensor)[0]):
-            for j in range(np.shape(self.particle.cauchy_stress_tensor)[1]):
-                self.particle.shear_stress[i][j] = (
-                    self.particle.cauchy_stress_tensor[i][j] *
-                    self.reverse_kronecker_delta(i, j)
-                )
-        return self.particle.shear_stress
-    
-    def update_shear_strain(self, id):
-        for i in range(np.shape(self.particle.shear_strain)[0]):
-            for j in range(np.shape(self.particle.shear_strain)[1]):
-                self.particle.shear_strain[i][j] = (
-                    (self.neighbours_list[id].initial_pos[j] - self.particle.initial_pos[j]) / 
-                    (self.neighbours_list[id].initial_pos[i] - self.particle.initial_pos[i]) 
-                )
-        return self.particle.shear_strain
 
     # ---------------------------------------------------------------- FORCE CALCULATIONS -------------------------------------------------------------------------
 
@@ -202,51 +236,42 @@ class FSISPH(SPH):
             self.particle.perp_velocity = self.particle.velocity - \
                 self.particle.velocity*self.normalize(self.particle.initial_pos - nbr_particle.initial_pos)
         
-        self.update_shear_modulus()
-        self.local_domain_volume()
+            self.update_shear_modulus()
+            self.update_volume()
 
-        numerator = (self.particle.shear_modulus*self.neighbours_list[id].volume* \
+            numerator = (self.particle.shear_modulus*nbr_particle.volume* \
+                        self.cubic_spline_kernel_gradient_mag(self.particle.initial_pos - 
+                                                            nbr_particle.initial_pos)* \
+                        self.particle.perp_velocity) + \
+                        (nbr_particle.shear_modulus*self.particle.volume* \
+                        self.cubic_spline_kernel_pos(nbr_particle.initial_pos - 
+                                                    self.particle.initial_pos)* \
+                        nbr_particle.perp_velocity)
+            
+            denom = (self.particle.shear_modulus*nbr_particle.volume* \
                     self.cubic_spline_kernel_gradient_mag(self.particle.initial_pos - 
-                                                          self.neighbours_list[id].initial_pos)* \
-                    self.particle.perp_velocity) + \
-                    (self.neighbours_list[id].shear_modulus*self.particle.volume* \
-                    self.cubic_spline_kernel_pos(self.neighbours_list[id].initial_pos - 
-                                                 self.particle.initial_pos)* \
-                    self.neighbours_list[id].perp_velocity)
-        
-        denom = (self.particle.shear_modulus*self.neighbours_list[id].volume* \
-                self.cubic_spline_kernel_gradient_mag(self.particle.initial_pos - 
-                                                      self.neighbours_list[id].initial_pos)) + \
-                (self.neighbours_list[id].shear_modulus*self.particle.volume* \
-                self.cubic_spline_kernel_pos(self.neighbours_list[id].initial_pos - 
-                                             self.particle.initial_pos))
-        
-        self.particle.perp_velocity += (
-            numerator / denom
-        )
+                                                        nbr_particle.initial_pos)) + \
+                    (nbr_particle.shear_modulus*self.particle.volume* \
+                    self.cubic_spline_kernel_pos(nbr_particle.initial_pos - 
+                                                self.particle.initial_pos))
+            
+            if any(denom)==0:
+                perp_velocity = np.array([0, 0, 0], dtype="float64")
+            else:
+                perp_velocity = numerator / denom
 
-    def local_domain_volume(self):
-        trapezoidal_amt = self.trapezoidal_sub_interval_amt
-        for nbr_particle in self.neighbours_list:
+            self.particle.perp_velocity += perp_velocity
 
-            self.trapezoidal_sub_interval_amt = trapezoidal_amt
-            volume = 0
-            while (self.trapezoidal_sub_interval_amt > 0):
-                
-                if self.trapezoidal_sub_interval_amt == trapezoidal_amt:
-                    volume += self.cubic_spline_kernel_pos(self.particle.initial_pos - 
-                                                                        nbr_particle.initial_pos)
-
-                volume += 2*self.cubic_spline_kernel_pos(self.particle.initial_pos - 
-                                                                        nbr_particle.initial_pos)
-
-                self.trapezoidal_sub_interval_amt -= 1
-            self.particle.volume += volume*0.5*self.delta_x
+    def update_volume(self):
+        try:
+            self.particle.volume = self.particle.mass / self.particle.mass_density
+        except ZeroDivisionError:
+            self.particle.volume = 0
 
     def update_parallel_velocity(self):
         
         self.update_bulk_modulus()
-        self.local_domain_volume()
+        self.update_volume()
 
         for id, nbr_particle in enumerate(self.neighbours_list):
             self.particle.parallel_velocity = self.particle.velocity* \
@@ -256,7 +281,7 @@ class FSISPH(SPH):
                 (self.particle.bulk_modulus*nbr_particle.volume*self.cubic_spline_kernel_gradient_mag(
                 self.particle.initial_pos - nbr_particle.initial_pos) * self.particle.parallel_velocity) +
                 (nbr_particle.bulk_modulus*nbr_particle.volume*self.cubic_spline_kernel_pos(
-                 nbr_particle - self.particle.initial_pos) * nbr_particle.parallel_velocity)
+                 nbr_particle.initial_pos - self.particle.initial_pos) * nbr_particle.parallel_velocity)
             )
 
             denominator = (
@@ -266,9 +291,12 @@ class FSISPH(SPH):
                 nbr_particle.initial_pos - self.particle.initial_pos))  
             )
 
-            self.particle.parallel_velocity += (
-                numerator / denominator
-            )
+            if any(denominator)==0:
+                parallel_velocity = 0
+            else:
+                parallel_velocity = numerator / denominator
+
+            self.particle.parallel_velocity += parallel_velocity
         
     def update_slip_condition(self):
         
@@ -303,22 +331,32 @@ class FSISPH(SPH):
                                             nbr_particle.mass_density)
                 )
 
-                denominator = ( self.particle.mass_density + nbr_particle.mass_density)
+                denominator = self.particle.mass_density + nbr_particle.mass_density
+
+                if denominator==0:
+                    cauchy_stress = np.array([0, 0, 0], dtype="float64")
+                else:
+                    cauchy_stress = numerator / denominator
 
                 self.particle.cauchy_stress_tensor = (
-                    np.identity(3) * (numerator / denominator)
+                    np.identity(3) * cauchy_stress
                 )
+
             if self.slip_condition is not True:
                 numerator = (
                 (self.particle.cauchy_stress_tensor * nbr_particle.mass_density) +
                 (nbr_particle.cauchy_stress_tensor*self.particle.mass_density) 
                 )
 
-                denominator = ( self.particle.mass_density + nbr_particle.mass_density)
+                if denominator==0:
+                    cauchy_stress = np.array([0, 0, 0], dtype="float64")
+                else:
+                    cauchy_stress = numerator / denominator
 
-                self.particle.cauchy_stress_tensor += numerator / denominator
+                self.particle.cauchy_stress_tensor += cauchy_stress
 
     # --------------------------------------------------------------- CONSERVATIVE DIFFUSION ---------------------------------------------------------------------
+
     def update_conservative_diffusion_mass_density(self):
         mass_density = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
@@ -336,10 +374,13 @@ class FSISPH(SPH):
                     self.particle.initial_pos - nbr_particle.initial_pos), 2) +
                     self.OTHER_PARAMS["deformation"])
                 )
-                mass_density += numerator / denominator
+                if denominator==0:
+                    mass_density_term = np.array([0, 0, 0], dtype="float64")
+                else:
+                    mass_density_term = numerator / denominator
+                mass_density += mass_density_term
                 
-        self.particle.mass_density = -self.OTHER_PARAMS["diffusion_coefficient"] * \
-                       mass_density
+        self.particle.mass_density = -self.OTHER_PARAMS["diffusion_coefficient"] * mass_density
         
     def update_conservative_diffusion_energy(self):
         velocity = 0
@@ -363,7 +404,7 @@ class FSISPH(SPH):
         self.particle.velocity = -self.OTHER_PARAMS["diffusion_coefficient"] * \
                        velocity
     
-    # -----------------------------------------------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------ FORCE ATTRIBUTES ------------------------------------------------------------------------
 
     def outward_facing_unit_norm(self, position):
         return self.normalize(position)
@@ -441,25 +482,24 @@ class FSISPH(SPH):
                 ))
             )
 
-    def update_half_velocity(self):
-        self.particle.half_velocity = self.particle.velocity + self.particle.acceleration*self.delta_time/2
+    def update_half_velocity(self, particle):
+        particle.half_velocity = particle.velocity + particle.acceleration*self.delta_time/2
 
-    def update_mass_density(self):
+    def update_mass_density(self, particle):
 
-        self.update_half_velocity()
+        self.update_half_velocity(particle)
         mass_density = np.array([0, 0, 0], dtype="float64")
-        for nbr_particle in self.neighbours_list:
+        for nbr_particle in particle.neighbour_list:
+            try:
+                mass_d = nbr_particle.mass / nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_d = np.array([0, 0, 0], dtype="float64")
             mass_density += (
-                nbr_particle.mass / nbr_particle.mass_density *
-                (self.particle.half_velocity - self.interface_velocity) *
-                self.cubic_spline_kernel(kernel_type=1,
-                                         nbr_position=nbr_particle.initial_pos)
+                mass_d *
+                (particle.half_velocity - self.interface_velocity) *
+                self.cubic_spline_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
             )
-        self.particle.mass_density *= -2*mass_density
-
-    @staticmethod
-    def normalize(position):
-        return position / np.linalg.norm(position)
+        particle.mass_density *= -2*mass_density
     
     def update_interface_velocity(self):
         
@@ -486,15 +526,20 @@ class FSISPH(SPH):
 
     def update_net_forces(self):
 
-        self.update_pressure()
-        self.update_mass_density()
-        self.update_conservative_diffusion_mass_density()
+        for nbr in self.neighbours_list:
+            self.find_neighbour_list(nbr)
+            self.update_mass_density(nbr)
+
+        #self.update_conservative_diffusion_mass_density()
+
+        self.find_neighbour_list(self.particle)
+        self.update_mass_density(self.particle)
 
         self.update_cauchy_stress()
         self.update_sound_speed()
         self.update_pressure()
 
-        self.update_conservative_diffusion_energy()
+        #self.update_conservative_diffusion_energy()
         self.update_energy_conservation()
         self.update_interface_velocity()
 
@@ -504,7 +549,21 @@ class FSISPH(SPH):
             self.update_artificial_viscosity_slip()
         elif self.slip_condition is not True:
             self.update_artificial_viscosity_slip()
-        
+    
+    # ------------------------------------------------------------------- UPDATE CALLS ---------------------------------------------------------------------------
+
+    def debugging_forces(self, secs):
+
+        print(f"Mass density is {self.particle.mass_density}")
+        print(f"Acceleration is {self.particle.acceleration}")
+        print(f"Interface velocity is {self.particle.interface_velocity}")
+        print(f"Parallel velocity is {self.particle.parallel_velocity}")
+        print(f"Perpendicular velocity is {self.particle.perp_velocity}")
+        print(f"Cauchy stress is {self.particle.cauchy_stress_tensor}")
+        print(f"Deviatoric stress is {self.particle.deviatoric_stress_tensor}")
+        print("\n\n")
+        time.sleep(secs)
+
     def update(self):
 
         self.update_net_forces()
@@ -513,3 +572,5 @@ class FSISPH(SPH):
         self.XSPH_vel_correction()
         self.choose_time_stepping(self.time_stepping)
         self.choose_collision_types("Cuboid", "Normal")
+
+        self.debugging_forces(0.1)

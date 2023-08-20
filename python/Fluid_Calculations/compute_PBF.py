@@ -36,8 +36,8 @@ class PBF(SPH):
         self.all_particles = all_particles
         self.constraint_grad = np.array([0, 0, 0], dtype="float64")
         self.iter = 0
-        self.depth_lvl = 5
-        self.main_depth_lvl = 5
+        self.depth_lvl = 3
+        self.main_depth_lvl = 3
         
         self.predict_positions(self.particle, self.main_depth_lvl)
     
@@ -272,6 +272,7 @@ class PBF(SPH):
     
     def debugging_forces(self, secs):
         print("Vorticity is:", self.particle.vorticity)
+        print("Vorticity force is: ", self.particle.vorticity_force)
         print("\n\n")
         time.sleep(secs)
 
@@ -300,6 +301,8 @@ class PBF(SPH):
         self.update_secondary_forces(self.particle, self.depth_lvl)
         
         self.update_forces(self.particle)
+        self.debugging_forces(0.01)
+
         self.XSPH_vel_correction()
         self.XSPH_viscosity_correction()
 
