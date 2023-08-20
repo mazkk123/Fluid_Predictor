@@ -255,6 +255,8 @@ class FSISPH(SPH):
                     self.cubic_spline_kernel_pos(nbr_particle.initial_pos - 
                                                 self.particle.initial_pos))
             
+            print(denom)
+            
             if any(denom)==0:
                 perp_velocity = np.array([0, 0, 0], dtype="float64")
             else:
