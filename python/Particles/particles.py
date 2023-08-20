@@ -12,7 +12,7 @@ class Particle:
                  velocity : np.array=np.array([0.2, 0.1, 0.5], dtype="float64"),
                  acceleration: np.array=np.array([0, 0, 0], dtype="float64"),
                  mass: float=0.1, shape : str="circle", size : int=2,
-                 phase_number: int=3) -> None:
+                 phase_number: int=7) -> None:
         """
             initialize particle properties 
         """

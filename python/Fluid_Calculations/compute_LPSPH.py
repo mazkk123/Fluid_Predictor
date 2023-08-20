@@ -47,7 +47,9 @@ class LPSPH(SPH):
         self.pressure = np.array([0, 0, 0], dtype="float64")
         self.pressure_force = np.array([0, 0, 0], dtype="float64")
         
-        self.predict_attrs()
+        self.predict_attrs(self.particle, 4)
+        self.particle.predicted_density = self.particle.mass_density
+
         self.pressure_neighbourhood()
         
         self.iterations = 0
@@ -221,26 +223,29 @@ class LPSPH(SPH):
             if particle is not nbr:
                 particle.neighbour_list.append(nbr)
 
-    def predict_attrs(self):
+    def predict_attrs(self, particle, depth:int = 4):
 
-        for particle in self.all_particles:
-
-            self.find_neighbour_list(particle)
-            self.update_predicted_mass_density(particle)
-            self.update_predicted_gravity(particle)
-            self.update_predicted_buoyancy(particle)
-            self.update_predicted_surface_tension(particle)
-            self.update_predicted_viscosity(particle)
-
-            self.all_forces = particle.gravity + \
-                              particle.buoyancy + \
-                              particle.surface_tension + \
-                              particle.viscosity
-            
-            particle.predicted_velocity = particle.velocity + self.all_forces*self.delta_time
-            particle.predicted_initial_pos = particle.initial_pos + particle.predicted_velocity*self.delta_time
+        if depth==0:
+            return 
         
-        self.particle.predicted_density = self.particle.mass_density
+        self.find_neighbour_list(particle)
+        self.update_predicted_mass_density(particle)
+        self.update_predicted_gravity(particle)
+        self.update_predicted_buoyancy(particle)
+        self.update_predicted_surface_tension(particle)
+        self.update_predicted_viscosity(particle)
+
+        self.all_forces = particle.gravity + \
+                            particle.buoyancy + \
+                            particle.surface_tension + \
+                            particle.viscosity
+        
+        particle.predicted_velocity = particle.velocity + self.all_forces*self.delta_time
+        particle.predicted_initial_pos = particle.initial_pos + particle.predicted_velocity*self.delta_time
+
+        for nbr in particle.neighbour_list:
+            return self.predict_attrs(nbr, depth-1)
+            
 
     def update_predicted_attrs(self):
 

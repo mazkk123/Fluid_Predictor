@@ -47,9 +47,9 @@ class FluidSystem:
     }
 
     PHASE_INFORMATION = {
-        "phase_number":3,
-        "mass_density":[998.2, 1010, 700],
-        "viscosity":[3.5, 10, 23],
+        "phase_number":7,
+        "mass_density":[998.2, 1010, 700, 1000, 2000, 556, 455],
+        "viscosity":[3.5, 10, 23, 15, 2.4, 3.5, 7.2],
         "mass":[0.1, 0.1, 0.1]
     }
 

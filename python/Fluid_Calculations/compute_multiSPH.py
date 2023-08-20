@@ -86,7 +86,7 @@ class MultiSPH(SPH):
                 density_volume_frac_term += self.phase_info["mass_density"][i] * (volume_frac_neighbour_term +
                                                                                  volume_frac_term)
             try:
-                if any(nbr_particle.interp_density)==0:
+                if all(nbr_particle.interp_density)<=0:
                     mass_over_interp_density = np.array([0, 0, 0], dtype="float64")
                 else:
                     mass_over_interp_density = nbr_particle.mass / nbr_particle.interp_density
@@ -121,7 +121,7 @@ class MultiSPH(SPH):
             except ZeroDivisionError:
                 position = np.array([0, 0, 0], dtype="float64")
             try:
-                if any(nbr_particle.interp_density)==0:
+                if all(nbr_particle.interp_density)<=0:
                     mass_over_interp_density = np.array([0, 0, 0], dtype="float64")
                 else:
                     mass_over_interp_density = nbr_particle.mass / nbr_particle.interp_density
@@ -129,7 +129,7 @@ class MultiSPH(SPH):
             except ZeroDivisionError:
                 mass_over_interp_density = np.array([0, 0, 0], dtype="float64")
 
-            if any(mass_over_interp_density==0):
+            if all(mass_over_interp_density<=0):
                 self.viscous_tensor += np.array([0, 0, 0], dtype="float64")
             else:
                 self.viscous_tensor += (
@@ -148,7 +148,7 @@ class MultiSPH(SPH):
     def update_pressure_laplacian(self):
         for nbr_particle in self.neighbours_list:
             try:
-                if any(nbr_particle.interp_density)==0:
+                if any(nbr_particle.interp_density)<=0:
                     pressure_term = np.array([0, 0, 0], dtype="float64")
                 else:
                     pressure_term = (self.particle.pressure + nbr_particle.pressure) / 2 * nbr_particle.interp_density
@@ -225,14 +225,14 @@ class MultiSPH(SPH):
             k_stiffness_const = -1 * (self.PHASE_CONSTANTS["k_stiffness"] * self.phase_info["mass_density"][i] /
                                       self.PHASE_CONSTANTS["lambda_stiffness"])
             try:
-                if any(self.particle.interp_density)==0:
+                if any(self.particle.interp_density)<=0:
                     interp_over_mass_d = np.array([0, 0, 0], dtype="float64")
                 else:
                     interp_over_mass_d = self.particle.interp_density/self.particle.mass_density
             except ZeroDivisionError:
                 interp_over_mass_d = np.array([0, 0, 0], dtype="float64")
 
-            if any(interp_over_mass_d)==0:
+            if any(interp_over_mass_d)<=0:
                 pressure_const = np.array([0, 0, 0], dtype="float64")
             else:
                 pressure_const = ((self.PHASE_CONSTANTS["lambda_stiffness"] - 1) * \
@@ -248,14 +248,14 @@ class MultiSPH(SPH):
     def volume_frac_grad_mixture_vel(self, phase_num:int = None):
         for nbr_particle in self.neighbours_list:
             try:
-                if any(nbr_particle.interp_density)==0:
+                if all(nbr_particle.interp_density)<=0:
                     nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
                 else:
                     nbr_mass_over_interp = nbr_particle.mass / nbr_particle.interp_density
             except ZeroDivisionError:
                 nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
 
-            if any(nbr_mass_over_interp)==0:
+            if all(nbr_mass_over_interp)<=0:
                 self.volume_frac_mix_vel[phase_num] += np.array([0, 0, 0], dtype="float64")
             else:
                 self.volume_frac_mix_vel[phase_num] += (
@@ -269,15 +269,15 @@ class MultiSPH(SPH):
         if phase_num is not None:
             for nbr_particle in self.neighbours_list:
                 try:
-                    if any(nbr_particle.interp_density)==0:
+                    if all(nbr_particle.interp_density)<=0:
                         nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
                     else:
                         nbr_mass_over_interp = nbr_particle.mass / nbr_particle.interp_density
                 except ZeroDivisionError:
                     nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
                 
-                if any(nbr_mass_over_interp)==0:
-                    self.volume_frac_mix_vel[phase_num] += np.array([0, 0, 0], dtype="float64")
+                if all(nbr_mass_over_interp)<=0:
+                    self.mix_vel_volume_frac[phase_num] += np.array([0, 0, 0], dtype="float64")
                 else:
                     self.mix_vel_volume_frac[phase_num] += (
                         (nbr_mass_over_interp) *
@@ -300,7 +300,10 @@ class MultiSPH(SPH):
 
         particle.pressure = np.array([0, 0, 0], dtype="float64")
         try:
-            interp_over_mass_d = particle.interp_density / particle.mass_density
+            if any(particle.interp_density)<=0:
+                interp_over_mass_d = np.array([0, 0, 0], dtype="float64")
+            else:
+                interp_over_mass_d = particle.interp_density / particle.mass_density
         except ZeroDivisionError:
             interp_over_mass_d = np.array([0, 0, 0], dtype="float64")
 
@@ -354,7 +357,7 @@ class MultiSPH(SPH):
                 self.update_phase_pressure(phase_num, self.particle)
                 
                 try:
-                    if any(nbr_particle.interp_density == 0):
+                    if any(nbr_particle.interp_density <= 0):
                         nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
                     else:
                         nbr_mass_over_interp = nbr_particle.mass / nbr_particle.interp_density
@@ -378,7 +381,7 @@ class MultiSPH(SPH):
             for nbr_particle in self.neighbours_list:
 
                 try:
-                    if any(nbr_particle.interp_density == 0):
+                    if any(nbr_particle.interp_density <= 0):
                         nbr_mass_over_interp = np.array([0, 0, 0], dtype="float64")
                     else:
                         nbr_mass_over_interp = nbr_particle.mass / nbr_particle.interp_density
@@ -403,10 +406,17 @@ class MultiSPH(SPH):
             )
 
     def mass_frac_volume_grad(self):
+        
+        volume_grad = np.array([0, 0, 0], dtype="float64")
         for i in range(self.particle.phase_number):
             self.volume_fraction_grad(i)
 
-            volume_grad = self.volume_frac_gradient[i] / self.particle.phase_volume_fraction[i]
+            if type(self.particle.phase_volume_fraction[i])==type(np.array):
+                if any(self.particle.phase_volume_fraction[i])==0:
+                    volume_grad = np.array([0, 0, 0], dtype="float64")
+                else:
+                    volume_grad = self.volume_frac_gradient[i] / self.particle.phase_volume_fraction[i]
+                
             if any(self.volume_frac_gradient[i])==0:
                 volume_grad = np.array([0, 0, 0], dtype="float64")
             if any(volume_grad)==0:
@@ -518,7 +528,6 @@ class MultiSPH(SPH):
         self.particle.velocity += self.particle.acceleration*self.delta_time
         self.particle.initial_pos += self.particle.velocity*self.delta_time
 
-        """ self.debugging_attribs(0.05) """
         self.choose_collision_types("Cuboid", "Normal")
         
         self.adapt_to_CFL()
