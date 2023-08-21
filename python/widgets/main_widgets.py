@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow, \
     QGraphicsView
 from PySide6.QtCore import QSize, QRect , Qt
 from PySide6.QtGui import QPixmap, QColor, QFont
-from canvas_state import DrawingCanvas
+from render_scene import RenderScene
 from utility_functions import *
 from widget_utilities import *
 
@@ -263,10 +263,7 @@ class MainWindow(QMainWindow, UtilFuncs):
             widget
         """
         self.graphics_view_v_layout = QVBoxLayout()
-        self.main_canvas = DrawingCanvas(QColor(255,0,0), 
-                                         QFont("Arial"), 14)
-        self.main_frame_w = QGraphicsView(self.main_canvas)
-        self.main_frame_w.setGeometry(QRect(0, 0, 1000, 400))
+        self.main_canvas = RenderScene(self)
 
     def create_frame_controls(self):
         """
@@ -343,7 +340,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.frame_and_graphics_splitter = QSplitter(Qt.Orientation.Vertical)
         self.frame_and_graphics_splitter.setChildrenCollapsible(False)
 
-        self.frame_and_graphics_splitter.addWidget(self.main_frame_w)
+        self.frame_and_graphics_splitter.addWidget(self.main_canvas)
         self.frame_and_graphics_splitter.addWidget(self.animation_controls_dock_w)
    
     def create_reset_button(self):
