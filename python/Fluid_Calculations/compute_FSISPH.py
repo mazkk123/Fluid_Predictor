@@ -75,6 +75,15 @@ class FSISPH(SPH):
         if q>=2:
             return 0
 
+    def new_cubic_spline_kernel_gradient(self, position:np.array=None):
+        if np.linalg.norm(position) == 0: q = 0
+        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
+        if q>=0 and q<1:
+            kernel_val = m.pow(1 - q, 2) * self.normalize(position)
+            return kernel_val
+        if q>=1:
+            return np.array([0, 0, 0], dtype="float64")
+
     def find_neighbour_list(self, particle):
         particle.neighbour_list = []
         for nbr in self.hash_table[particle.hash_value]:
@@ -205,14 +214,12 @@ class FSISPH(SPH):
             )
             
             kernel_term = (
-            self.cubic_spline_kernel_gradient(
-                np.abs(
-                self.particle.initial_pos - 
-                nbr_particle.initial_pos)
-                )
+                    self.new_cubic_spline_kernel_gradient(
+                    np.abs( self.particle.initial_pos -  nbr_particle.initial_pos)
+                    )
             )
         
-            self.particle.acceleration += kernel_term*tensor_term
+            self.particle.acceleration += np.dot(tensor_term, kernel_term)
 
     def update_shear_modulus(self):
 
@@ -232,8 +239,10 @@ class FSISPH(SPH):
     # ---------------------------------------------------------------- FORCE CALCULATIONS -------------------------------------------------------------------------
 
     def update_perpendicular_velocity(self):
+
+        intermediate_perp_vel = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
-            self.particle.perp_velocity = self.particle.velocity - \
+            intermediate_perp_vel = self.particle.velocity - \
                 self.particle.velocity*self.normalize(self.particle.initial_pos - nbr_particle.initial_pos)
         
             self.update_shear_modulus()
@@ -242,7 +251,7 @@ class FSISPH(SPH):
             numerator = (self.particle.shear_modulus*nbr_particle.volume* \
                         self.cubic_spline_kernel_gradient_mag(self.particle.initial_pos - 
                                                             nbr_particle.initial_pos)* \
-                        self.particle.perp_velocity) + \
+                        intermediate_perp_vel) + \
                         (nbr_particle.shear_modulus*self.particle.volume* \
                         self.cubic_spline_kernel_pos(nbr_particle.initial_pos - 
                                                     self.particle.initial_pos)* \
@@ -254,14 +263,14 @@ class FSISPH(SPH):
                     (nbr_particle.shear_modulus*self.particle.volume* \
                     self.cubic_spline_kernel_pos(nbr_particle.initial_pos - 
                                                 self.particle.initial_pos))
-            
-            print(denom)
-            
-            if any(denom)==0:
-                perp_velocity = np.array([0, 0, 0], dtype="float64")
+
+            if any(denom[0])==0:
+                perp_velocity = np.array([[0, 0, 0],
+                                          [0, 0, 0]
+                                          [0, 0, 0]], dtype="float64")
             else:
                 perp_velocity = numerator / denom
-
+            
             self.particle.perp_velocity += perp_velocity
 
     def update_volume(self):
@@ -294,7 +303,7 @@ class FSISPH(SPH):
             )
 
             if any(denominator)==0:
-                parallel_velocity = 0
+                parallel_velocity = np.array([0, 0, 0], dtype="float64")
             else:
                 parallel_velocity = numerator / denominator
 
@@ -328,14 +337,14 @@ class FSISPH(SPH):
                                             nbr_particle.initial_pos) * self.particle.cauchy_stress_tensor * 
                 self.outward_facing_unit_norm(self.particle.initial_pos -
                                             nbr_particle.initial_pos) * nbr_particle.mass_density) +
-                (self.outward_facing_unit_norm(self.neighbours_list[id].initial_pos -
+                (self.outward_facing_unit_norm(nbr_particle.initial_pos -
                                             self.particle.initial_pos) * nbr_particle.cauchy_stress_tensor *
                                             nbr_particle.mass_density)
                 )
 
                 denominator = self.particle.mass_density + nbr_particle.mass_density
 
-                if denominator==0:
+                if all(denominator)==0:
                     cauchy_stress = np.array([0, 0, 0], dtype="float64")
                 else:
                     cauchy_stress = numerator / denominator
@@ -362,10 +371,10 @@ class FSISPH(SPH):
     def update_conservative_diffusion_mass_density(self):
         mass_density = 0
         for id, nbr_particle in enumerate(self.neighbours_list):
-            if self.update_sound_speed(id) == nbr_particle.sound_speed:
+            if self.particle.sound_speed == nbr_particle.sound_speed:
                 numerator = (
                      (nbr_particle.mass_density - self.particle.mass_density) *
-                     (self.update_sound_speed(id) - nbr_particle.sound_speed) *
+                     (self.particle.sound_speed - nbr_particle.sound_speed) *
                      (self.PARAMETERS["cell_size"]*(self.particle.initial_pos -
                      nbr_particle.initial_pos) * self.cubic_spline_kernel_gradient(
                       self.particle.initial_pos - nbr_particle.initial_pos
@@ -376,7 +385,7 @@ class FSISPH(SPH):
                     self.particle.initial_pos - nbr_particle.initial_pos), 2) +
                     self.OTHER_PARAMS["deformation"])
                 )
-                if denominator==0:
+                if any(denominator)==0:
                     mass_density_term = np.array([0, 0, 0], dtype="float64")
                 else:
                     mass_density_term = numerator / denominator
@@ -412,12 +421,16 @@ class FSISPH(SPH):
         return self.normalize(position)
     
     def update_interface_normals(self):
+        self.particle.interface_normal = np.array([0, 0, 0], dtype="float64")
         for id, nbr_particle in enumerate(self.neighbours_list):
-            if self.update_sound_speed(id) == nbr_particle.sound_speed:
+            if (self.particle.sound_speed != nbr_particle.sound_speed).all():
+                try:
+                    mass_d = nbr_particle.mass / nbr_particle.mass_density
+                except ZeroDivisionError:
+                    mass_d = np.array([0, 0, 0], dtype="float64")
                 self.particle.interface_normal = (
-                    nbr_particle.mass / nbr_particle.mass_density *
-                    self.cubic_spline_kernel_grad(self.particle.initial_pos -
-                    nbr_particle.initial_pos)
+                    mass_d * self.cubic_spline_kernel_gradient(self.particle.initial_pos -
+                                                               nbr_particle.initial_pos)
                 )
         self.particle.interface_normal *= -1
         
@@ -460,7 +473,7 @@ class FSISPH(SPH):
                 self.particle.initial_pos - nbr_particle.initial_pos
                 ), 2)
             )
-            viscosity = max(viscosity_term, 0)
+            viscosity = np.maximum(viscosity_term, np.array([0, 0, 0], dtype="float64"))
             const_term = -self.force / (self.particle.mass_density - nbr_particle.mass_density)
             self.particle.artificial_viscosity = (
                 const_term * 
@@ -469,7 +482,7 @@ class FSISPH(SPH):
                 viscosity + 
 
                 self.OTHER_PARAMS["beta_const"]*
-                m.pow(viscosity, 2)
+                np.power(viscosity, 2)
             )
 
     def update_force(self):
@@ -517,7 +530,10 @@ class FSISPH(SPH):
 
     def update_energy_conservation(self):
         
-        velocity = np.array([0, 0, 0], dtype="float64")
+        velocity = np.array([[0, 0, 0],
+                             [0, 0, 0],
+                             [0, 0, 0]], dtype="float64")
+        
         for id, nbr_particle in enumerate(self.neighbours_list):
             velocity += (
                 self.particle.force * nbr_particle.mass *
@@ -532,7 +548,7 @@ class FSISPH(SPH):
             self.find_neighbour_list(nbr)
             self.update_mass_density(nbr)
 
-        #self.update_conservative_diffusion_mass_density()
+        self.update_conservative_diffusion_mass_density()
 
         self.find_neighbour_list(self.particle)
         self.update_mass_density(self.particle)
@@ -541,8 +557,6 @@ class FSISPH(SPH):
         self.update_sound_speed()
         self.update_pressure()
 
-        #self.update_conservative_diffusion_energy()
-        self.update_energy_conservation()
         self.update_interface_velocity()
 
         self.update_force()
@@ -566,13 +580,25 @@ class FSISPH(SPH):
         print("\n\n")
         time.sleep(secs)
 
+    def update_velocity(self):
+
+        self.acceleration = np.array([0, 0, 0], dtype="float64")
+            
+        for nbr_particle in self.neighbours_list:
+            self.acceleration += nbr_particle.mass * (
+                self.particle.acceleration - nbr_particle.acceleration
+            )
+        
+        self.particle.velocity += self.delta_time*self.acceleration
+
     def update(self):
 
         self.update_net_forces()
         self.update_acceleration_force()
+        self.update_velocity()
 
+        self.particle.initial_pos += self.particle.velocity*self.delta_time
         self.XSPH_vel_correction()
-        self.choose_time_stepping(self.time_stepping)
-        self.choose_collision_types("Cuboid", "Normal")
 
+        self.choose_collision_types("Cuboid", "Normal")
         self.debugging_forces(0.1)

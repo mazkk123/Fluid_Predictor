@@ -91,15 +91,22 @@ class Particle:
         self.deviatoric_stress_tensor = np.array([[0, 0, 0], 
                                                   [0, 0, 0],
                                                   [0, 0, 0]], dtype="float64")
-        self.half_velocity = velocity
-        self.perp_velocity = velocity
-        self.parallel_velocity = velocity
+
+        self.perp_velocity = np.array([[0, 0, 0],
+                                       [0, 0, 0],
+                                       [0, 0, 0]], dtype="float64")
+        
+        self.parallel_velocity = np.array([0, 0, 0], dtype="float64")
+        
         self.interface_velocity = velocity
+        self.half_velocity = velocity
         self.interface_normal = np.array([0, 0, 0], dtype="float64")
         self.volume = 0
         self.sound_speed = 0
         self.bulk_modulus = 0
-        self.force = np.array([0, 0, 0], dtype="float64")
+        self.force = np.array([[0, 0, 0],
+                               [0, 0, 0],
+                               [0, 0, 0]], dtype="float64")
         
         self.shear_modulus = np.array([[0, 0, 0], 
                                       [0, 0, 0],

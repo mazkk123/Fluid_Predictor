@@ -221,7 +221,6 @@ class FluidSystem:
                         delta_time=0.02   
                     ).update()
                 if id == 8:
-                    print("do FSISPH")
                     FSISPH(
                         particle = p,
                         search_method = self.NEIGHBOUR_SEARCHES[self.choose_neighbour_search()],
