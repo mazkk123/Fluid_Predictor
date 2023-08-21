@@ -47,18 +47,6 @@ class PCSPH(SPH):
     def find_beta_const(self):
         return m.pow(self.delta_time, 2)*m.pow(self.particle.mass, 2)* \
             2 / m.pow(self.PARAMETERS["mass_density"], 2)
-    
-    def cubic_spline_kernel_gradient(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        kernel_const = 1 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 4))
-        if q>=0 and q<=1:
-            kernel_val = 9/4*m.pow(q, 2) - 3*q
-            return kernel_val*kernel_const
-        if q>=1 and q<=2:
-            kernel_val = -3/4*m.pow((2 - q), 2)
-            return kernel_val*kernel_const
-        if q>=2:
-            return 0
 
     # ---------------------------------------------------------------------- PREDICT DENSITY -----------------------------------------------------------------------------
 
@@ -156,83 +144,6 @@ class PCSPH(SPH):
         return super().update_pressure_force()
 
     # -------------------------------------------------------------------- UPDATE CALLS ------------------------------------------------------------------------------
-    
-    def update_predicted_mass_density(self, particle):
-        """
-        """
-        density = 0 
-        for nbr_particle in particle.neighbour_list:
-            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*nbr_particle.mass
-
-        particle.mass_density = self.PARAMETERS["mass_density"] + density
-    
-    def update_predicted_viscosity(self, particle):
-        """
-        """
-        viscosity = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            vel_dif = nbr_particle.velocity - particle.velocity
-            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
-            try:
-                mass_pressure = particle.mass/nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_pressure = 0
-            viscosity += vel_dif*mass_pressure*kernel_laplacian
-
-        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
-
-    def update_predicted_gravity(self, particle):
-        """
-        """
-        particle.gravity = self.gravity_const
-    
-    def update_predicted_normal_field(self, particle):
-        """
-        """
-        normal_field = np.array([0, 0, 0],  dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            pos_difference = particle.initial_pos - nbr_particle.initial_pos
-            normal_field += (
-                particle.mass * 1/particle.mass_density * self.kernel_gradient(pos_difference, 0)
-            )
-        return normal_field
-
-    def update_predicted_surface_curvature(self, particle):
-        """        
-        """
-        surface_curvature = 0
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            surface_curvature += (
-                particle.mass * 1/particle.mass_density * self.kernel_laplacian(
-                particle.initial_pos - nbr_particle.initial_pos, 0)
-            )
-        return surface_curvature
-    
-    def update_predicted_surface_tension(self, particle):
-        """
-        """
-        normal_field = self.update_predicted_normal_field(particle)
-        surface_curvature = self.update_predicted_surface_curvature(particle)
-        normal_field_magnitude = np.linalg.norm(normal_field)
-        
-        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
-            particle.surface_tension = (
-                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
-            )
-
-    def update_predicted_buoyancy(self, particle):
-        """
-        """
-        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
-        buoyancy *= self.gravity_const
-        particle.buoyancy = buoyancy
-    
-    def find_neighbour_list(self, particle):
-        particle.neighbour_list = []
-        for nbr in self.hash_table[particle.hash_value]:
-            if particle is not nbr:
-                particle.neighbour_list.append(nbr)
 
     def update_predicted_attrs(self, particle, depth:int=3):
         
@@ -240,7 +151,6 @@ class PCSPH(SPH):
             return 
         
         self.find_neighbour_list(particle)
-
         self.update_predicted_mass_density(particle)
         self.update_predicted_gravity(particle)
         self.update_predicted_surface_tension(particle)

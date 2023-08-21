@@ -41,81 +41,8 @@ class DFSPH(SPH):
         self.divergence_force = np.array([0, 0, 0], dtype="float64")
         self.num_particles = num_particles
 
-        self.predict_advective_forces(self.particle, 4)
+        self.predict_advective_forces(self.particle, 3)
         self.update_divergence_factor(self.particle)
-        
-    # ------------------------------------------------------------------- PREDICT FORCES -------------------------------------------------------------------------------
-
-    def update_mass_density(self, particle):
-        """
-        """
-        density = 0 
-        for nbr_particle in particle.neighbour_list:
-            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*nbr_particle.mass
-
-        particle.mass_density = self.PARAMETERS["mass_density"] + density
-    
-    def update_viscosity(self, particle):
-        """
-        """
-        viscosity = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            vel_dif = nbr_particle.velocity - particle.velocity
-            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
-            try:
-                mass_pressure = particle.mass/nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_pressure = 0
-            viscosity += vel_dif*mass_pressure*kernel_laplacian
-
-        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
-
-    def update_gravity(self, particle):
-        """
-        """
-        particle.gravity = self.gravity_const
-    
-    def update_normal_field(self, particle):
-        """
-        """
-        normal_field = np.array([0, 0, 0],  dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            pos_difference = particle.initial_pos - nbr_particle.initial_pos
-            normal_field += (
-                particle.mass * 1/particle.mass_density * self.kernel_gradient(pos_difference, 0)
-            )
-        return normal_field
-
-    def update_surface_curvature(self, particle):
-        """        
-        """
-        surface_curvature = 0
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            surface_curvature += (
-                particle.mass * 1/particle.mass_density * self.kernel_laplacian(
-                particle.initial_pos - nbr_particle.initial_pos, 0)
-            )
-        return surface_curvature
-    
-    def update_surface_tension(self, particle):
-        """
-        """
-        normal_field = self.update_normal_field(particle)
-        surface_curvature = self.update_surface_curvature(particle)
-        normal_field_magnitude = np.linalg.norm(normal_field)
-        
-        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
-            particle.surface_tension = (
-                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
-            )
-
-    def update_buoyancy(self, particle):
-        """
-        """
-        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
-        buoyancy *= self.gravity_const
-        particle.buoyancy = buoyancy
 
     # ----------------------------------------------------------------- UTILITY FUNCTIONS -----------------------------------------------------------------------------
 
@@ -125,11 +52,11 @@ class DFSPH(SPH):
             return
         
         self.find_neighbour_list(particle)
-        self.update_mass_density(particle)
-        self.update_viscosity(particle)
-        self.update_gravity(particle)
-        self.update_buoyancy(particle)
-        self.update_surface_tension(particle)
+        self.update_predicted_mass_density(particle)
+        self.update_predicted_viscosity(particle)
+        self.update_predicted_gravity(particle)
+        self.update_predicted_buoyancy(particle)
+        self.update_predicted_surface_tension(particle)
 
         self.all_forces += (
             particle.viscosity +
@@ -165,19 +92,7 @@ class DFSPH(SPH):
 
     def calculate_density_error(self):
         return self.particle.predicted_density - self.PARAMETERS["mass_density"]
-    
-    def cubic_spline_kernel_gradient(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        kernel_const = 1 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 4))
-        if q>=0 and q<=1:
-            kernel_val = 9/4*m.pow(q, 2) - 3*q
-            return kernel_val*kernel_const
-        if q>=1 and q<=2:
-            kernel_val = -3/4*m.pow((2 - q), 2)
-            return kernel_val*kernel_const
-        if q>=2:
-            return 0
-    
+
     def find_neighbour_list(self, particle):
         particle.neighbour_list = []
         for nbr in self.hash_table[particle.hash_value]:
@@ -222,12 +137,29 @@ class DFSPH(SPH):
 
         divergence_density = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in self.neighbours_list:
+
+            try:
+                if nbr_particle.mass_density == 0:
+                    nbr_stiffness_density = 0
+                else:
+                    nbr_stiffness_density = nbr_particle.stiffness_k / nbr_particle.mass_density
+            except ZeroDivisionError:
+                stiffness_density = np.array([0, 0, 0], dtype="float64")
+
+            try:
+                if self.particle.mass_density == 0:
+                    stiffness_density = 0
+                else:
+                    stiffness_density = self.particle.stiffness_k / self.particle.mass_density
+            except ZeroDivisionError:
+                stiffness_density = np.array([0, 0, 0], dtype="float64")
+
             divergence_density += (
                 nbr_particle.mass*
                 (
-                    particle.stiffness_k / particle.mass_density +
-                    nbr_particle.stiffness_k / nbr_particle.mass_density
-                )*
+                    stiffness_density +
+                    nbr_stiffness_density
+                ) *
                 self.cubic_spline_kernel_gradient(
                     particle.initial_pos - nbr_particle.initial_pos
                 )
@@ -347,10 +279,10 @@ class DFSPH(SPH):
         self.recompute_neighbour_list(self.particle)
 
         for nbr in self.particle.neighbour_list:
-            self.update_mass_density(nbr)
+            self.update_predicted_mass_density(nbr)
             self.update_divergence_factor(nbr)
 
-        self.update_mass_density(self.particle)
+        self.update_predicted_mass_density(self.particle)
         self.update_divergence_factor(self.particle)
 
     def update_errors(self):
@@ -365,6 +297,7 @@ class DFSPH(SPH):
         self.update_errors()
         
         self.particle.velocity = self.particle.predicted_velocity
+        """ self.debugging_forces(0.1) """
 
         self.XSPH_vel_correction()
         self.choose_collision_types()

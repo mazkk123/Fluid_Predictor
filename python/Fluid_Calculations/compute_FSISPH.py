@@ -38,57 +38,13 @@ class FSISPH(SPH):
                                               [0, 0, 0]], dtype="float64")
 
         self.interface_velocity = np.array([5.2, 0.1, 3.2], dtype="float64")
-        self.force = np.array([0, 0, 0], dtype="float64")
+        
+        self.force = np.array([[0, 0, 0],
+                               [0, 0, 0],
+                               [0, 0, 0]], dtype="float64")
 
         self.interface_neighbrs = []
         self.slip_condition = slip_condition
-
-    # --------------------------------------------------------------- UTILITY CALCULATIONS -------------------------------------------------------------------
-
-    @staticmethod
-    def kronecker_delta(i, j):
-        if (i==j): return 1 
-        else: return 0
-
-    @staticmethod
-    def reverse_kronecker_delta(i, j):
-        if (i==j): return 0
-        else: return 1
-
-    @staticmethod
-    def normalize(position):
-
-        if np.linalg.norm(position)==0:
-            position = np.array([0, 0, 0], dtype="float64"
-                                )
-        return position / np.linalg.norm(position)
-    
-    def cubic_spline_kernel_gradient(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        kernel_const = 1 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 4))
-        if q>=0 and q<=1:
-            kernel_val = 9/4*m.pow(q, 2) - 3*q
-            return kernel_val*kernel_const
-        if q>=1 and q<=2:
-            kernel_val = -3/4*m.pow((2 - q), 2)
-            return kernel_val*kernel_const
-        if q>=2:
-            return 0
-
-    def new_cubic_spline_kernel_gradient(self, position:np.array=None):
-        if np.linalg.norm(position) == 0: q = 0
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<1:
-            kernel_val = m.pow(1 - q, 2) * self.normalize(position)
-            return kernel_val
-        if q>=1:
-            return np.array([0, 0, 0], dtype="float64")
-
-    def find_neighbour_list(self, particle):
-        particle.neighbour_list = []
-        for nbr in self.hash_table[particle.hash_value]:
-            if particle is not nbr:
-                particle.neighbour_list.append(nbr)
 
     # ---------------------------------------------------------------- TENSOR ATTRIBUTES ----------------------------------------------------------------------
 

@@ -1,7 +1,5 @@
 import math as m
 import numpy as np
-import random as rd
-import re
 import sys
 import time
 
@@ -14,7 +12,9 @@ from Collisions.box_collisions import BoxCollisions, AABB, OrientedBBox
 from Collisions.sphere_collisions import SphereCollisions, CapsuleCollisions, CylinderCollisions
 from Particles.particles import Particle
 
-class SPH(Particle):
+from utility_calculations import UtilityCalculations
+
+class SPH(UtilityCalculations):
 
     PARAMETERS = {
         "grid_separation":0.1,
@@ -87,6 +87,9 @@ class SPH(Particle):
             self.time_stepping = time_stepping
         if collision_type is not None:
             self.collision_type = collision_type
+
+        super().__init__(hash_table=self.hash_table,
+                         parameters=self.PARAMETERS)
         
         self.temperature = temperature
 
@@ -176,12 +179,6 @@ class SPH(Particle):
             self.particle.normal_field += (
                 mass_d * self.kernel_gradient(self.particle.initial_pos - nbr_particle.initial_pos, 0)
             )
-    
-    def find_neighbour_list(self, particle):
-        particle.neighbour_list = []
-        for nbr in self.hash_table[particle.hash_value]:
-            if particle is not nbr:
-                particle.neighbour_list.append(nbr)
 
     def mark_active_members(self, particle, depth:int=3):
 
@@ -463,8 +460,6 @@ class SPH(Particle):
         if self.temperature is True:
             self.update_dynamic_viscosity()
             self.update_momentum()
-        
-        """ self.debugging_forces(0) """
 
         self.all_forces += self.particle.pressure_force + \
                           self.gravity_const + self.buoyancy + \
@@ -642,7 +637,6 @@ class SPH(Particle):
                                     self.CFL_force_condition(),
                                     self.CFL_viscosity_condition()])
         
-
 # ------------------------------------------------------------------ THERMAL INTEGRATION ---------------------------------------------------------------------------
     def nubla(self):
         return self.PARAMETERS["cell_size"]*0.1
@@ -696,32 +690,8 @@ class SPH(Particle):
         self.all_forces += self.particle.gravity + \
                            self.particle.buoyancy + \
                            self.particle.surface_tension
-# ------------------------------------------------------------------- CUBIC SPLINE KERNEL ---------------------------------------------------------------------------
-
-    def cubic_spline_kernel_grad_c(self, position, index_comp:int = 0):
-        const_term = 15 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
-        kernel_term = (position[index_comp] / np.linalg.norm(position)) * \
-                    m.pow((self.PARAMETERS["cell_size"] - np.linalg.norm(position)), 2)
-        return const_term*kernel_term
-        
-    def cubic_spline_kernel_pos(self, position):
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q >= 0 and q <= 0.5:
-            return 1 - 6*m.pow(q, 2) + 6*m.pow(q, 3)
-        if q > 0.5 and  q<= 1:
-            return 2*m.pow(1-q, 3)
-        if q>1:
-            return 0
-        
-    def cubic_spline_kernel_gradient(self, position):
-        const_term = 15 / (np.pi*m.pow(self.PARAMETERS["cell_size"], 6))
-        kernel_term = (position / np.linalg.norm(position)) * \
-                    m.pow((self.PARAMETERS["cell_size"] - np.linalg.norm(position)), 2)
-        return const_term*kernel_term
-
-    def cubic_spline_kernel_gradient_mag(self, position):
-        return self.cubic_spline_kernel_gradient(np.abs(position))
         
     def update_body_force(self):
         self.particle.body_force = self.PARAMETERS["thermal_exp_coeff"]*self.particle.gravity* \
                 (self.particle.temperature - self.PARAMETERS["abs_temperature"])
+        

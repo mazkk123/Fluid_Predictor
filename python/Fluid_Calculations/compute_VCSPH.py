@@ -31,22 +31,6 @@ class VCSPH(DFSPH):
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
     
-    def normalize(self, vector):
-
-        if np.linalg.norm(vector) == 0:
-            return 0
-        
-        return vector / np.linalg.norm(vector)
-        
-    def new_cubic_spline_kernel_gradient(self, position:np.array=None):
-        if np.linalg.norm(position) == 0: q = 0
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<1:
-            kernel_val = m.pow(1 - q, 2) * self.normalize(position)
-            return kernel_val
-        if q>=1:
-            return 0
-    
     # ---------------------------------------------------------------------- VORTICITY REFINEMENT --------------------------------------------------------------------------
         
     def vorticity(self, particle):
@@ -86,9 +70,16 @@ class VCSPH(DFSPH):
     def update_vorticity_velocity_grad(self, particle):
         self.vorticity_grad = np.array([0, 0, 0], dtype="float64")
         for nbr_particle in particle.neighbour_list:
+            try:
+                if nbr_particle.mass_density==0:
+                    mass_d = 0
+                else:
+                    mass_d = nbr_particle.mass / nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_d = 0
+
             self.vorticity_grad += (
-                (nbr_particle.mass / nbr_particle.mass_density)*
-                (nbr_particle.predicted_velocity - self.particle.predicted_velocity)*
+                mass_d*(nbr_particle.predicted_velocity - self.particle.predicted_velocity)*
                 self.new_cubic_spline_kernel_gradient( particle.initial_pos - nbr_particle.initial_pos)
             )
         self.vorticity_grad *= particle.vorticity
@@ -100,14 +91,19 @@ class VCSPH(DFSPH):
         self.vorticity_laplacian = np.array([0, 0, 0], dtype="float64")
 
         for nbr_particle in particle.neighbour_list:
+            try:
+                if nbr_particle.mass_density==0:
+                    mass_d = 0
+                else:
+                    mass_d = nbr_particle.mass / nbr_particle.mass_density
+            except ZeroDivisionError:
+                mass_d = 0
             self.vorticity_laplacian += (
-                (nbr_particle.mass / nbr_particle.mass_density)*
-                ((particle.vorticity - nbr_particle.vorticity)*
+                mass_d * ((particle.vorticity - nbr_particle.vorticity)*
                  (particle.initial_pos - nbr_particle.initial_pos) / (
                     (np.power(particle.initial_pos - nbr_particle.initial_pos,2) +
                     0.01*m.pow(self.PARAMETERS["cell_size"], 2))
-                ))*
-                self.new_cubic_spline_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
+                ))*self.new_cubic_spline_kernel_gradient(particle.initial_pos - nbr_particle.initial_pos)
             )
         self.vorticity_laplacian *= dimension_const*viscosity_force
     
@@ -118,8 +114,13 @@ class VCSPH(DFSPH):
         return self.vorticity_grad + self.vorticity_laplacian
 
     def update_volume(self, particle):
-        particle.volume = particle.mass / particle.mass_density
-    
+        try:
+            if particle.mass_density == 0:
+                particle.volume = 0
+            else:
+                particle.volume = particle.mass / particle.mass_density
+        except ZeroDivisionError:
+            particle.volume = 0
     # ------------------------------------------------------------------- STREAM RELATED FUNCTIONS ------------------------------------------------------------------------
 
     def update_stream_function(self, particle):
@@ -129,9 +130,12 @@ class VCSPH(DFSPH):
         for nbr_particle in particle.neighbour_list:
             if np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos) < self.PARAMETERS["cell_size"]:
                 volume_term = (nbr_particle.vorticity_del*nbr_particle.volume)
-                particle.stream_function += (
-                        volume_term / np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos)
-                )
+                if np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos)==0:
+                    particle.stream_function += np.array([0, 0, 0], dtype="float64")
+                else:
+                    particle.stream_function += (
+                            volume_term / np.linalg.norm(particle.initial_pos - nbr_particle.initial_pos)
+                    )
         particle.stream_function *= size_const
 
     def update_velocity_del(self):

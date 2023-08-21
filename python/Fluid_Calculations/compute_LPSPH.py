@@ -146,83 +146,6 @@ class LPSPH(SPH):
 
         particle.predicted_density = self.PARAMETERS["mass_density"] + density
 
-    def update_predicted_mass_density(self, particle):
-        """
-        """
-        density = 0 
-        for nbr_particle in particle.neighbour_list:
-            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*nbr_particle.mass
-
-        particle.mass_density = self.PARAMETERS["mass_density"] + density
-
-    def update_predicted_viscosity(self, particle):
-        """
-        """
-        viscosity = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            vel_dif = nbr_particle.velocity - particle.velocity
-            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
-            try:
-                mass_pressure = particle.mass/nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_pressure = 0
-            viscosity += vel_dif*mass_pressure*kernel_laplacian
-
-        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
-
-    def update_predicted_gravity(self, particle):
-        """
-        """
-        particle.gravity = self.gravity_const
-    
-    def update_predicted_normal_field(self, particle):
-        """
-        """
-        normal_field = np.array([0, 0, 0],  dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            pos_difference = particle.initial_pos - nbr_particle.initial_pos
-            normal_field += (
-                particle.mass * 1/particle.mass_density * self.kernel_gradient(pos_difference, 0)
-            )
-        return normal_field
-
-    def update_predicted_surface_curvature(self, particle):
-        """        
-        """
-        surface_curvature = 0
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            surface_curvature += (
-                particle.mass * 1/particle.mass_density * self.kernel_laplacian(
-                particle.initial_pos - nbr_particle.initial_pos, 0)
-            )
-        return surface_curvature
-    
-    def update_predicted_surface_tension(self, particle):
-        """
-        """
-        normal_field = self.update_predicted_normal_field(particle)
-        surface_curvature = self.update_predicted_surface_curvature(particle)
-        normal_field_magnitude = np.linalg.norm(normal_field)
-        
-        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
-            particle.surface_tension = (
-                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
-            )
-
-    def update_predicted_buoyancy(self, particle):
-        """
-        """
-        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
-        buoyancy *= self.gravity_const
-        particle.buoyancy = buoyancy
-
-    def find_neighbour_list(self, particle):
-        particle.neighbour_list = []
-        for nbr in self.hash_table[particle.hash_value]:
-            if particle is not nbr:
-                particle.neighbour_list.append(nbr)
-
     def predict_attrs(self, particle, depth:int = 4):
 
         if depth==0:
@@ -246,7 +169,6 @@ class LPSPH(SPH):
         for nbr in particle.neighbour_list:
             return self.predict_attrs(nbr, depth-1)
             
-
     def update_predicted_attrs(self):
 
         for particle in self.neighbours_list:

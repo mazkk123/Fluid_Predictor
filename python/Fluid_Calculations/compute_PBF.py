@@ -40,22 +40,6 @@ class PBF(SPH):
         self.main_depth_lvl = 3
         
         self.predict_positions(self.particle, self.main_depth_lvl)
-    
-    def normalize(self, vector):
-
-        if np.linalg.norm(vector) == 0:
-            return 0
-        
-        return vector / np.linalg.norm(vector)
-        
-    def new_cubic_spline_kernel_gradient(self, position:np.array=None):
-        if np.linalg.norm(position) == 0: q = 0
-        q = np.linalg.norm(position) / self.PARAMETERS["cell_size"]
-        if q>=0 and q<1:
-            kernel_val = m.pow(1 - q, 2) * self.normalize(position)
-            return kernel_val
-        if q>=1:
-            return 0
         
     def predict_positions(self, particle, depth:int=4):
         
@@ -63,11 +47,11 @@ class PBF(SPH):
             return
             
         self.find_neighbour_list(particle)
-        self.update_mass_density(particle)
-        self.update_gravity(particle)
-        self.update_buoyancy(particle)
-        self.update_viscosity(particle)
-        self.update_surface_tension(particle)
+        self.update_predicted_mass_density(particle)
+        self.update_predicted_gravity(particle)
+        self.update_predicted_buoyancy(particle)
+        self.update_predicted_viscosity(particle)
+        self.update_predicted_surface_tension(particle)
         
         self.all_forces += (
             particle.gravity +
@@ -82,78 +66,7 @@ class PBF(SPH):
                                         particle.predicted_velocity
         for nbr in particle.neighbour_list:
             return self.predict_positions(nbr, depth-1)
-                
-    def update_mass_density(self, particle):
-        """
-        """
-        density = 0 
-        for nbr_particle in particle.neighbour_list:
-            kernel_value = self.kernel_linear(particle.initial_pos - nbr_particle.initial_pos, 0)
-            density += kernel_value*nbr_particle.mass
-
-        particle.mass_density = self.PARAMETERS["mass_density"] + density
     
-    def update_viscosity(self, particle):
-        """
-        """
-        viscosity = np.array([0, 0, 0], dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            vel_dif = nbr_particle.velocity - particle.velocity
-            kernel_laplacian = self.kernel_laplacian(particle.initial_pos - nbr_particle.initial_pos, 2)
-            try:
-                mass_pressure = particle.mass/nbr_particle.mass_density
-            except ZeroDivisionError:
-                mass_pressure = 0
-            viscosity += vel_dif*mass_pressure*kernel_laplacian
-
-        particle.viscosity = viscosity*self.PARAMETERS["viscosity"]
-
-    def update_gravity(self, particle):
-        """
-        """
-        particle.gravity = self.gravity_const
-    
-    def update_normal_field(self, particle):
-        """
-        """
-        normal_field = np.array([0, 0, 0],  dtype="float64")
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            pos_difference = particle.initial_pos - nbr_particle.initial_pos
-            normal_field += (
-                particle.mass * 1/particle.mass_density * self.kernel_gradient(pos_difference, 0)
-            )
-        return normal_field
-
-    def update_surface_curvature(self, particle):
-        """        
-        """
-        surface_curvature = 0
-        for id, nbr_particle in enumerate(particle.neighbour_list):
-            surface_curvature += (
-                particle.mass * 1/particle.mass_density * self.kernel_laplacian(
-                particle.initial_pos - nbr_particle.initial_pos, 0)
-            )
-        return surface_curvature
-    
-    def update_surface_tension(self, particle):
-        """
-        """
-        normal_field = self.update_normal_field(particle)
-        surface_curvature = self.update_surface_curvature(particle)
-        normal_field_magnitude = np.linalg.norm(normal_field)
-        
-        if normal_field_magnitude >= self.PARAMETERS["tension_threshold"]:
-            particle.surface_tension = (
-                self.PARAMETERS["tension_coefficient"] * surface_curvature * normal_field/normal_field_magnitude 
-            )
-
-    def update_buoyancy(self, particle):
-        """
-        """
-        buoyancy = self.PARAMETERS["buoyancy"] * (particle.mass_density - self.PARAMETERS["mass_density"])
-        buoyancy *= self.gravity_const
-        particle.buoyancy = buoyancy
-        
     def update_constraint_function(self, particle):
         
         particle.constraint_function = (
