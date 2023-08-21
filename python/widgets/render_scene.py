@@ -27,7 +27,7 @@ except ImportError:
 class Logo():
     def __init__(self):
         self.m_data = QVector3DList()
-        self.m_data.reserve(5000)
+        self.m_data.reserve(20000)
 
         x1 = +0.06
         y1 = -0.14
@@ -49,7 +49,7 @@ class Logo():
         self.extrude(x4, y4, y4, x4)
         self.extrude(y4, x4, y3, x3)
 
-        NUM_SECTORS = 100
+        NUM_SECTORS = 200
 
         for i in range(NUM_SECTORS):
             angle = (i * 2 * math.pi) / NUM_SECTORS
@@ -259,7 +259,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
     def initializeGL(self):
         self.context().aboutToBeDestroyed.connect(self.cleanup)
         self.initializeOpenGLFunctions()
-        self.glClearColor(0, 0, 0, 0 if self._transparent else 1)
+        self.glClearColor(0.5, 0.5, 0.5, 0 if self._transparent else 1)
 
         self.program = QOpenGLShaderProgram()
 
@@ -327,7 +327,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             normal_matrix = self.world.normalMatrix()
             self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
 
-            self.glDrawArrays(GL.GL_TRIANGLES, 0, self.logo.vertex_count())
+            self.glDrawArrays(GL.GL_POINTS, 0, 20000)
             self.program.release()
 
     def resizeGL(self, width, height):
