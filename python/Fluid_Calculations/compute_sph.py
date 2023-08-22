@@ -69,7 +69,10 @@ class SPH(UtilityCalculations):
                  tank_attrs: dict=None,
                  temperature:bool=False,
                  all_particles:list = None,
-                 collision_type: str="box"):
+                 collision_type: str="box",
+                 params: dict=None, 
+                 collision_types: dict=None, 
+                 time_schemes: dict=None):
         
         if tank_attrs is not None:
             self.tank_attrs = tank_attrs
@@ -87,6 +90,14 @@ class SPH(UtilityCalculations):
             self.time_stepping = time_stepping
         if collision_type is not None:
             self.collision_type = collision_type
+            
+        if params is not None:
+            self.PARAMETERS = params
+        if collision_types is not None:
+            self.COLLISION_TYPES = collision_types
+        if time_schemes is not None:
+            self.TIME_SCHEMES = time_schemes
+
 
         super().__init__(hash_table=self.hash_table,
                          parameters=self.PARAMETERS)

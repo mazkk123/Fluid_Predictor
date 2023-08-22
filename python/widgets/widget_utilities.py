@@ -1,12 +1,11 @@
-from PySide6.QtWidgets import QVBoxLayout, QWidget,  QPushButton, \
-    QToolButton, QToolBar, QTabWidget, QHBoxLayout, QVBoxLayout, QComboBox,  \
-    QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox, QColormap,  \
-    QSpacerItem, QSizePolicy,  QFrame, QMenu, QMenuBar, QDockWidget, QScrollArea, \
-    QStyleOption
-from PySide6.QtCore import QSize, QRect , Qt
-from PySide6.QtGui import QPixmap, QIcon, QImage, QMouseEvent
-from typing import Union, Optional
-from utility_functions import UtilFuncs, VerticalSeparator, HorizontalSeparator
+from PySide6.QtWidgets import QPushButton, \
+    QToolButton, QToolBar, QTabWidget, QComboBox,  \
+    QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox,  \
+    QSizePolicy,  QMenu, QMenuBar, QDockWidget, QScrollArea
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QMouseEvent
+from utility_functions import UtilFuncs
+from Fluid_Utilities.system import FluidSystem
 from appearance import *
 
 # ------------------------------------------ WIDGET ITEMS ------------------------------------------
@@ -78,7 +77,8 @@ class CustomSlider(QSlider):
                  minimum_size : QSize=None, maximum_size : QSize=None,
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_btn : QPushButton=None, linked_spin_box: QSpinBox=None,
-                 linked_double_spin_box : QDoubleSpinBox = None) -> object: 
+                 linked_double_spin_box : QDoubleSpinBox = None,
+                 alias:str = None, system_obj:FluidSystem = None) -> object: 
         """
             constructor for custom slider widget
         """
@@ -123,6 +123,11 @@ class CustomSlider(QSlider):
         self.btn = linked_btn
         self.spin_box = linked_spin_box
         self.double_spin_box = linked_double_spin_box
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj
 
         self.activate_slider_links()
 
@@ -171,6 +176,8 @@ class CustomSlider(QSlider):
         if self.double_spin_box is not None:
             self.double_spin_box.setValue(self.value()*self.multiplier)
 
+        self.alias_callback()
+
     def slider_pressed(self):
         """
             callback function on linked button
@@ -182,6 +189,34 @@ class CustomSlider(QSlider):
             callback function on linked button
         """
         pass
+    
+    def alias_callback(self):
+        """
+            change attributes in system class object
+        """
+        if self.alias is not None:
+            if self.alias == "particle number":
+                self.system_obj.num_particles = self.value()
+            elif self.alias == "particle separation":
+                self.system_obj.USER_PARAMETERS["grid_separation"] = self.value()
+            elif self.alias == "cell size":
+                self.system_obj.USER_PARAMETERS["cell_size"] = self.value()
+            elif self.alias == "mass":
+                self.system_obj.USER_PARAMETERS["mass"] = self.value()
+            elif self.alias == "gravity":
+                self.system_obj.USER_PARAMETERS["gravity"] = self.value()
+            elif self.alias == "buoyancy":
+                self.system_obj.USER_PARAMETERS["buoyancy"] = self.value()
+            elif self.alias == "viscosity":
+                self.system_obj.USER_PARAMETERS["viscosity"] = self.value()
+            elif self.alias == "pressure":
+                self.system_obj.USER_PARAMETERS["pressure"] = self.value()
+            elif self.alias == "mass density":
+                self.system_obj.USER_PARAMETERS["mass_density"] = self.value()
+            elif self.alias == "speed loss":
+                self.system_obj.USER_PARAMETERS["speed_loss"] = self.value()
+            elif self.alias == "delta time":
+                self.system_obj.USER_PARAMETERS["delta_time"] = self.value() 
 
     # -------------------------------- CLASS DUNDER METHODS ----------------------------
     def __repr__(self):
@@ -206,7 +241,10 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
                  increment : QSize=None, value : float= None, multiplier: float=None,
                  minimum_size : QSize=None, maximum_size : QSize=None,
                  width : QSize=None, height : QSize=None, size : QSize=None,
-                 linked_spin_box: QSpinBox=None, linked_slider : QSlider = None) -> object:
+                 linked_spin_box: QSpinBox=None, linked_slider : QSlider = None,
+                 alias:str = None, system_obj:FluidSystem = None,
+                 direction:int = None) -> object:
+        
         super(CustomDoubleSpinBox, self).__init__()
         
         if size_policy is not None:
@@ -237,6 +275,13 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
             self.setFixedHeight(height)
         if size is not None:
             self.setFixedSize(size)
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj
+        if direction is not None:
+            self.direction = direction
 
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
@@ -281,6 +326,43 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
         if self.slider is not None:
             self.slider.setValue(int(self.value()*self.multiplier))
 
+        self.alias_callback()
+
+    def alias_callback(self):
+        if self.alias is not None:
+            if self.alias == "particle separation":
+                self.system_obj.USER_PARAMETERS["grid_separation"] = self.value()
+            elif self.alias == "cell size":
+                self.system_obj.USER_PARAMETERS["cell_size"] = self.value()
+            elif self.alias == "velocity":
+                if self.direction is not None:
+                    self.system_obj.USER_PARAMETERS["initial_velocity"][self.direction] = self.value()
+            elif self.alias == "acceleration":
+                if self.direction is not None:
+                    self.system_obj.USER_PARAMETERS["initial_acceleration"][self.direction] = self.value()
+            elif self.alias == "tank radius":
+                if self.direction is not None:
+                    self.system_obj.TANK_ATTRS["dimensions"]["size"][self.direction] = self.value()
+            elif self.alias == "tank position":
+                if self.direction is not None:
+                    self.system_obj.TANK_ATTRS["dimensions"]["location"][self.direction] = self.value()
+            elif self.alias == "mass":
+                self.system_obj.USER_PARAMETERS["mass"] = self.value()
+            elif self.alias == "gravity":
+                self.system_obj.USER_PARAMETERS["gravity"] = self.value()
+            elif self.alias == "buoyancy":
+                self.system_obj.USER_PARAMETERS["buoyancy"] = self.value()
+            elif self.alias == "viscosity":
+                self.system_obj.USER_PARAMETERS["viscosity"] = self.value()
+            elif self.alias == "pressure":
+                self.system_obj.USER_PARAMETERS["pressure"] = self.value()
+            elif self.alias == "mass density":
+                self.system_obj.USER_PARAMETERS["mass_density"] = self.value()
+            elif self.alias == "speed loss":
+                self.system_obj.USER_PARAMETERS["speed_loss"] = self.value()
+            elif self.alias == "delta time":
+                self.system_obj.USER_PARAMETERS["delta_time"] = self.value() 
+
     def __str__(self):
         return self.ABOUT_DOUBLE_SPIN_BOX
     
@@ -304,7 +386,8 @@ class CustomSpinBox(QSpinBox):
                  minimum_size : QSize=None, maximum_size : QSize=None,
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
-                 linked_slider : QSlider = None) -> object:
+                 linked_slider : QSlider = None,
+                 alias:str=None, system_obj:FluidSystem=None) -> object:
         
         super(CustomSpinBox, self).__init__()
 
@@ -336,6 +419,11 @@ class CustomSpinBox(QSpinBox):
             self.setFixedHeight(height)
         if size is not None:
             self.setFixedSize(size)
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj
 
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
@@ -378,6 +466,13 @@ class CustomSpinBox(QSpinBox):
             self.double_spin_box.setValue(float(self.value()*self.multiplier))
         if self.slider is not None:
             self.slider.setValue(self.value()*self.multiplier)
+
+        self.alias_callback()
+
+    def alias_callback(self):
+        if self.alias is not None:
+            if self.alias == "particle number":
+                self.system_obj.num_particles = self.value()
 
 class CustomLineEdit(QLineEdit):
 
@@ -598,7 +693,8 @@ class CustomComboBox(QComboBox):
                  minimum_size : QSize=None, maximum_size : QSize=None,
                  width : QSize=None, height : QSize=None, size : QSize=None,
                  linked_double_spin_box: QDoubleSpinBox=None,
-                 linked_slider : QSlider = None) -> object:
+                 linked_slider : QSlider = None, alias:str = None,
+                 system_obj:FluidSystem = None) -> object:
         super(CustomComboBox, self).__init__()
 
         self.all_items_to_add = items_to_add
@@ -606,6 +702,12 @@ class CustomComboBox(QComboBox):
             self.add_items_from_list()
         if add_item is True:
             self.addItem(item)
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj  
+
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
         
@@ -622,7 +724,20 @@ class CustomComboBox(QComboBox):
         """
             slot callback when index item changed
         """
-        pass
+        self.alias_callback()
+
+    def alias_callback(self):
+        if self.alias is not None:
+            if self.alias == "solver type":
+                self.system_obj.simulation_type = self.currentText()
+            elif self.alias == "distribution type":
+                self.system_obj.orientation_type = self.currentText()
+            elif self.alias == "search method":
+                self.system_obj.search_method = self.currentText()
+            elif self.alias == "time integrator":
+                self.system_obj.time_stepping = self.currentText()
+
+    
 
 # ----------------------------------------- MENU WIDGETS ----------------------------------
 

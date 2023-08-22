@@ -7,10 +7,13 @@ from PySide6.QtGui import QVector3D, QOpenGLFunctions, QMatrix4x4, \
                             QOpenGLContext, QSurfaceFormat, QVector3DList, QWheelEvent
 import numpy as np
 from shiboken6 import VoidPtr
-from argparse import ArgumentParser, RawTextHelpFormatter
 import ctypes
 import math
 import sys
+
+sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\")
+
+from Fluid_Utilities.system import FluidSystem
 
 try:
     from OpenGL import GL
@@ -24,17 +27,26 @@ except ImportError:
     message_box.exec()
     sys.exit(1)
 
-class Logo():
-    def __init__(self):
+class FluidSolver:
+
+    def __init__(self, system_obj:FluidSystem):
+        
+        self.system_obj = system_obj
         self.m_data = QVector3DList()
-        self.m_data.reserve(100000)
+        self.m_data.reserve(system_obj.num_particles)
+        self.initialize_m_data()
 
-        x_incr, y_incr, z_incr = 0.01, 0.01, 0.01
-        for i in range(100):
-            for j in range(100):
-                for k in range(100):
-
-                    self.add(QVector3D(i + x_incr, j + j + y_incr, k + z_incr))
+    def initialize_m_data(self):
+        for particle in self.system_obj.particle_list:
+            self.add(QVector3D(particle.initial_pos[0],
+                               particle.initial_pos[1],
+                               particle.initial_pos[2]))
+            
+    def update_m_data(self):
+        for id in range(len(self.m_data)):
+            self.m_data[id] = QVector3D(self.system_obj.particle_list[id].initial_pos[0],
+                                        self.system_obj.particle_list[id].initial_pos[1],
+                                        self.system_obj.particle_list[id].initial_pos[2])
 
     def const_data(self):
         return self.m_data.constData()
@@ -54,21 +66,35 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
     y_rotation_changed = Signal(int)
     z_rotation_changed = Signal(int)
 
-    def __init__(self, transparent, parent=None):
+    x_pan_changed = Signal(int)
+    y_pan_changed = Signal(int)
+
+    def __init__(self, transparent, 
+                 system_obj:FluidSystem, parent=None):
+        
         QOpenGLWidget.__init__(self, parent)
         QOpenGLFunctions.__init__(self)
 
         self._transparent = transparent
         self._core = QSurfaceFormat.defaultFormat().profile() == QSurfaceFormat.CoreProfile
 
+        self.system_obj = system_obj
+
         self._x_rot = 0
         self._y_rot = 0
         self._z_rot = 0
+
+        self._x_pan = 0
+        self._y_pan = 0
+
         self.zoom = 1.0
         self._last_pos = QPointF()
-        self.logo = Logo()
+        self.fluid_solver = FluidSolver(self.system_obj)
+        self.animation_timer = QTimer(self)
+        self.animation_timer.timeout.connect(self.animate)
+        
         self.vao = QOpenGLVertexArrayObject()
-        self._logo_vbo = QOpenGLBuffer()
+        self._solver_vbo = QOpenGLBuffer()
         self.program = QOpenGLShaderProgram()
         self._proj_matrix_loc = 0
         self._mv_matrix_loc = 0
@@ -91,6 +117,12 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
     def z_rotation(self):
         return self._z_rot
 
+    def x_pan(self):
+        return self._x_pan
+
+    def y_pan(self):
+        return self._y_pan
+    
     def minimumSizeHint(self):
         return QSize(50, 50)
 
@@ -126,6 +158,20 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         if angle != self._z_rot:
             self._z_rot = angle
             self.z_rotation_changed.emit(angle)
+            self.update()
+
+    @Slot(int)
+    def set_xpan(self, offset):
+        if offset != self._x_pan:
+            self._x_pan = offset
+            self.x_pan_changed.emit(offset)
+            self.update()
+
+    @Slot(int)
+    def set_ypan(self, offset):
+        if offset != self._y_pan:
+            self._y_pan = offset
+            self.y_pan_changed.emit(offset)
             self.update()
 
     @Slot()
@@ -219,10 +265,10 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
         self.vao.create()
         with QOpenGLVertexArrayObject.Binder(self.vao):
-            self._logo_vbo.create()
-            self._logo_vbo.bind()
+            self._solver_vbo.create()
+            self._solver_vbo.bind()
             float_size = ctypes.sizeof(ctypes.c_float)
-            self._logo_vbo.allocate(self.logo.const_data(), self.logo.count() * float_size)
+            self._solver_vbo.allocate(self.fluid_solver.const_data(), self.fluid_solver.count() * float_size)
 
             self.setup_vertex_attribs()
 
@@ -231,9 +277,11 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
             self.program.setUniformValue(self._light_pos_loc, QVector3D(0, 0, 70))
             self.program.release()
+        
+        self.animation_timer.start(10000)
 
     def setup_vertex_attribs(self):
-        self._logo_vbo.bind()
+        self._solver_vbo.bind()
         f = QOpenGLContext.currentContext().functions()
         f.glEnableVertexAttribArray(0)
         f.glEnableVertexAttribArray(1)
@@ -243,7 +291,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         pointer = VoidPtr(3 * float_size)
         f.glVertexAttribPointer(0, 3, int(GL.GL_FLOAT), int(GL.GL_FALSE), 6 * float_size, null)
         f.glVertexAttribPointer(1, 3, int(GL.GL_FLOAT), int(GL.GL_FALSE), 6 * float_size, pointer)
-        self._logo_vbo.release()
+        self._solver_vbo.release()
 
     def paintGL(self):
         self.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
@@ -255,6 +303,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.world.rotate(self._y_rot / 16, 0, 1, 0)
         self.world.rotate(self._z_rot / 16, 0, 0, 1)
         self.world.scale( 0.05 * self.zoom, 0.05 * self.zoom, 0.05 * self.zoom)
+        self.world.translate(self._x_pan, self._y_pan, 0.0)
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
             self.program.bind()
@@ -263,8 +312,14 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             normal_matrix = self.world.normalMatrix()
             self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
 
-            self.glDrawArrays(GL.GL_POINTS, 0, self.logo.count())
+            self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
             self.program.release()
+
+    def animate(self):
+        self.fluid_solver.update_m_data()
+        self.system_obj.update()
+        print("Position is: ", self.system_obj.particle_list[0].initial_pos)
+        self.update()
 
     def resizeGL(self, width, height):
         self.proj.setToIdentity()
@@ -278,12 +333,15 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         dx = pos.x() - self._last_pos.x()
         dy = pos.y() - self._last_pos.y()
 
-        if event.buttons() & Qt.LeftButton:
+        if event.buttons() & Qt.MouseButton.LeftButton:
             self.set_xrotation(self._x_rot + 8 * dy)
             self.set_yrotation(self._y_rot + 8 * dx)
-        elif event.buttons() & Qt.RightButton:
+        elif event.buttons() & Qt.MouseButton.RightButton:
             self.set_xrotation(self._x_rot + 8 * dy)
             self.set_zrotation(self._z_rot + 8 * dx)
+        elif event.buttons() & Qt.MouseButton.MiddleButton:
+            self.set_xpan(self._x_pan + dx)
+            self.set_ypan(self._y_pan + dy)
 
         self._last_pos = pos
 
