@@ -55,8 +55,10 @@ class FluidSystem:
     USER_PARAMETERS = {
         "initial_velocity":np.array([0, 0, 0], dtype="float64"),
         "initial_acceleration":np.array([0, 0, 0], dtype="float64"),
-        "grid_separation":0.1,
-        "cell_size":0.4,
+        "radius":2.5,
+        "height":0.4,
+        "grid_separation":0.02,
+        "cell_size":0.15,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
@@ -165,19 +167,19 @@ class FluidSystem:
             if orientation[1]==0:
                 if sub_id == 0:
                     for id, positions in enumerate(Uniform(num_particles = self.num_particles,
-                                                          spacing=0.01).uniform_box_distribution()):
+                                                           spacing=self.USER_PARAMETERS["grid_separation"]).uniform_box_distribution()):
                         self.particle_list[id].initial_pos = positions
                         self.update_hash(self.particle_list[id])
                         self.set_init_attrs(id)
                 elif sub_id == 1:
                     for id, positions in enumerate(Uniform(num_particles = self.num_particles,
-                                                           radius=0.5, height=0.2).uniform_cylinder_distribution()):
+                                                           radius=self.USER_PARAMETERS["radius"], height=0.2).uniform_cylinder_distribution()):
                         self.particle_list[id].initial_pos = positions
                         self.update_hash(self.particle_list[id])
                         self.set_init_attrs(id)
                 elif sub_id == 2:
                     for id, positions in enumerate(Uniform(num_particles = self.num_particles,
-                                                          radius=2.5).uniform_sphere_distribution()):
+                                                           radius=self.USER_PARAMETERS["radius"]).uniform_sphere_distribution()):
                         self.particle_list[id].initial_pos = positions
                         self.update_hash(self.particle_list[id])
                         self.set_init_attrs(id)
@@ -190,13 +192,14 @@ class FluidSystem:
                         self.set_init_attrs(id)
                 elif sub_id == 1:
                     for id, positions in enumerate(Random(num_particles = self.num_particles,
-                                                          radius=0.1, height=0.2).random_cylinder_distribution()):
+                                                          radius=self.USER_PARAMETERS["radius"],
+                                                          height=self.USER_PARAMETERS["height"]).random_cylinder_distribution()):
                         self.particle_list[id].initial_pos = positions
                         self.update_hash(self.particle_list[id])
                         self.set_init_attrs(id)
                 elif sub_id == 2:
                     for id, positions in enumerate(Random(num_particles = self.num_particles,
-                                                          radius=0.1, num_layers=100).random_sphere_distribution()):
+                                                          radius=self.USER_PARAMETERS["radius"]).random_sphere_distribution()):
                         self.particle_list[id].initial_pos = positions
                         self.update_hash(self.particle_list[id])
                         self.set_init_attrs(id)
