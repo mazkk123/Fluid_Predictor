@@ -370,9 +370,11 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.set_fixed_size_policy(self.fluid_solver_group_box)
 
         self.fluid_solver_label = CustomLabel(title="Choose Solver")
-        fluid_solver_lbls = ["SPH", "Multi SPH", "WCSPH", "PCSPH", "IISPH", "Eulerian", "FLIP", "PIC"]
+        fluid_solver_lbls = ["SPH", "MultiSPH", "IISPH", "WCSPH", "LPSPH", 
+                             "PCSPH", "DFSPH", "VCSPH", "FSISPH", "PBF"]
         
-        self.fluid_solver_combo_box = CustomComboBox(add_items=True, items_to_add=fluid_solver_lbls)
+        self.fluid_solver_combo_box = CustomComboBox(add_items=True, items_to_add=fluid_solver_lbls,
+                                                     alias="solver type", system_obj=self.system_obj)
 
         self.solver_horizontal_layout.addWidget(self.fluid_solver_label)
         self.solver_horizontal_layout.addWidget(self.fluid_solver_combo_box)
