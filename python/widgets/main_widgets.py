@@ -397,7 +397,7 @@ class MainWindow(QMainWindow, UtilFuncs):
                                                 label_control=True,
                                                 increment=1)
         self.nbr_of_particle_sBox = CustomSpinBox(maximum=150000, minimum=100, 
-                                                  increment=1, value=100000, 
+                                                  increment=1, value=1000, 
                                                   alias="particle number", 
                                                   system_obj=self.system_obj)
         self.nbr_of_particles_slider = CustomSlider(orientation=Qt.Orientation.Horizontal,
