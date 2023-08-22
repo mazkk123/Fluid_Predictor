@@ -4,7 +4,7 @@ from PySide6.QtCore import QSize, QRect, QTimer, Qt, Signal, Slot, QPointF
 from PySide6.QtOpenGL import QOpenGLVertexArrayObject, QOpenGLBuffer, \
                              QOpenGLShaderProgram, QOpenGLShader
 from PySide6.QtGui import QVector3D, QOpenGLFunctions, QMatrix4x4, \
-                            QOpenGLContext, QSurfaceFormat, QVector3DList
+                            QOpenGLContext, QSurfaceFormat, QVector3DList, QWheelEvent
 import numpy as np
 from shiboken6 import VoidPtr
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -27,47 +27,14 @@ except ImportError:
 class Logo():
     def __init__(self):
         self.m_data = QVector3DList()
-        self.m_data.reserve(20000)
+        self.m_data.reserve(100000)
 
-        x1 = +0.06
-        y1 = -0.14
-        x2 = +0.14
-        y2 = -0.06
-        x3 = +0.08
-        y3 = +0.00
-        x4 = +0.30
-        y4 = +0.22
+        x_incr, y_incr, z_incr = 0.01, 0.01, 0.01
+        for i in range(100):
+            for j in range(100):
+                for k in range(100):
 
-        self.quad(x1, y1, x2, y2, y2, x2, y1, x1)
-        self.quad(x3, y3, x4, y4, y4, x4, y3, x3)
-
-        self.extrude(x1, y1, x2, y2)
-        self.extrude(x2, y2, y2, x2)
-        self.extrude(y2, x2, y1, x1)
-        self.extrude(y1, x1, x1, y1)
-        self.extrude(x3, y3, x4, y4)
-        self.extrude(x4, y4, y4, x4)
-        self.extrude(y4, x4, y3, x3)
-
-        NUM_SECTORS = 200
-
-        for i in range(NUM_SECTORS):
-            angle = (i * 2 * math.pi) / NUM_SECTORS
-            x5 = 0.30 * math.sin(angle)
-            y5 = 0.30 * math.cos(angle)
-            x6 = 0.20 * math.sin(angle)
-            y6 = 0.20 * math.cos(angle)
-
-            angle = ((i + 1) * 2 * math.pi) / NUM_SECTORS
-            x7 = 0.20 * math.sin(angle)
-            y7 = 0.20 * math.cos(angle)
-            x8 = 0.30 * math.sin(angle)
-            y8 = 0.30 * math.cos(angle)
-
-            self.quad(x5, y5, x6, y6, x7, y7, x8, y8)
-
-            self.extrude(x6, y6, x7, y7)
-            self.extrude(x8, y8, x5, y5)
+                    self.add(QVector3D(i + x_incr, j + j + y_incr, k + z_incr))
 
     def const_data(self):
         return self.m_data.constData()
@@ -78,41 +45,8 @@ class Logo():
     def vertex_count(self):
         return self.count() / 6
 
-    def quad(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        n = QVector3D.normal(QVector3D(x4 - x1, y4 - y1, 0), QVector3D(x2 - x1, y2 - y1, 0))
-
-        self.add(QVector3D(x1, y1, -0.05), n)
-        self.add(QVector3D(x4, y4, -0.05), n)
-        self.add(QVector3D(x2, y2, -0.05), n)
-
-        self.add(QVector3D(x3, y3, -0.05), n)
-        self.add(QVector3D(x2, y2, -0.05), n)
-        self.add(QVector3D(x4, y4, -0.05), n)
-
-        n = QVector3D.normal(QVector3D(x1 - x4, y1 - y4, 0), QVector3D(x2 - x4, y2 - y4, 0))
-
-        self.add(QVector3D(x4, y4, 0.05), n)
-        self.add(QVector3D(x1, y1, 0.05), n)
-        self.add(QVector3D(x2, y2, 0.05), n)
-
-        self.add(QVector3D(x2, y2, 0.05), n)
-        self.add(QVector3D(x3, y3, 0.05), n)
-        self.add(QVector3D(x4, y4, 0.05), n)
-
-    def extrude(self, x1, y1, x2, y2):
-        n = QVector3D.normal(QVector3D(0, 0, -0.1), QVector3D(x2 - x1, y2 - y1, 0))
-
-        self.add(QVector3D(x1, y1, 0.05), n)
-        self.add(QVector3D(x1, y1, -0.05), n)
-        self.add(QVector3D(x2, y2, 0.05), n)
-
-        self.add(QVector3D(x2, y2, -0.05), n)
-        self.add(QVector3D(x2, y2, 0.05), n)
-        self.add(QVector3D(x1, y1, -0.05), n)
-
-    def add(self, v, n):
+    def add(self, v):
         self.m_data.append(v)
-        self.m_data.append(n)
 
 
 class RenderScene(QOpenGLWidget, QOpenGLFunctions):
@@ -130,6 +64,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self._x_rot = 0
         self._y_rot = 0
         self._z_rot = 0
+        self.zoom = 1.0
         self._last_pos = QPointF()
         self.logo = Logo()
         self.vao = QOpenGLVertexArrayObject()
@@ -319,6 +254,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.world.rotate(180 - (self._x_rot / 16), 1, 0, 0)
         self.world.rotate(self._y_rot / 16, 0, 1, 0)
         self.world.rotate(self._z_rot / 16, 0, 0, 1)
+        self.world.scale( 0.05 * self.zoom, 0.05 * self.zoom, 0.05 * self.zoom)
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
             self.program.bind()
@@ -327,12 +263,12 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             normal_matrix = self.world.normalMatrix()
             self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
 
-            self.glDrawArrays(GL.GL_POINTS, 0, 20000)
+            self.glDrawArrays(GL.GL_POINTS, 0, self.logo.count())
             self.program.release()
 
     def resizeGL(self, width, height):
         self.proj.setToIdentity()
-        self.proj.perspective(45, width / height, 0.01, 100)
+        self.proj.perspective(45, width / height, 0.01, 10000)
 
     def mousePressEvent(self, event):
         self._last_pos = event.position()
@@ -350,3 +286,12 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             self.set_zrotation(self._z_rot + 8 * dx)
 
         self._last_pos = pos
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        delta = event.angleDelta().y() / 120  # Normalized delta
+        self.zoom += delta * 0.1  # Adjust the zoom speed
+
+        # Ensure zoom stays within a reasonable range
+        self.zoom = max(0.05, min(5.0, self.zoom))
+
+        self.update()  # Trigger a repaint

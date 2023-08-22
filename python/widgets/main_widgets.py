@@ -263,7 +263,7 @@ class MainWindow(QMainWindow, UtilFuncs):
             widget
         """
         self.graphics_view_v_layout = QVBoxLayout()
-        self.main_canvas = RenderScene(self)
+        self.main_canvas = RenderScene(transparent=False)
 
     def create_frame_controls(self):
         """
