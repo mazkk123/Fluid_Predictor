@@ -1,6 +1,7 @@
 import math as m
 import numpy as np
 import random as rd
+import cupy as cp
 
 from Particles.particles import Particle
 

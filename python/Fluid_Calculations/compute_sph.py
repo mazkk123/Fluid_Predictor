@@ -2,6 +2,7 @@ import math as m
 import numpy as np
 import sys
 import time
+import cupy as cp
 
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
@@ -119,7 +120,7 @@ class SPH(UtilityCalculations):
         self.normal_field()
         
         self.update_particle_neighbours()
-        self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
+        self.gravity_const = np.array([0, 9.81, 0], dtype="float64")
         self.all_forces = np.array([0, 0, 0], dtype="float64")
 
     # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------
@@ -132,18 +133,21 @@ class SPH(UtilityCalculations):
         if self.search_method != "Neighbour":
             self.particle.neighbour_list = []
             self.mark_active_neighbours()
-            for items in self.hash_table[self.hash_value]:
-                if not items==self.particle:
-                    if items in self.active:
-                        self.neighbours_list.append(items)
-                        self.particle.neighbour_list.append(items)
-                    elif items in self.semi_active:
-                        self.neighbours_list.append(items)
-                        self.particle.neighbour_list.append(items)
-                    elif items in self.other_active:
-                        self.neighbours_list.append(items)
-                        self.particle.neighbour_list.append(items)
-            #self.particle_query()
+            try:
+                for items in self.hash_table[self.hash_value]:
+                    if not items==self.particle:
+                        if items in self.active:
+                            self.neighbours_list.append(items)
+                            self.particle.neighbour_list.append(items)
+                        elif items in self.semi_active:
+                            self.neighbours_list.append(items)
+                            self.particle.neighbour_list.append(items)
+                        elif items in self.other_active:
+                            self.neighbours_list.append(items)
+                            self.particle.neighbour_list.append(items)
+                #self.particle_query()
+            except KeyError:
+                pass
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
@@ -569,7 +573,7 @@ class SPH(UtilityCalculations):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        self.adapt_to_CFL()
+        #self.adapt_to_CFL()
 
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):

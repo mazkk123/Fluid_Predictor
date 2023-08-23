@@ -21,6 +21,9 @@ class PCSPH(SPH):
                  hash_value:int=None,
                  time_stepping:str = "Euler Cromer",
                  all_particles:list = None,
+                 time_schemes:dict = None,
+                 params:dict = None,
+                 collision_types:dict = None,
                  tank_attrs:dict = None,
                  delta_time:float = None,
                  temperature:bool = False):
@@ -31,6 +34,9 @@ class PCSPH(SPH):
                         search_method=search_method,
                         hash_table=hash_table,
                         hash_value=hash_value,
+                        time_schemes=time_schemes,
+                        collision_types=collision_types,
+                        params=params,
                         tank_attrs=tank_attrs,
                         temperature=temperature,
                         delta_time=delta_time)

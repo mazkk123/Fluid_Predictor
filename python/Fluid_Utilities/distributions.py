@@ -1,5 +1,6 @@
 import math as m
 import numpy as np
+import cupy as cp
 import random as rd
 import re
 import sys
@@ -21,7 +22,7 @@ class Uniform:
     def uniform_box_distribution(self):
         """
             perform a uniform distribution of particles and returns
-            a list of np arrays holding the particle positions in a list
+            a list of np.arrays holding the particle positions in a list
         """        
 
         ppr = int(m.pow(self.num_particles, 1/3))
@@ -40,7 +41,7 @@ class Uniform:
     def uniform_cylinder_distribution(self):
         """
             perform a uniform distribution of particles and returns
-            a list of np arrays holding the particle positions in a list
+            a list of np.arrays holding the particle positions in a list
         """        
         num_circles = int(m.pow(self.num_particles, 1/4))
         num_points_per_circle = int(m.pow(self.num_particles, 1/4))
@@ -70,7 +71,7 @@ class Uniform:
     def uniform_sphere_distribution(self):
         """
             perform a uniform distribution of particles and returns
-            a list of np arrays holding the particle positions in a list
+            a list of np.arrays holding the particle positions in a list
         """        
         
         phi = np.linspace(0, np.pi, int(m.pow(self.num_particles, 1/2)))
@@ -100,7 +101,7 @@ class Random:
     def random_box_distribution(self):
         """
             perform a uniform distribution of particles and returns
-            a list of np arrays holding the particle positions in a list
+            a list of np.arrays holding the particle positions in a list
         """        
 
         positions = []

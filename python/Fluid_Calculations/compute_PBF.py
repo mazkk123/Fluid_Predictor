@@ -22,6 +22,9 @@ class PBF(SPH):
                 hash_value:int = None,
                 time_stepping:str = "Euler Cromer",
                 tank_attrs:dict = None,
+                time_schemes:dict = None,
+                params: dict = None,
+                collision_types: dict = None,
                 all_particles:list = None,
                 delta_time:int = 0.02):
         
@@ -30,6 +33,9 @@ class PBF(SPH):
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_stepping=time_stepping,
+                         time_schemes=time_schemes,
+                         collision_types=collision_types,
+                         params=params,
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
         

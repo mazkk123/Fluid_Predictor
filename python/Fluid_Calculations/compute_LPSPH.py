@@ -19,6 +19,9 @@ class LPSPH(SPH):
                  search_method: str=None,
                  hash_table:dict=None,
                  hash_value:int=None,
+                 time_schemes:dict = None,
+                 collision_types:dict = None,
+                 params:dict = None,
                  all_particles:list = None,
                  tank_attrs:dict = None,
                  delta_time:float = None):
@@ -28,6 +31,9 @@ class LPSPH(SPH):
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_stepping=time_stepping,
+                         time_schemes=time_schemes,
+                         params=params,
+                         collision_types=collision_types,
                          all_particles=all_particles,
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)

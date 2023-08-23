@@ -1,5 +1,6 @@
 import math as m
 import numpy as np
+import cupy as cp
 import random as rd
 import re
 import sys
@@ -56,24 +57,24 @@ class FluidSystem:
         "initial_velocity":np.array([0, 0, 0], dtype="float64"),
         "initial_acceleration":np.array([0, 0, 0], dtype="float64"),
         "radius":2.5,
-        "height":0.4,
-        "grid_separation":0.02,
-        "cell_size":0.15,
+        "height":0.15,
+        "grid_separation":0.005,
+        "cell_size":0.4,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
-        "buoyancy":0.3,
+        "buoyancy":0.2,
         "tension_coefficient":0.0728,
         "tension_threshold":6,
         "pressure_const":7,
         "loss_of_speed":0.5,
         "epsilon":0.1,
         "neighbour_num":30,
-        "beta_const":0.25,
+        "beta_const":0,
         "stiffness_constant":1000,
         "alpha":0.4,
-        "v_cutoff":0.02,
-        "N_cutoff":0.01,
+        "v_cutoff":0,
+        "N_cutoff":0,
         "thermal_exp_coeff":4.988,
         "kinematic_visc":0.000006,
         "lambda_const":0.005,
@@ -111,7 +112,7 @@ class FluidSystem:
     def __init__ (self,
                   type:str = "SPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 10000,
+                  num_particles:int = 1000,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):
@@ -144,8 +145,11 @@ class FluidSystem:
                 init_hash_value = CompactHashing(self.USER_PARAMETERS["cell_size"], self.num_particles).find_hash_value(particle)
 
             try:
-                self.HASH_MAP[init_hash_value].append(particle)
-                particle.hash_value = init_hash_value
+                try:
+                    self.HASH_MAP[init_hash_value].append(particle)
+                    particle.hash_value = init_hash_value
+                except TypeError:
+                    pass
             except KeyError:
                 self.HASH_MAP[init_hash_value] = [particle]
                 particle.hash_value = init_hash_value

@@ -1,6 +1,7 @@
 import math as m
 import numpy as np
 import random as rd
+import cupy as cp
 import re
 import time
 
@@ -24,6 +25,9 @@ class WCSPH(SPH):
                  hash_table:dict=None,
                  hash_value:int=None,
                  time_stepping:str = "Euler Cromer",
+                 time_schemes:dict = None,
+                 collision_types:dict = None,
+                 params: dict = None,
                  all_particles:list = None,
                  tank_attrs:dict = None,
                  delta_time:float = None):
@@ -32,6 +36,9 @@ class WCSPH(SPH):
                         all_particles=all_particles, 
                         time_stepping=time_stepping,
                         search_method=search_method,
+                        collision_types=collision_types,
+                        params=params,
+                        time_schemes=time_schemes,
                         hash_table=hash_table,
                         hash_value=hash_value,
                         tank_attrs=tank_attrs,
@@ -45,12 +52,12 @@ class WCSPH(SPH):
     def update_pressure(self):
         
         if self.particle.mass_density>2*self.PARAMETERS["mass_density"]:
-            pressure_val_1 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
-            pressure_val_2 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
+            pressure_val_1 = cp.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
+            pressure_val_2 = cp.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
             self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         if self.particle.mass_density >= (self.PARAMETERS["mass_density"]) and self.particle.mass_density < 2*self.PARAMETERS["mass_density"]:
-            pressure_val_1 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
-            pressure_val_2 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
+            pressure_val_1 = cp.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
+            pressure_val_2 = cp.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
             self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         else:
             self.particle.pressure = 0

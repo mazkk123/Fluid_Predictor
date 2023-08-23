@@ -1,6 +1,7 @@
 import math as m
 import numpy as np
 import time
+import cupy as cp
 
 from Fluid_Calculations.compute_sph import SPH
 from Particles.particles import Particle
@@ -22,6 +23,9 @@ class MultiSPH(SPH):
                  hash_value:int=None,
                  all_particles:list = None,
                  time_stepping:str="Euler Cromer",
+                 time_schemes:dict = None,
+                 collision_types:dict = None,
+                 params:dict = None,
                  tank_attrs:dict=None,
                  delta_time:float = None,
                  phase_info:dict = None):
@@ -30,6 +34,9 @@ class MultiSPH(SPH):
                          search_method=search_method,
                          all_particles=all_particles,
                          hash_table=hash_table,
+                         collision_types=collision_types,
+                         params=params,
+                         time_schemes=time_schemes,
                          hash_value=hash_value,
                          tank_attrs=tank_attrs,
                          time_stepping=time_stepping,

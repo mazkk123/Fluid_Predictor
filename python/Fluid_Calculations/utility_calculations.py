@@ -1,5 +1,6 @@
 import math as m
 import numpy as np
+import cupy as cp
 
 from Particles.particles import Particle
 
@@ -148,6 +149,9 @@ class UtilityCalculations:
 
     def find_neighbour_list(self, particle):
         particle.neighbour_list = []
-        for nbr in self.hash_table[particle.hash_value]:
-            if particle is not nbr:
-                particle.neighbour_list.append(nbr)
+        try:
+            for nbr in self.hash_table[particle.hash_value]:
+                if particle is not nbr:
+                    particle.neighbour_list.append(nbr)
+        except KeyError:
+            pass
