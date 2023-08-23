@@ -11,35 +11,35 @@ from  Fluid_Utilities.search_methods import SpatialHashing
 class DFSPH(SPH):
 
     OTHER_PARAMS = {
-        "max_iterations":5,
-        "max_iterations_div":5,
+        "max_iterations":2,
+        "max_iterations_div":2,
         "divergence_error":0.06,
         "alpha_vorticity":0.5
     }
 
     def __init__(self,
-                particle: Particle=None,
-                search_method:str = None,
-                hash_table:dict = None,
-                hash_value:int = None,
-                time_schemes:dict = None,
-                params:dict = None,
-                collision_types:dict = None,
-                time_stepping:str = "Euler Cromer",
-                all_particles:list = None,
-                tank_attrs:dict = None,
-                num_particles:int = None,
-                delta_time:int = 0.02):
+                 particle: Particle=None,
+                 search_method: str=None,
+                 hash_table:dict=None,
+                 hash_value:int=None,
+                 time_stepping:str = "Euler Cromer",
+                 all_particles:list = None,
+                 time_schemes:dict = None,
+                 params:dict = None,
+                 collision_types:dict = None,
+                 tank_attrs:dict = None,
+                 delta_time:float = None,
+                 num_particles:bool = False):
         
         super().__init__(particle=particle,
+                         all_particles=all_particles, 
+                         time_stepping=time_stepping,
                          search_method=search_method,
-                         all_particles=all_particles,
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_schemes=time_schemes,
-                         params=params,
                          collision_types=collision_types,
-                         time_stepping=time_stepping,
+                         params=params,
                          tank_attrs=tank_attrs,
                          delta_time=delta_time)
         
@@ -52,7 +52,7 @@ class DFSPH(SPH):
 
     # ----------------------------------------------------------------- UTILITY FUNCTIONS -----------------------------------------------------------------------------
 
-    def predict_advective_forces(self, particle, depth:int=4):
+    def predict_advective_forces(self, particle, depth:int=2):
         
         if depth==0:
             return
@@ -119,12 +119,18 @@ class DFSPH(SPH):
     # ----------------------------------------------------------------- DENSITY CORRECTION -----------------------------------------------------------------------------
 
     def update_stiffness_k(self, particle):
-        particle.stiffness_k = (
-            1/ m.pow(self.delta_time, 2) *
-            (particle.predicted_density - self.PARAMETERS["mass_density"]) *
-            particle.divergence_factor
-        )
-    
+        
+        mass_diff = particle.predicted_density - self.PARAMETERS["mass_density"]
+        try:
+            time_integral = 1/ m.pow(self.delta_time, 2)
+            particle.stiffness_k = (
+                time_integral *
+                mass_diff *
+                particle.divergence_factor
+            )
+        except ZeroDivisionError:
+            particle.stiffness_k = np.array([0, 0, 0], dtype="float64")
+
     def update_predicted_density(self, particle):
         for nbr_particle in particle.neighbour_list:
             particle.predicted_density += (
@@ -275,6 +281,7 @@ class DFSPH(SPH):
         print("Buoyancy:", self.particle.buoyancy)
         print("Gravity:", self.particle.gravity)
         print("viscosity:", self.particle.viscosity)
+        print("Delta time is:", self.delta_time)
         print("\n\n")
         time.sleep(secs)
 
@@ -303,7 +310,7 @@ class DFSPH(SPH):
         self.update_errors()
         
         self.particle.velocity = self.particle.predicted_velocity
-        """ self.debugging_forces(0.1) """
+        """ self.debugging_forces(0.01) """
 
         self.XSPH_vel_correction()
         self.choose_collision_types()

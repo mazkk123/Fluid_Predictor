@@ -110,9 +110,9 @@ class FluidSystem:
     HASH_MAP = {}
 
     def __init__ (self,
-                  type:str = "SPH",
+                  type:str = "DFSPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 1000,
+                  num_particles:int = 500,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):

@@ -96,9 +96,9 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.animation_timer.timeout.connect(self.animate)
         
         self.vao = QOpenGLVertexArrayObject()
-        """ self.fbo_quad_vao = QOpenGLVertexArrayObject()
+        self.fbo_quad_vao = QOpenGLVertexArrayObject()
         self.vbo = QOpenGLBuffer()
-        self.fbo = QOpenGLFramebufferObject(self.width(), self.height()) """
+        self.fbo_texture = None
 
         self._solver_vbo = QOpenGLBuffer()
         self.program = QOpenGLShaderProgram()
@@ -324,15 +324,13 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
             self.setup_vbo_vertex_attribs()
 
-            f = QOpenGLContext.currentContext().functions()
-            self.fbo = f.glGenFramebuffers(1)
-            f.glBindFramebuffer(GL.GL_FRAMEBUFFER, self.fbo)
+        self.fbo = QOpenGLFramebufferObject(self.width(), self.height())
 
-            self.setup_fbo_texture_attribs(f)
+        self.setup_fbo_texture_attribs()
 
-            self.fbo_shader_program.release() """
+        self.fbo_shader_program.release() """
         
-        self.animation_timer.start(5000)
+        self.animation_timer.start(1000)
 
     def setup_vertex_attribs(self):
         self._solver_vbo.bind()
@@ -348,29 +346,37 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self._solver_vbo.release()
 
     def setup_vbo_vertex_attribs(self):
-        self.vbo.bind()
         f = QOpenGLContext.currentContext().functions()
         f.glEnableVertexAttribArray(0)
-        f.glEnableVertexAttribArray(1)
+        f.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo.bufferId())  # Bind the VBO
 
-        vertices = [-1, -1, 1, -1, -1, 1, 1, 1]
-        GL.glBufferData(GL.GL_ARRAY_BUFFER, len(vertices) * 4, (ctypes.c_float * len(vertices))(*vertices), GL.GL_STATIC_DRAW)
+        # Set up vertex attribute pointer
+        stride = 2 * ctypes.sizeof(ctypes.c_float)  # Size of vertex data in bytes
+        offset = 0  # Offset of the vertex data in the buffer
 
-        f.glVertexAttribPointer(0, 2, GL.GL_FLOAT, GL.GL_FALSE, 0, None)
-        self.vbo.release()
+        # Specify the layout of the vertex data in the buffer
+        f.glVertexAttribPointer(0, 2, GL.GL_FLOAT, GL.GL_FALSE, stride, ctypes.c_void_p(offset))
 
-    def setup_fbo_texture_attribs(self, f):
+        f.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)  # Unbind the VBO
 
-        self.fbo_texture = GL.glGenTextures(1)
+    def setup_fbo_texture_attribs(self):
+        f = QOpenGLContext.currentContext().functions()
         
-        f.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)
+        # Generate the texture and bind it
+        self.fbo_texture = GL.glGenTextures(1)  # Generate the texture ID
+        f.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)  # Bind the texture
+        
+        # Set texture parameters and allocate storage
         f.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGB, self.width(), self.height(), 0, GL.GL_RGB, GL.GL_UNSIGNED_BYTE, None)
         f.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
         f.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+        
+        # Bind the framebuffer and attach the texture to it
+        self.fbo.bind()
         f.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, self.fbo_texture, 0)
-
-        f.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0)
-        f.glBindTexture(GL.GL_TEXTURE_2D, 0)
+        
+        # Unbind the framebuffer and texture
+        self.fbo.release()
 
     def update_vbo(self):
         # Update the VBO with the new particle positions
@@ -381,9 +387,6 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
     def paintGL(self):
 
-        """ print(f"fbo part 2 is {self.fbo}")
-        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, self.fbo) """
-        
         self.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         self.glEnable(GL.GL_DEPTH_TEST)
         self.glEnable(GL.GL_CULL_FACE)
@@ -408,18 +411,14 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             self.program.release()
 
         """ with QOpenGLVertexArrayObject.Binder(self.fbo_quad_vao):
-
             self.fbo_shader_program.bind()
-            GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0)
-            GL.glBindTexture(GL.GL_TEXTURE_2D, 0)  # Unbind previous texture
-            GL.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)  # Bind FBO texture
+
+            f = QOpenGLContext.currentContext().functions()
+            f.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)  # Bind FBO texture
 
             # Use a different shader program for rendering the FBO texture
-            GL.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4)
-            self.fbo_shader_program.release()
-
-        self.glDisable(GL.GL_DEPTH_TEST)
-        self.glDisable(GL.GL_CULL_FACE) """
+            self.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4)
+            self.fbo_shader_program.release() """
 
     def animate(self):
         self.system_obj.update()

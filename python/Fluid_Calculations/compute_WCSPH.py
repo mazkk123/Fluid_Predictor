@@ -52,12 +52,12 @@ class WCSPH(SPH):
     def update_pressure(self):
         
         if self.particle.mass_density>2*self.PARAMETERS["mass_density"]:
-            pressure_val_1 = cp.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
-            pressure_val_2 = cp.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
+            pressure_val_1 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
+            pressure_val_2 = np.power((self.particle.mass_density - self.PARAMETERS["mass_density"])/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
             self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         if self.particle.mass_density >= (self.PARAMETERS["mass_density"]) and self.particle.mass_density < 2*self.PARAMETERS["mass_density"]:
-            pressure_val_1 = cp.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
-            pressure_val_2 = cp.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
+            pressure_val_1 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["alpha"])
+            pressure_val_2 = np.power((self.particle.mass_density)/ self.PARAMETERS["mass_density"], self.EXTRA_PARAMS["beta"])
             self.pressure = self.K*(pressure_val_1 - pressure_val_2)
         else:
             self.particle.pressure = 0

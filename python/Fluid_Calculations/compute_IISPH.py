@@ -64,7 +64,7 @@ class IISPH(SPH):
     def predict_advection(self):
 
         self.mass_density_adv = 0
-        self.predict_nbr_advection(self.particle, 4)
+        self.predict_nbr_advection(self.particle, 3)
 
         self.particle.pressure  = self.particle.prev_pressure*0.5
         self.update_mass_density_advection()
