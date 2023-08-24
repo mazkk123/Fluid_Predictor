@@ -25,7 +25,6 @@ class IISPH(SPH):
                  time_stepping:str = "Euler Cromer",
                  tank_attrs:dict = None,
                  hash_value:int=None,
-
                  delta_time:float = None):
         
         super().__init__(particle=particle,
@@ -64,7 +63,7 @@ class IISPH(SPH):
     def predict_advection(self):
 
         self.mass_density_adv = 0
-        self.predict_nbr_advection(self.particle, 3)
+        self.predict_nbr_advection(self.particle, 2)
 
         self.particle.pressure  = self.particle.prev_pressure*0.5
         self.update_mass_density_advection()
@@ -125,6 +124,7 @@ class IISPH(SPH):
         print("Buoyancy:", self.particle.buoyancy)
         print("Gravity:", self.particle.gravity)
         print("viscosity:", self.particle.viscosity)
+        print("Delta time is: ", self.delta_time)
         print("\n\n")
         time.sleep(secs)
 
@@ -218,6 +218,7 @@ class IISPH(SPH):
         self.particle.velocity = self.particle.advected_velocity + self.delta_time*self.particle.pressure_force/self.particle.mass
         self.particle.initial_pos += self.particle.velocity*self.delta_time
         
+        self.debugging_forces(0.01)
         self.XSPH_vel_correction()
         self.choose_collision_types("Cuboid", "Normal")
 

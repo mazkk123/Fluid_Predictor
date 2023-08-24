@@ -11,25 +11,25 @@ from  Fluid_Utilities.search_methods import SpatialHashing
 class DFSPH(SPH):
 
     OTHER_PARAMS = {
-        "max_iterations":2,
-        "max_iterations_div":2,
-        "divergence_error":0.06,
+        "max_iterations":6,
+        "max_iterations_div":6,
+        "divergence_error":0.6,
         "alpha_vorticity":0.5
     }
 
-    def __init__(self,
+    def __init__(self, 
                  particle: Particle=None,
                  search_method: str=None,
-                 hash_table:dict=None,
-                 hash_value:int=None,
-                 time_stepping:str = "Euler Cromer",
                  all_particles:list = None,
                  time_schemes:dict = None,
-                 params:dict = None,
                  collision_types:dict = None,
+                 params:dict = None,
+                 hash_table:dict=None,
+                 time_stepping:str = "Euler Cromer",
                  tank_attrs:dict = None,
+                 hash_value:int=None,
                  delta_time:float = None,
-                 num_particles:bool = False):
+                 num_particles:int = None):
         
         super().__init__(particle=particle,
                          all_particles=all_particles, 
@@ -47,7 +47,7 @@ class DFSPH(SPH):
         self.divergence_force = np.array([0, 0, 0], dtype="float64")
         self.num_particles = num_particles
 
-        self.predict_advective_forces(self.particle, 3)
+        self.predict_advective_forces(self.particle, 4)
         self.update_divergence_factor(self.particle)
 
     # ----------------------------------------------------------------- UTILITY FUNCTIONS -----------------------------------------------------------------------------
@@ -120,9 +120,9 @@ class DFSPH(SPH):
 
     def update_stiffness_k(self, particle):
         
-        mass_diff = particle.predicted_density - self.PARAMETERS["mass_density"]
         try:
             time_integral = 1/ m.pow(self.delta_time, 2)
+            mass_diff = particle.predicted_density - self.PARAMETERS["mass_density"]
             particle.stiffness_k = (
                 time_integral *
                 mass_diff *
@@ -185,7 +185,7 @@ class DFSPH(SPH):
         iter_step = 0
         self.particle.predicted_density = self.particle.mass_density
 
-        self.adapt_to_CFL()
+        """ self.adapt_to_CFL() """
 
         if self.calculate_density_error() > 0.01*self.PARAMETERS["mass_density"] and iter_step < self.OTHER_PARAMS["max_iterations"]:
 
@@ -310,7 +310,8 @@ class DFSPH(SPH):
         self.update_errors()
         
         self.particle.velocity = self.particle.predicted_velocity
-        """ self.debugging_forces(0.01) """
 
         self.XSPH_vel_correction()
-        self.choose_collision_types()
+        self.choose_collision_types("Cuboid", "Normal")
+
+        """ self.debugging_forces(0.1) """

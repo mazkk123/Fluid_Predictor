@@ -18,7 +18,7 @@ from utility_calculations import UtilityCalculations
 class SPH(UtilityCalculations):
 
     PARAMETERS = {
-        "grid_separation":0.1,
+        "grid_separation":0.05,
         "cell_size":0.4,
         "mass": 0.1,
         "viscosity": 3.5,
@@ -120,7 +120,7 @@ class SPH(UtilityCalculations):
         self.normal_field()
         
         self.update_particle_neighbours()
-        self.gravity_const = np.array([0, 9.81, 0], dtype="float64")
+        self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
         self.all_forces = np.array([0, 0, 0], dtype="float64")
 
     # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------
@@ -133,21 +133,18 @@ class SPH(UtilityCalculations):
         if self.search_method != "Neighbour":
             self.particle.neighbour_list = []
             self.mark_active_neighbours()
-            try:
-                for items in self.hash_table[self.hash_value]:
-                    if not items==self.particle:
-                        if items in self.active:
-                            self.neighbours_list.append(items)
-                            self.particle.neighbour_list.append(items)
-                        elif items in self.semi_active:
-                            self.neighbours_list.append(items)
-                            self.particle.neighbour_list.append(items)
-                        elif items in self.other_active:
-                            self.neighbours_list.append(items)
-                            self.particle.neighbour_list.append(items)
+            for items in self.hash_table[self.hash_value]:
+                if not items==self.particle:
+                    if items in self.active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
+                    elif items in self.semi_active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
+                    elif items in self.other_active:
+                        self.neighbours_list.append(items)
+                        self.particle.neighbour_list.append(items)
                 #self.particle_query()
-            except KeyError:
-                pass
         else:
             for items in NearestNeighbour(search_radius=self.PARAMETERS["cell_size"], particle=self.particle,
                                           neighbour_size=self.PARAMETERS["neighbour_num"]).find_neighbours():
@@ -222,7 +219,6 @@ class SPH(UtilityCalculations):
                     self.other_active.append(nbr)
                 else:
                     self.semi_active.append(nbr)
-        
                 
     # ------------------------------------------------------------------- KERNEL STEPS ----------------------------------------------------------------------------
 
@@ -493,6 +489,7 @@ class SPH(UtilityCalculations):
         print("Body Force:", self.particle.body_force)
         print("Thermal:", self.particle.thermal_diffusion)
         print("viscosity:", self.particle.viscosity)
+        print("Delta time is:", self.delta_time)
         print("\n\n")
         time.sleep(secs)
 
@@ -573,7 +570,7 @@ class SPH(UtilityCalculations):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        #self.adapt_to_CFL()
+        self.adapt_to_CFL()
 
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):

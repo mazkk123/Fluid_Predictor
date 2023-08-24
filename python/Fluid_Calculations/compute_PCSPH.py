@@ -10,7 +10,7 @@ from Particles.particles import Particle
 class PCSPH(SPH):
 
     OTHER_PARAMS = {
-        "max_iterations":1,
+        "max_iterations":2,
         "min_iterations":1,
     }
 
@@ -46,7 +46,7 @@ class PCSPH(SPH):
         self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
         self.particle.pressure = 0
 
-        self.update_predicted_attrs(self.particle, 4)
+        self.update_predicted_attrs(self.particle, 5)
 
         self.particle.predicted_density = self.particle.mass_density
     

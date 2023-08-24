@@ -149,9 +149,6 @@ class UtilityCalculations:
 
     def find_neighbour_list(self, particle):
         particle.neighbour_list = []
-        try:
-            for nbr in self.hash_table[particle.hash_value]:
-                if particle is not nbr:
-                    particle.neighbour_list.append(nbr)
-        except KeyError:
-            pass
+        for nbr in self.hash_table[particle.hash_value]:
+            if particle is not nbr:
+                particle.neighbour_list.append(nbr)

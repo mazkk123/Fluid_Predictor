@@ -1,6 +1,5 @@
 import math as m
 import numpy as np
-import cupy as cp
 import random as rd
 import re
 import sys
@@ -110,9 +109,9 @@ class FluidSystem:
     HASH_MAP = {}
 
     def __init__ (self,
-                  type:str = "DFSPH",
+                  type:str = "SPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 500,
+                  num_particles:int = 10000,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):
@@ -145,11 +144,8 @@ class FluidSystem:
                 init_hash_value = CompactHashing(self.USER_PARAMETERS["cell_size"], self.num_particles).find_hash_value(particle)
 
             try:
-                try:
-                    self.HASH_MAP[init_hash_value].append(particle)
-                    particle.hash_value = init_hash_value
-                except TypeError:
-                    pass
+                self.HASH_MAP[init_hash_value].append(particle)
+                particle.hash_value = init_hash_value
             except KeyError:
                 self.HASH_MAP[init_hash_value] = [particle]
                 particle.hash_value = init_hash_value

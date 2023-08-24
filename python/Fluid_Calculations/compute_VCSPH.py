@@ -1,6 +1,5 @@
 import math as m
 import numpy as np
-import cupy as cp
 import random as rd
 import re
 import time

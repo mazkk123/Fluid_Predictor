@@ -1,7 +1,6 @@
 import math as m
 import numpy as np
 import random as rd
-import cupy as cp
 import re
 import time
 
@@ -63,4 +62,6 @@ class WCSPH(SPH):
             self.particle.pressure = 0
 
     def update(self):
+
+        self.debugging_forces(0.01)
         return super().update()

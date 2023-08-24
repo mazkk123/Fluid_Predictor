@@ -1,6 +1,5 @@
 import math as m
 import numpy as np
-""" import cupy as cp """
 import sys
 import time
 
@@ -8,7 +7,7 @@ sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\
 
 from Fluid_Utilities.system import FluidSystem
 
-system_obj = FluidSystem(type="VCSPH", search_method="Spatial Hashing", num_particles=250)
+system_obj = FluidSystem(type="SPH", search_method="Spatial Hashing", num_particles=100000)
 
 for i in range(system_obj.num_frames):
     

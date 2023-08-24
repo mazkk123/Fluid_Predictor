@@ -94,12 +94,18 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.fluid_solver = FluidSolver(self.system_obj)
         self.animation_timer = QTimer(self)
         self.animation_timer.timeout.connect(self.animate)
+
+        self.frame_milliseconds = 10000
+        self.frame_rate = 30
+        self.animation_timer.setInterval(self.frame_milliseconds)
+
+        self.num_frames = 20  # Specify the number of frames
+        self.updated = False
+        self.frame_data = [None] * self.num_frames  # Initialize an empty list for frame data
+        self.current_frame_index = 0
+        self.play_frame_index = 0
         
         self.vao = QOpenGLVertexArrayObject()
-        self.fbo_quad_vao = QOpenGLVertexArrayObject()
-        self.vbo = QOpenGLBuffer()
-        self.fbo_texture = None
-
         self._solver_vbo = QOpenGLBuffer()
         self.program = QOpenGLShaderProgram()
         self.fbo_shader_program = QOpenGLShaderProgram()
@@ -244,30 +250,6 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
                    gl_FragColor = vec4(col, 1.0);
                 }"""
 
-    def fbo_vertex_shader(self):
-        return  """
-                #version 330 core
-                layout (location = 0) in vec2 vertex;
-                out vec2 TexCoords;
-                void main()
-                {
-                    gl_Position = vec4(vertex, 0.0, 1.0);
-                    TexCoords = vertex * 0.5 + 0.5;
-                }
-                """
-    
-    def fbo_fragment_shader(self):
-        return  """
-                #version 330 core
-                in vec2 TexCoords;
-                out vec4 FragColor;
-                uniform sampler2D fboTexture;
-                void main()
-                {
-                    FragColor = texture(fboTexture, TexCoords);
-                }
-                """
-    
     def initializeGL(self):
         self.context().aboutToBeDestroyed.connect(self.cleanup)
         self.initializeOpenGLFunctions()
@@ -308,29 +290,8 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
             self.program.setUniformValue(self._light_pos_loc, QVector3D(0, 0, 70))
             self.program.release()
-
-        """ self.fbo_shader_program.addShaderFromSourceCode(QOpenGLShader.Vertex, self.fbo_vertex_shader())
-        self.fbo_shader_program.addShaderFromSourceCode(QOpenGLShader.Fragment, self.fbo_fragment_shader())
-        self.fbo_shader_program.link()
-
-        self.fbo_shader_program.bind()
-        self.fbo_shader_program.setUniformValue("fboTexture", 0)  # Texture unit 0
-
-        self.fbo_quad_vao.create()
-        with QOpenGLVertexArrayObject.Binder(self.fbo_quad_vao):
-
-            self.vbo.create()
-            self.vbo.bind()
-
-            self.setup_vbo_vertex_attribs()
-
-        self.fbo = QOpenGLFramebufferObject(self.width(), self.height())
-
-        self.setup_fbo_texture_attribs()
-
-        self.fbo_shader_program.release() """
         
-        self.animation_timer.start(1000)
+        self.animation_timer.start(self.frame_milliseconds)
 
     def setup_vertex_attribs(self):
         self._solver_vbo.bind()
@@ -345,45 +306,14 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         f.glVertexAttribPointer(1, 3, int(GL.GL_FLOAT), int(GL.GL_FALSE), 6 * float_size, pointer)
         self._solver_vbo.release()
 
-    def setup_vbo_vertex_attribs(self):
-        f = QOpenGLContext.currentContext().functions()
-        f.glEnableVertexAttribArray(0)
-        f.glBindBuffer(GL.GL_ARRAY_BUFFER, self.vbo.bufferId())  # Bind the VBO
+    def update_frame_data(self, frame_index):
+        # Calculate data for the specified frame
+        frame_vertices = self.fluid_solver.const_data()  # Calculate vertices for the current frame
 
-        # Set up vertex attribute pointer
-        stride = 2 * ctypes.sizeof(ctypes.c_float)  # Size of vertex data in bytes
-        offset = 0  # Offset of the vertex data in the buffer
-
-        # Specify the layout of the vertex data in the buffer
-        f.glVertexAttribPointer(0, 2, GL.GL_FLOAT, GL.GL_FALSE, stride, ctypes.c_void_p(offset))
-
-        f.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)  # Unbind the VBO
-
-    def setup_fbo_texture_attribs(self):
-        f = QOpenGLContext.currentContext().functions()
-        
-        # Generate the texture and bind it
-        self.fbo_texture = GL.glGenTextures(1)  # Generate the texture ID
-        f.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)  # Bind the texture
-        
-        # Set texture parameters and allocate storage
-        f.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGB, self.width(), self.height(), 0, GL.GL_RGB, GL.GL_UNSIGNED_BYTE, None)
-        f.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
-        f.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
-        
-        # Bind the framebuffer and attach the texture to it
-        self.fbo.bind()
-        f.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, self.fbo_texture, 0)
-        
-        # Unbind the framebuffer and texture
-        self.fbo.release()
-
-    def update_vbo(self):
-        # Update the VBO with the new particle positions
-        self._solver_vbo.bind()
-        float_size = ctypes.sizeof(ctypes.c_float)
-        self._solver_vbo.write(0, self.fluid_solver.const_data(), self.fluid_solver.count() * float_size)
-        self._solver_vbo.release()
+        # Store the data in the frame_data list
+        self.frame_data[frame_index] = {
+            "vertices": frame_vertices
+        }
 
     def paintGL(self):
 
@@ -396,33 +326,54 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.world.rotate(self._y_rot / 16, 0, 1, 0)
         self.world.rotate(self._z_rot / 16, 0, 0, 1)
         self.world.scale(0.05 * self.zoom, 0.05 * self.zoom, 0.05 * self.zoom)
-        self.world.translate(self._x_pan, self._y_pan, 0.0)
-
-        self.update_vbo()
+        self.world.translate(self._x_pan, self._y_pan, 0.0) 
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
-            self.program.bind()
-            self.program.setUniformValue(self._proj_matrix_loc, self.proj)
-            self.program.setUniformValue(self._mv_matrix_loc, self.camera * self.world)
-            normal_matrix = self.world.normalMatrix()
-            self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
+            
+            if self.updated != True:
+                self.update_frame_data(self.current_frame_index) 
+                print(f"frame is {self.current_frame_index + 1}")
+                if self.current_frame_index == self.num_frames-1:
+                    self.updated = True
 
-            self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
-            self.program.release()
+            if self.updated:
+                self.program.bind()
+                self._solver_vbo.bind()
 
-        """ with QOpenGLVertexArrayObject.Binder(self.fbo_quad_vao):
-            self.fbo_shader_program.bind()
+                self.program.setUniformValue(self._proj_matrix_loc, self.proj)
+                self.program.setUniformValue(self._mv_matrix_loc, self.camera * self.world)
+                normal_matrix = self.world.normalMatrix()
+                self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
 
-            f = QOpenGLContext.currentContext().functions()
-            f.glBindTexture(GL.GL_TEXTURE_2D, self.fbo_texture)  # Bind FBO texture
+                print(f"play frame index is {self.play_frame_index}")
+                max_frame_index = self.num_frames - 1  # The maximum index value
 
-            # Use a different shader program for rendering the FBO texture
-            self.glDrawArrays(GL.GL_TRIANGLE_STRIP, 0, 4)
-            self.fbo_shader_program.release() """
+                frame_data = self.frame_data[self.play_frame_index]
+                frame_vertices = frame_data["vertices"]
+                float_size = ctypes.sizeof(ctypes.c_float)
+
+                # Update VBO with current frame's vertices
+                self._solver_vbo.write(0, frame_vertices, self.fluid_solver.count() * float_size)
+
+                # Render the particles for the current frame
+                self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
+
+                # Increment and wrap the frame index
+                self.play_frame_index = (self.play_frame_index + 1) % max_frame_index
+
+                self._solver_vbo.release()
+                self.program.release()
+        
+        self.current_frame_index += 1
 
     def animate(self):
-        self.system_obj.update()
-        self.fluid_solver.update_m_data()
+        
+        if self.updated != True:
+            self.system_obj.update()
+            self.fluid_solver.update_m_data()
+        else:
+            self.animation_timer.setInterval(1000 // self.frame_rate)
+
         self.update()
 
     def resizeGL(self, width, height):
