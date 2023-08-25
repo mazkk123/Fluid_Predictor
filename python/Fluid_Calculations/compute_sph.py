@@ -33,8 +33,8 @@ class SPH(UtilityCalculations):
         "beta_const":0.25,
         "stiffness_constant":1000,
         "alpha":0.4,
-        "v_cutoff":0.02,
-        "N_cutoff":0.01,
+        "v_cutoff":0.0,
+        "N_cutoff":0.0,
         "thermal_exp_coeff":4.988,
         "kinematic_visc":0.000006,
         "lambda_const":0.005,
@@ -120,7 +120,7 @@ class SPH(UtilityCalculations):
         self.normal_field()
         
         self.update_particle_neighbours()
-        self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
+        self.gravity_const = np.array([0, 0, -9.81], dtype="float64")
         self.all_forces = np.array([0, 0, 0], dtype="float64")
 
     # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------
@@ -570,7 +570,7 @@ class SPH(UtilityCalculations):
         self.choose_collision_types("Cuboid", "Normal")
         self.choose_time_stepping(self.time_stepping)
 
-        self.adapt_to_CFL()
+        #self.adapt_to_CFL()
 
 # ------------------------------------------------------------- ADAPTIVE TIME STEPPING ----------------------------------------------------------------------------
     def update_vel_max(self):

@@ -57,12 +57,12 @@ class FluidSystem:
         "initial_acceleration":np.array([0, 0, 0], dtype="float64"),
         "radius":2.5,
         "height":0.15,
-        "grid_separation":0.005,
-        "cell_size":0.4,
+        "grid_separation":0.01,
+        "cell_size":0.25,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
-        "buoyancy":0.2,
+        "buoyancy":0,
         "tension_coefficient":0.0728,
         "tension_threshold":6,
         "pressure_const":7,
@@ -121,11 +121,13 @@ class FluidSystem:
         self.shape_type = shape_type
         self.orientation_type = orientation_type
         self.time_stepping = time_stepping
+        self.stored_positions = {}
 
         self.particle_list = []
         self.search_method = search_method
   
-        self.num_frames = 24
+        self.num_frames = 20
+        self.frame_counter = 0
 
         self.init_particle_attrs()
 
@@ -217,7 +219,7 @@ class FluidSystem:
             if self.choose_simulation_type() is not None:
                 
                 self.update_hash(p)
-
+                
                 id = self.choose_simulation_type()
                 if id==0:
                     SPH(
@@ -233,7 +235,7 @@ class FluidSystem:
                         time_schemes=self.USER_TIME_SCHEMES,
                         temperature= False,
                         delta_time=0.02
-                    ).update()
+                    ).update() 
                 if id==1:
                     MultiSPH(
                         particle = p,
@@ -361,7 +363,12 @@ class FluidSystem:
                         params=self.USER_PARAMETERS,
                         time_schemes=self.USER_TIME_SCHEMES,
                         delta_time=0.02   
-                    ).update()
+                    ).update()  
+
+                self.stored_positions.setdefault(self.frame_counter, []).append(p.initial_pos.copy())
+            
+        self.frame_counter += 1
+                
 
     def choose_simulation_type(self):
         """

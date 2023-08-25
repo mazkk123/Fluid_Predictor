@@ -218,8 +218,7 @@ class IISPH(SPH):
         self.particle.velocity = self.particle.advected_velocity + self.delta_time*self.particle.pressure_force/self.particle.mass
         self.particle.initial_pos += self.particle.velocity*self.delta_time
         
-        self.debugging_forces(0.01)
         self.XSPH_vel_correction()
         self.choose_collision_types("Cuboid", "Normal")
 
-        self.adapt_to_CFL()
+        #self.adapt_to_CFL()

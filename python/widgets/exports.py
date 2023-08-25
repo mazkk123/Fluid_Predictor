@@ -36,39 +36,43 @@ class ExportUtils:
     def export_to_json(self):
         self.write_to_json_dict()
         if self.file_path is not None:
-            with open(file_path, "w") as write_js:
-                json.dumps(self.JSON_export, write.js)
+            with open(self.file_path, "w") as write_js:
+                write_js.write(json.dumps(self.JSON_export))
             
     def write_to_json_dict(self):
-        for particle in self.system_obj.particle_list:
-            try:
-                self.JSON_export["id"].append(particle.id)
-                self.JSON_export["position"].append(particle.initial_pos)
-                self.JSON_export["velocity"].append(particle.velocity)
-                self.JSON_export["acceleration"].append(particle.acceleration)
-                self.JSON_export["pressure"].append(particle.pressure_force)
-                self.JSON_export["surface tension"].append(particle.surface_tension)
-                self.JSON_export["buoyancy"].append(particle.buoyancy)
-                self.JSON_export["viscosity"].append(particle.viscosity)
-                self.JSON_export["mass"].append(particle.mass)
-            except KeyError:
-                self.JSON_export["id"] = [particle.id]
-                self.JSON_export["position"] = [particle.initial_pos]
-                self.JSON_export["velocity"] = [particle.velocity]
-                self.JSON_export["acceleration"] = [particle.acceleration]
-                self.JSON_export["pressure"] = [particle.pressure_force]
-                self.JSON_export["surface tension"] = [particle.surface_tension]
-                self.JSON_export["buoyancy"] = [particle.buoyancy]
-                self.JSON_export["viscosity"] = [particle.viscosity]
-                self.JSON_export["mass"] = [particle.mass]
-                
+        counter = 0
+        for frame in range(self.system_obj.num_frames):
+            for particle in self.system_obj.particle_list:
+                try:
+                    self.JSON_export["id"].append(particle.id)
+                    self.JSON_export["position"].append(particle.initial_pos)
+                    self.JSON_export["velocity"].append(particle.velocity)
+                    self.JSON_export["acceleration"].append(particle.acceleration)
+                    self.JSON_export["pressure"].append(particle.pressure_force)
+                    self.JSON_export["surface tension"].append(particle.surface_tension)
+                    self.JSON_export["buoyancy"].append(particle.buoyancy)
+                    self.JSON_export["viscosity"].append(particle.viscosity)
+                    self.JSON_export["mass"].append(particle.mass)
+                    self.JSON_export["frame_num"].append(frame)
+                except KeyError:
+                    self.JSON_export["id"] = [particle.id]
+                    self.JSON_export["position"] = [particle.initial_pos]
+                    self.JSON_export["velocity"] = [particle.velocity]
+                    self.JSON_export["acceleration"] = [particle.acceleration]
+                    self.JSON_export["pressure"] = [particle.pressure_force]
+                    self.JSON_export["surface tension"] = [particle.surface_tension]
+                    self.JSON_export["buoyancy"] = [particle.buoyancy]
+                    self.JSON_export["viscosity"] = [particle.viscosity]
+                    self.JSON_export["mass"] = [particle.mass]
+                    self.JSON_export["frame_num"] = [frame]
+                    
     def import_from_json(self):
         if self.JSON_import is not None:
             try:
                 with open(self.file_path, "r") as read_js:
                     self.JSON_import = json.loads(read_js)
             except FileNotFoundError:
-                self.export_to_JSON()
+                self.export_to_json()
         
     def import_from_houdini(self):
         pass

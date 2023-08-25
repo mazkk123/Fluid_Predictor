@@ -62,6 +62,4 @@ class WCSPH(SPH):
             self.particle.pressure = 0
 
     def update(self):
-
-        self.debugging_forces(0.01)
         return super().update()

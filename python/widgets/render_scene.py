@@ -43,12 +43,11 @@ class FluidSolver:
                                particle.initial_pos[1],
                                particle.initial_pos[2]))
             
-    def update_m_data(self):
+    def update_m_data(self, frame_index):
         self.m_data.clear()
-        for particle in self.system_obj.particle_list:
-            self.add(QVector3D(particle.initial_pos[0],
-                               particle.initial_pos[1],
-                               particle.initial_pos[2]))
+        for i in range(self.system_obj.num_particles):
+            position = self.system_obj.stored_positions[frame_index][i]
+            self.add(QVector3D(position[0], position[1], position[2])) 
 
     def const_data(self):
         return self.m_data.constData()
@@ -92,18 +91,15 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.zoom = 1.0
         self._last_pos = QPointF()
         self.fluid_solver = FluidSolver(self.system_obj)
-        self.animation_timer = QTimer(self)
-        self.animation_timer.timeout.connect(self.animate)
 
-        self.frame_milliseconds = 10000
-        self.frame_rate = 30
-        self.animation_timer.setInterval(self.frame_milliseconds)
-
-        self.num_frames = 20  # Specify the number of frames
-        self.frame_data = [None] * self.num_frames  # Initialize an empty list for frame data
+        self.num_frames = 20
         self.current_frame_index = 0
-        self.playable_frame_index = 0
-        
+
+        self.all_frames_updated = False
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.animate)
+        self.animation_timer.start(1000 // 30)
+
         self.vao = QOpenGLVertexArrayObject()
         self._solver_vbo = QOpenGLBuffer()
         self.program = QOpenGLShaderProgram()
@@ -119,6 +115,15 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             fmt = self.format()
             fmt.setAlphaBufferSize(8)
             self.setFormat(fmt)
+
+        self.update_stored_positions()
+
+    def update_stored_positions(self):
+        for i in range(self.num_frames):
+            self.system_obj.update()
+            print(f"updating frame {i + 1} ...")
+
+        self.all_frames_updated = True
 
     def x_rotation(self):
         return self._x_rot
@@ -289,8 +294,6 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
 
             self.program.setUniformValue(self._light_pos_loc, QVector3D(0, 0, 70))
             self.program.release()
-        
-        self.animation_timer.start(self.frame_milliseconds)
 
     def setup_vertex_attribs(self):
         self._solver_vbo.bind()
@@ -305,15 +308,12 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         f.glVertexAttribPointer(1, 3, int(GL.GL_FLOAT), int(GL.GL_FALSE), 6 * float_size, pointer)
         self._solver_vbo.release()
 
-    def update_frame_data(self, frame_index):
-        # Calculate data for the specified frame
-        frame_vertices = self.fluid_solver.const_data()  # Calculate vertices for the current frame
-
-        # Store the data in the frame_data list
-        self.frame_data[frame_index] = {
-            "vertices": frame_vertices
-        }
-
+    def update_vbo(self):
+        self._solver_vbo.bind()
+        float_size = ctypes.sizeof(ctypes.c_float)
+        self._solver_vbo.write(0, self.fluid_solver.const_data(), self.fluid_solver.count() * float_size)
+        self._solver_vbo.release()
+        
     def paintGL(self):
 
         self.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
@@ -326,57 +326,31 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.world.rotate(self._z_rot / 16, 0, 0, 1)
         self.world.scale(0.05 * self.zoom, 0.05 * self.zoom, 0.05 * self.zoom)
         self.world.translate(self._x_pan, self._y_pan, 0.0)
+        
+        self.update_vbo()
+
+        self.current_frame_index = (self.current_frame_index + 1) % self.num_frames
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
             self.program.bind()
-            self._solver_vbo.bind()
 
             self.program.setUniformValue(self._proj_matrix_loc, self.proj)
             self.program.setUniformValue(self._mv_matrix_loc, self.camera * self.world)
             normal_matrix = self.world.normalMatrix()
             self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
-
-            if self.current_frame_index < self.num_frames:
-                self.update_frame_data(self.current_frame_index)
-                print(f"frame {self.current_frame_index + 1} complete")
-
-                frame_data = self.frame_data[self.current_frame_index]
-                frame_vertices = frame_data["vertices"]
-                float_size = ctypes.sizeof(ctypes.c_float)
-
-                # Write the new frame vertices to the VBO
-                self._solver_vbo.write(0, frame_vertices, self.fluid_solver.count() * float_size)
-
-            elif self.current_frame_index > self.num_frames:
-                print(f"replaying frame {self.playable_frame_index} ...")
-                try:
-                    frame_data = self.frame_data[self.playable_frame_index]
-                    if frame_data:
-                        frame_vertices = frame_data["vertices"]
-                        float_size = ctypes.sizeof(ctypes.c_float)
-
-                        self._solver_vbo.write(0, frame_vertices, self.fluid_solver.count() * float_size)
-
-                        self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
-                        self.playable_frame_index += 1
-                except IndexError:
-                    self.playable_frame_index = self.num_frames - self.playable_frame_index
-
-            self._solver_vbo.release()
-            self.current_frame_index += 1
-            self.program.release()
             
-        self.swapBuffers()
+            self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
+
+            self.program.release()
 
     def animate(self):
-        
-        if self.updated != True:
-            self.system_obj.update()
-            self.fluid_solver.update_m_data()
-        else:
-            self.animation_timer.setInterval(1000 // self.frame_rate)
+        if self.all_frames_updated:
 
-        self.update()
+            self.fluid_solver.update_m_data(self.current_frame_index)
+            """ print(f"stored position 1 is {self.system_obj.stored_positions[self.current_frame_index][0]}")
+            print(f"position 1 is {self.fluid_solver.m_data[0]}") """
+
+            self.update()
 
     def resizeGL(self, width, height):
         self.proj.setToIdentity()

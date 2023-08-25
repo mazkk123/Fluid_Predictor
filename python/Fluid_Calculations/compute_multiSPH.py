@@ -537,5 +537,5 @@ class MultiSPH(SPH):
 
         self.choose_collision_types("Cuboid", "Normal")
         
-        self.adapt_to_CFL()
+        #self.adapt_to_CFL()
 
