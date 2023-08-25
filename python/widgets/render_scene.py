@@ -100,10 +100,9 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.animation_timer.setInterval(self.frame_milliseconds)
 
         self.num_frames = 20  # Specify the number of frames
-        self.updated = False
         self.frame_data = [None] * self.num_frames  # Initialize an empty list for frame data
         self.current_frame_index = 0
-        self.play_frame_index = 0
+        self.playable_frame_index = 0
         
         self.vao = QOpenGLVertexArrayObject()
         self._solver_vbo = QOpenGLBuffer()
@@ -326,45 +325,48 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self.world.rotate(self._y_rot / 16, 0, 1, 0)
         self.world.rotate(self._z_rot / 16, 0, 0, 1)
         self.world.scale(0.05 * self.zoom, 0.05 * self.zoom, 0.05 * self.zoom)
-        self.world.translate(self._x_pan, self._y_pan, 0.0) 
+        self.world.translate(self._x_pan, self._y_pan, 0.0)
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
-            
-            if self.updated != True:
-                self.update_frame_data(self.current_frame_index) 
-                print(f"frame is {self.current_frame_index + 1}")
-                if self.current_frame_index == self.num_frames-1:
-                    self.updated = True
+            self.program.bind()
+            self._solver_vbo.bind()
 
-            if self.updated:
-                self.program.bind()
-                self._solver_vbo.bind()
+            self.program.setUniformValue(self._proj_matrix_loc, self.proj)
+            self.program.setUniformValue(self._mv_matrix_loc, self.camera * self.world)
+            normal_matrix = self.world.normalMatrix()
+            self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
 
-                self.program.setUniformValue(self._proj_matrix_loc, self.proj)
-                self.program.setUniformValue(self._mv_matrix_loc, self.camera * self.world)
-                normal_matrix = self.world.normalMatrix()
-                self.program.setUniformValue(self._normal_matrix_loc, normal_matrix)
+            if self.current_frame_index < self.num_frames:
+                self.update_frame_data(self.current_frame_index)
+                print(f"frame {self.current_frame_index + 1} complete")
 
-                print(f"play frame index is {self.play_frame_index}")
-                max_frame_index = self.num_frames - 1  # The maximum index value
-
-                frame_data = self.frame_data[self.play_frame_index]
+                frame_data = self.frame_data[self.current_frame_index]
                 frame_vertices = frame_data["vertices"]
                 float_size = ctypes.sizeof(ctypes.c_float)
 
-                # Update VBO with current frame's vertices
+                # Write the new frame vertices to the VBO
                 self._solver_vbo.write(0, frame_vertices, self.fluid_solver.count() * float_size)
 
-                # Render the particles for the current frame
-                self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
+            elif self.current_frame_index > self.num_frames:
+                print(f"replaying frame {self.playable_frame_index} ...")
+                try:
+                    frame_data = self.frame_data[self.playable_frame_index]
+                    if frame_data:
+                        frame_vertices = frame_data["vertices"]
+                        float_size = ctypes.sizeof(ctypes.c_float)
 
-                # Increment and wrap the frame index
-                self.play_frame_index = (self.play_frame_index + 1) % max_frame_index
+                        self._solver_vbo.write(0, frame_vertices, self.fluid_solver.count() * float_size)
 
-                self._solver_vbo.release()
-                self.program.release()
-        
-        self.current_frame_index += 1
+                        self.glDrawArrays(GL.GL_POINTS, 0, self.fluid_solver.count())
+                        self.playable_frame_index += 1
+                except IndexError:
+                    self.playable_frame_index = self.num_frames - self.playable_frame_index
+
+            self._solver_vbo.release()
+            self.current_frame_index += 1
+            self.program.release()
+            
+        self.swapBuffers()
 
     def animate(self):
         
