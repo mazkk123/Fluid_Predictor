@@ -86,7 +86,7 @@ class FluidSystem:
         "radius":2.5,
         "height":0.15,
         "grid_separation":0.01,
-        "cell_size":0.15,
+        "cell_size":0.3,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
