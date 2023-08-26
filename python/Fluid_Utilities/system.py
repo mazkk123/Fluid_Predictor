@@ -5,6 +5,9 @@ import re
 import sys
 import time
 
+from PySide6.QtWidgets import QProgressDialog, QWidget, QMainWindow
+from PySide6.QtCore import QTimer
+
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Calculations\\")
 
 from Fluid_Calculations.compute_sph import SPH
@@ -22,10 +25,35 @@ from Fluid_Calculations.compute_PBF import PBF
 sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\python\\Fluid_Utilities\\")
 
 from distributions import Random, Uniform
-from search_methods import CompactHashing, SpatialHashing, ZSorting
+from search_methods import CompactHashing, SpatialHashing
 
 from Particles.particles import Particle
 from Particles.error_handling import *
+
+class FrameProgress(QProgressDialog):
+    # Operation constructor
+    def __init__(self, steps):
+        
+        super().__init__("Render progress is ...", "Cancel", 0, 100)
+
+        self.steps = steps
+
+        self.canceled.connect(self.cancel)
+
+        self.t = QTimer(self)
+        self.t.timeout.connect(self.perform)
+        self.t.start(1000)
+
+        self.t.start(0)
+
+    def perform(self):
+        self.setValue(self.steps)
+
+        if self.steps > self.maximum():
+            self.t.stop()
+    
+    def cancel(self):
+        self.t.stop()
 
 class FluidSystem:
     
@@ -58,7 +86,7 @@ class FluidSystem:
         "radius":2.5,
         "height":0.15,
         "grid_separation":0.01,
-        "cell_size":0.25,
+        "cell_size":0.15,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
@@ -99,19 +127,27 @@ class FluidSystem:
         "Abstract":4
     }
 
-    PHASE_INFORMATION = {
+    USER_PHASE_INFORMATION = {
         "phase_number":7,
         "mass_density":[998.2, 1010, 700, 1000, 2000, 556, 455],
         "viscosity":[3.5, 10, 23, 15, 2.4, 3.5, 7.2],
         "mass":[0.1, 0.1, 0.1]
     }
 
+    USER_ADDITIONAL_ATTRIBUTES = {
+        "density_error":0.01*USER_PARAMETERS["mass_density"],
+        "max_iterations":6,
+        "max_iterations_div":6,
+        "divergence_error":0.6,
+        "alpha_vorticity":0.5
+    }
+
     HASH_MAP = {}
 
-    def __init__ (self,
-                  type:str = "SPH",
+    def __init__ (self, parent:QMainWindow=None,
+                  type:str = "DFSPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 10000,
+                  num_particles:int = 8000,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):
@@ -123,6 +159,13 @@ class FluidSystem:
         self.time_stepping = time_stepping
         self.stored_positions = {}
 
+        self.start_playforward= False
+        self.start_playback = False
+        self.stop = False
+        self.start_play = False
+        self.finished_caching = False
+        self.parent = parent
+
         self.particle_list = []
         self.search_method = search_method
   
@@ -130,6 +173,18 @@ class FluidSystem:
         self.frame_counter = 0
 
         self.init_particle_attrs()
+
+    def update_stored_positions(self):
+
+        if not self.finished_caching:
+
+            for i in range(self.num_frames):
+                self.stored_positions[i] = []
+                self.update()
+                print(f"frame {i+1} complete ...")
+
+            self.finished_caching = True
+            self.start_playforward = True
 
     def update_hash(self, particle):
         """
@@ -249,7 +304,7 @@ class FluidSystem:
                         time_schemes=self.USER_TIME_SCHEMES,
                         tank_attrs = self.TANK_ATTRS,
                         delta_time=0.02,
-                        phase_info=self.PHASE_INFORMATION
+                        phase_info=self.USER_PHASE_INFORMATION
                     ).update()
                 if id==2:
                     IISPH(
@@ -263,6 +318,7 @@ class FluidSystem:
                         hash_value = p.hash_value,
                         time_stepping=self.time_stepping,
                         tank_attrs = self.TANK_ATTRS,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         delta_time=0.02 
                     ).update()
                 if id==3:
@@ -291,6 +347,7 @@ class FluidSystem:
                         collision_types=self.USER_COLLISION_TYPES,
                         params=self.USER_PARAMETERS,
                         time_schemes=self.USER_TIME_SCHEMES,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         temperature=False,
                         delta_time=0.02 
                     ).update()
@@ -306,6 +363,7 @@ class FluidSystem:
                         collision_types=self.USER_COLLISION_TYPES,
                         params=self.USER_PARAMETERS,
                         time_schemes=self.USER_TIME_SCHEMES,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         delta_time=0.02   
                     ).update()
                 if id == 6:
@@ -320,6 +378,7 @@ class FluidSystem:
                         time_schemes=self.USER_TIME_SCHEMES,
                         time_stepping=self.time_stepping,
                         tank_attrs = self.TANK_ATTRS,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         num_particles=self.num_particles,
                         delta_time=0.02   
                     ).update()
@@ -336,6 +395,7 @@ class FluidSystem:
                         time_schemes=self.USER_TIME_SCHEMES,
                         time_stepping=self.time_stepping,
                         tank_attrs = self.TANK_ATTRS,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         delta_time=0.02   
                     ).update()
                 if id == 8:
@@ -349,6 +409,7 @@ class FluidSystem:
                         collision_types=self.USER_COLLISION_TYPES,
                         params=self.USER_PARAMETERS,
                         time_schemes=self.USER_TIME_SCHEMES,
+                        additional_params = self.USER_ADDITIONAL_ATTRIBUTES,
                         delta_time=0.02   
                     ).update()
                 if id == 9:

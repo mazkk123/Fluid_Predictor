@@ -1,0 +1,18 @@
+DFSPH:
+- divergence error
+- alpha vorticity
+- maximum density error iterations
+- maximum divergence error iterations
+IISPH
+- maximum density error iterations
+- relaxation factor
+PCSPH
+- maximum density error iterations
+LPSPH
+- maximum density error iterations
+MultiSPH
+- phase number
+- phase mass densities
+- phase viscosities
+- phase masses
+VCSPH

@@ -29,7 +29,8 @@ class DFSPH(SPH):
                  tank_attrs:dict = None,
                  hash_value:int=None,
                  delta_time:float = None,
-                 num_particles:int = None):
+                 num_particles:int = None,
+                 additional_params:dict = None):
         
         super().__init__(particle=particle,
                          all_particles=all_particles, 
@@ -46,6 +47,13 @@ class DFSPH(SPH):
         self.divergence = np.array([0, 0, 0], dtype="float64")
         self.divergence_force = np.array([0, 0, 0], dtype="float64")
         self.num_particles = num_particles
+
+        self.additional_params = additional_params
+
+        self.OTHER_PARAMS["max_iterations"] = self.additional_params["max_iterations"]
+        self.OTHER_PARAMS["max_iterations_div"] = self.additional_params["max_iterations_div"]
+        self.OTHER_PARAMS["divergence_error"] = self.additional_params["divergence_error"]
+        self.OTHER_PARAMS["alpha_vorticity"] = self.additional_params["alpha_vorticity"]
 
         self.predict_advective_forces(self.particle, 4)
         self.update_divergence_factor(self.particle)

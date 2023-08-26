@@ -23,7 +23,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.setWindowTitle("Fluid Application")
         self.window_icon = QPixmap("images/Toolbar/fluid.png")
         self.setWindowIcon(self.window_icon)
-        self.system_obj = FluidSystem()
+        self.system_obj = FluidSystem(parent=self)
 
         self.initUI()
 
@@ -173,7 +173,7 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.create_appearance_widgets()
         self.create_motion_widget()
         self.create_distribution_widgets()
-        self.create_physical_widget()
+        self.create_attribs_widget()
         self.create_fluid_tank_widgets()
         self.create_system_widgets()
         self.main_layout.addSpacerItem(QSpacerItem(0,250))
@@ -277,11 +277,11 @@ class MainWindow(QMainWindow, UtilFuncs):
             create frame toolbar at bottom of window
         """
         self.play_bar_h_layout = QHBoxLayout()
-        self.play_simulation_btn = CustomPushButton()
+        self.play_simulation_btn = CustomPushButton(alias="backward", system_obj=self.system_obj)
         self.add_icons_to_widgets(widget=self.play_simulation_btn, image_name="play_backward.png")
-        self.stop_simulation_btn = CustomPushButton()
+        self.stop_simulation_btn = CustomPushButton(alias="stop", system_obj=self.system_obj)
         self.add_icons_to_widgets(widget=self.stop_simulation_btn, image_name="stop.png")
-        self.play_back_simulation_btn = CustomPushButton()
+        self.play_back_simulation_btn = CustomPushButton(alias="play", system_obj=self.system_obj)
         self.add_icons_to_widgets(widget=self.play_back_simulation_btn, image_name="play_forward.png")
 
         self.frame_spacing_item = QSpacerItem(700, 0)
@@ -508,6 +508,19 @@ class MainWindow(QMainWindow, UtilFuncs):
 
         self.main_layout.addWidget(self.motion_gBox)
 
+    def create_attribs_widget(self):
+        
+        self.physical_attribs_v_layout = QVBoxLayout()
+        self.physical_attribs_gBox = CustomGroupBox(title="Attributes")
+
+        self.physical_attribs_gBox.setLayout(self.physical_attribs_v_layout)
+
+        self.create_physical_widget()
+        self.create_additional_attribs_widget()
+        self.create_phase_attribs_widget()
+
+        self.main_layout.addWidget(self.physical_attribs_gBox)
+
     def create_physical_widget(self):
         """
             creates physical forces widget appearance
@@ -667,7 +680,137 @@ class MainWindow(QMainWindow, UtilFuncs):
         self.adjust_label_spacing(box_widget=self.physical_gBox,
                                   scale_factor=8)
 
-        self.main_layout.addWidget(self.physical_gBox)
+        self.physical_attribs_v_layout.addWidget(self.physical_gBox)
+
+    def create_additional_attribs_widget(self):
+        
+        self.additional_attribs_gBox = CustomGroupBox(title="Additional Attributes",
+                                                      checkable=True)
+        
+        self.additional_attribs_v_layout = QVBoxLayout()
+        self.additional_attribs_gBox.setLayout(self.additional_attribs_v_layout)
+
+        self.density_err_h_layout = QHBoxLayout()
+        self.maximum_density_err_lbl = CustomLabel(title="Max density")
+        self.maximum_density_err_double_spin = CustomDoubleSpinBox()
+        self.maximum_density_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.density_err_h_layout.addWidget(self.maximum_density_err_lbl)
+        self.density_err_h_layout.addWidget(self.maximum_density_err_double_spin)
+        self.density_err_h_layout.addWidget(self.maximum_density_err_slider)
+
+        self.divergence_err_h_layout = QHBoxLayout()
+        self.divergence_err_lbl = CustomLabel(title="Divergence")
+        self.divergence_err_double_spin = CustomDoubleSpinBox()
+        self.divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.divergence_err_h_layout.addWidget(self.divergence_err_lbl)
+        self.divergence_err_h_layout.addWidget(self.divergence_err_double_spin)
+        self.divergence_err_h_layout.addWidget(self.divergence_err_slider)
+
+        self.maximum_divergence_err_h_layout = QHBoxLayout()
+        self.maximum_divergence_err_lbl = CustomLabel(title="Max div.")
+        self.maximum_divergence_err_double_spin = CustomDoubleSpinBox()
+        self.maximum_divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_lbl)
+        self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_double_spin)
+        self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_slider)
+
+        self.relaxation_factor_h_layout = QHBoxLayout()
+        self.relaxation_factor_lbl = CustomLabel(title="Relaxation")
+        self.relaxation_factor_double_spin = CustomDoubleSpinBox()
+        self.relaxation_factor_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.relaxation_factor_h_layout.addWidget(self.relaxation_factor_lbl)
+        self.relaxation_factor_h_layout.addWidget(self.relaxation_factor_double_spin)
+        self.relaxation_factor_h_layout.addWidget(self.relaxation_factor_slider)
+
+        self.vorticity_factor_h_layout = QHBoxLayout()
+        self.vorticity_factor_lbl = CustomLabel(title="Vorticity")
+        self.vorticity_factor_double_spin = CustomDoubleSpinBox()
+        self.vorticity_factor_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.vorticity_factor_h_layout.addWidget(self.vorticity_factor_lbl)
+        self.vorticity_factor_h_layout.addWidget(self.vorticity_factor_double_spin)
+        self.vorticity_factor_h_layout.addWidget(self.vorticity_factor_slider)
+
+        self.additional_attribs_v_layout.addLayout(self.density_err_h_layout)
+        self.additional_attribs_v_layout.addLayout(self.divergence_err_h_layout)
+        self.additional_attribs_v_layout.addLayout(self.maximum_divergence_err_h_layout)
+        self.additional_attribs_v_layout.addLayout(self.relaxation_factor_h_layout)
+        self.additional_attribs_v_layout.addLayout(self.vorticity_factor_h_layout)
+
+        self.set_default_state(self.additional_attribs_gBox)
+        self.adjust_label_spacing(box_widget=self.additional_attribs_gBox,
+                                  scale_factor=8)
+
+        self.physical_attribs_v_layout.addWidget(self.additional_attribs_gBox)
+
+    def create_phase_attribs_widget(self):
+
+        self.multi_phase_v_layout = QVBoxLayout()
+        self.multi_phase_gBox = CustomGroupBox(title="Multi-phase Attributes", 
+                                               checkable=True)
+
+        self.multi_phase_gBox.setLayout(self.multi_phase_v_layout)
+
+        self.phase_num_h_layout = QHBoxLayout()
+        self.phase_num_lbl = CustomLabel(title="Phase number")
+        self.phase_num_spin = CustomSpinBox(value=5)
+        self.phase_num_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+        self.phase_num_h_layout.addWidget(self.phase_num_lbl)
+        self.phase_num_h_layout.addWidget(self.phase_num_spin)
+        self.phase_num_h_layout.addWidget(self.phase_num_slider)       
+
+        self.multi_phase_v_layout.addLayout(self.phase_num_h_layout)
+
+        self.create_phase_indiv_attribs(num_of_phases=self.phase_num_spin.value())
+
+        self.set_default_state(self.multi_phase_gBox)
+        self.adjust_label_spacing(box_widget=self.multi_phase_gBox,
+                                  scale_factor=8)
+
+        self.physical_attribs_v_layout.addWidget(self.multi_phase_gBox)
+
+    def create_phase_indiv_attribs(self, num_of_phases:int = None):
+        
+        for i in range(num_of_phases):
+            
+            phase_lbl = CustomLabel(title=f"Phase {i+1}")
+
+            phase_mass_h_layout = QHBoxLayout()
+            phase_mass_lbl = CustomLabel(title="Mass")
+            phase_mass_spin = CustomDoubleSpinBox()
+            phase_mass_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+            phase_mass_h_layout.addWidget(phase_mass_lbl)
+            phase_mass_h_layout.addWidget(phase_mass_spin)
+            phase_mass_h_layout.addWidget(phase_mass_slider)       
+
+            phase_mass_d_h_layout = QHBoxLayout()
+            phase_mass_d_lbl = CustomLabel(title="Mass Density")
+            phase_mass_d_spin = CustomDoubleSpinBox()
+            phase_mass_d_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+            phase_mass_d_h_layout.addWidget(phase_mass_d_lbl)
+            phase_mass_d_h_layout.addWidget(phase_mass_d_spin)
+            phase_mass_d_h_layout.addWidget(phase_mass_d_slider)
+
+            phase_visc_h_layout = QHBoxLayout()
+            phase_visc_lbl = CustomLabel(title="Viscosity")
+            phase_visc_spin = CustomDoubleSpinBox()
+            phase_visc_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+
+            phase_visc_h_layout.addWidget(phase_visc_lbl)
+            phase_visc_h_layout.addWidget(phase_visc_spin)
+            phase_visc_h_layout.addWidget(phase_visc_slider)
+
+            self.multi_phase_v_layout.addWidget(phase_lbl)
+            self.multi_phase_v_layout.addLayout(phase_mass_h_layout)
+            self.multi_phase_v_layout.addLayout(phase_mass_d_h_layout)
+            self.multi_phase_v_layout.addLayout(phase_visc_h_layout)
 
 # ----------------------- TANK WIDGET ---------------------------------------
 
@@ -879,65 +1022,87 @@ class MainWindow(QMainWindow, UtilFuncs):
         menu_bar = self.menuBar()
         file_bar = menu_bar.addMenu("File")
 
-        new_action = file_bar.addAction("New")
-        open_action = file_bar.addAction("Open")
-        open_recent = file_bar.addMenu("Open Recent...")
+        new_action = CustomAction("New")
+        file_bar.addAction(new_action)
+        open_action = CustomAction("Open")
+        file_bar.addAction(open_action)
+        file_bar.addMenu("Open Recent...")
 
         file_bar.addSeparator()
 
-        set_project = file_bar.addAction("Set Project")
+        set_project = CustomAction("Set Project")
+        file_bar.addAction(set_project)
 
         file_bar.addSeparator()
 
-        save_action = file_bar.addAction("Save")
-        save_as_action = file_bar.addAction("Save As")
-        import_action = file_bar.addAction("Import")
-        export_action = file_bar.addAction("Export")
+        save_action = CustomAction("Save")
+        file_bar.addAction(save_action)
+        save_as_action = CustomAction("Save As")
+        file_bar.addAction(save_as_action)
+        import_action = CustomAction("Import")
+        file_bar.addAction(import_action)
+        export_action = CustomAction("Export")
+        file_bar.addAction(export_action)
 
         file_bar.addSeparator()
-        quit_action = file_bar.addAction("Quit")
+        quit_action = CustomAction("Quit")
+        file_bar.addAction(quit_action)
 
         # creating the edit toolbar
         edit_bar = menu_bar.addMenu("Edit")
 
-        copy_action = edit_bar.addAction("Copy")
-        paste_action = edit_bar.addAction("Paste")
+        copy_action = CustomAction("Copy")
+        edit_bar.addAction(copy_action)
+        paste_action = CustomAction("Paste")
+        edit_bar.addAction(paste_action)
 
         edit_bar.addSeparator()
 
-        undo_action = edit_bar.addAction("Undo")
-        redo_action = edit_bar.addAction("Redo")
+        undo_action = CustomAction("Undo")
+        edit_bar.addAction(undo_action)
+        redo_action = CustomAction("Redo")
+        edit_bar.addAction(redo_action)
 
         edit_bar.addSeparator()
 
-        delete_action = edit_bar.addAction("Delete")
+        delete_action = CustomAction("Delete")
+        edit_bar.addAction(delete_action)
 
         window_bar = menu_bar.addMenu("Window")
 
-        full_screen = window_bar.addAction("FullScreen")
+        full_screen = CustomAction("Fullscreen")
+        window_bar.addAction(full_screen)
 
         window_bar.addSeparator()
 
-        resizable = window_bar.addAction("Resizable")
+        resizable = CustomAction("Resizanble")
+        window_bar.addAction(resizable)
         resizable.setCheckable(True)
 
-        expand_window = window_bar.addAction("Expand")
-        shrink_window = window_bar.addAction("Shrink")
+        expand_window = CustomAction("Expand")
+        window_bar.addAction(expand_window)
+        shrink_window = CustomAction("Shrink")
+        window_bar.addAction(shrink_window)
 
         display_bar = menu_bar.addMenu("Display")
 
-        display_all = display_bar.addAction("Display All")
+        display_all = CustomAction("Display All")
+        display_bar.addAction(display_all)
         display_all.setCheckable(True)
 
         hide_menu = display_bar.addMenu("Hide")
         
-        hide_tank_display = hide_menu.addAction("Tank")
+        hide_tank_display = CustomAction("Tank")
+        hide_menu.addAction(hide_tank_display)
         hide_tank_display.setCheckable(True)
-        hide_colliders_display = hide_menu.addAction("Collider")
+        hide_colliders_display = CustomAction("Collider")
+        hide_menu.addAction(hide_colliders_display)
         hide_colliders_display.setCheckable(True)
-        hide_fps_control = hide_menu.addAction("FPS")
+        hide_fps_control = CustomAction("FPS")
+        hide_menu.addAction(hide_fps_control)
         hide_fps_control.setCheckable(True)
-        hide_display_particle_count = hide_menu.addAction("No. of particles")
+        hide_display_particle_count = CustomAction("No. of particles")
+        hide_menu.addAction(hide_display_particle_count)
         hide_display_particle_count.setCheckable(True)
 
         display_bar.addSeparator()

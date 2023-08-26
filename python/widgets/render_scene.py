@@ -2,8 +2,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import QApplication, QMessageBox 
 from PySide6.QtCore import QSize, QRect, QTimer, Qt, Signal, Slot, QPointF
 from PySide6.QtOpenGL import QOpenGLVertexArrayObject, QOpenGLBuffer, \
-                             QOpenGLShaderProgram, QOpenGLShader, QOpenGLFramebufferObject, \
-                             QOpenGLTexture
+                             QOpenGLShaderProgram, QOpenGLShader
 from PySide6.QtGui import QVector3D, QOpenGLFunctions, QMatrix4x4, \
                             QOpenGLContext, QSurfaceFormat, QVector3DList, QWheelEvent
 import numpy as np
@@ -92,7 +91,6 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         self._last_pos = QPointF()
         self.fluid_solver = FluidSolver(self.system_obj)
 
-        self.num_frames = 20
         self.current_frame_index = 0
 
         self.all_frames_updated = False
@@ -116,14 +114,7 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             fmt.setAlphaBufferSize(8)
             self.setFormat(fmt)
 
-        self.update_stored_positions()
-
-    def update_stored_positions(self):
-        for i in range(self.num_frames):
-            self.system_obj.update()
-            print(f"updating frame {i + 1} ...")
-
-        self.all_frames_updated = True
+        """ self.system_obj.update_stored_positions() """
 
     def x_rotation(self):
         return self._x_rot
@@ -329,7 +320,10 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
         
         self.update_vbo()
 
-        self.current_frame_index = (self.current_frame_index + 1) % self.num_frames
+        if self.system_obj.start_playforward:
+            self.current_frame_index = (self.current_frame_index + 1) % self.system_obj.num_frames
+        elif self.system_obj.start_playback:
+            self.current_frame_index = (self.current_frame_index - 1 + self.system_obj.num_frames) % self.system_obj.num_frames
 
         with QOpenGLVertexArrayObject.Binder(self.vao):
             self.program.bind()
@@ -344,13 +338,13 @@ class RenderScene(QOpenGLWidget, QOpenGLFunctions):
             self.program.release()
 
     def animate(self):
-        if self.all_frames_updated:
+        if self.system_obj.stop == False:
+            if self.system_obj.start_play == True and \
+                self.system_obj.finished_caching == True:
 
-            self.fluid_solver.update_m_data(self.current_frame_index)
-            """ print(f"stored position 1 is {self.system_obj.stored_positions[self.current_frame_index][0]}")
-            print(f"position 1 is {self.fluid_solver.m_data[0]}") """
+                self.fluid_solver.update_m_data(self.current_frame_index)
 
-            self.update()
+                self.update()
 
     def resizeGL(self, width, height):
         self.proj.setToIdentity()

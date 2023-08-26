@@ -1,4 +1,3 @@
-- PCSPH
-- IISPH
-- LPSPH
-- MultiSPH
+- change line edit when simulation is running
+- get QActions working and linked
+

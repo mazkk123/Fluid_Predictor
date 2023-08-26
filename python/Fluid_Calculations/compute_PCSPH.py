@@ -11,7 +11,6 @@ class PCSPH(SPH):
 
     OTHER_PARAMS = {
         "max_iterations":3,
-        "min_iterations":1,
     }
 
     def __init__(self,

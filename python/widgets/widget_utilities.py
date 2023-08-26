@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QPushButton, \
     QGroupBox, QLabel, QLineEdit, QSlider, QDoubleSpinBox, QSpinBox,  \
     QSizePolicy,  QMenu, QMenuBar, QDockWidget, QScrollArea
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QMouseEvent, QAction
 from utility_functions import UtilFuncs
 from Fluid_Utilities.system import FluidSystem
 from appearance import *
@@ -11,13 +11,13 @@ from appearance import *
 # ------------------------------------------ WIDGET ITEMS ------------------------------------------
 
 class CustomPushButton(QPushButton):
-    
+     
      ABOUT_CUSTOM_SLIDER = """
         This is a custom push button with its own style widgets                        
         and utility functions overloaded from the QPushButton 
         widget class
     """
-
+     
      def __init__(self, title: str=None, style_sheet : str=None,
                   v_size_policy : QSizePolicy.Policy=None, 
                   h_size_policy : QSizePolicy.Policy=None,
@@ -25,7 +25,8 @@ class CustomPushButton(QPushButton):
                   minimum_size : QSize=None,maximum_size : QSize=None,
                   width : QSize=None, height : QSize=None, 
                   linked_btn : QPushButton=None, linked_spin_box: QSpinBox=None,
-                  linked_double_spin_box : QDoubleSpinBox = None) -> object: 
+                  linked_double_spin_box : QDoubleSpinBox = None,
+                  alias:str = None, system_obj:FluidSystem = None) -> object: 
         """
             constructor for custom slider widget
         """
@@ -58,6 +59,36 @@ class CustomPushButton(QPushButton):
 
         if style_sheet is not None:
             self.setStyleSheet(style_sheet)
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj
+
+        self.clicked.connect(self.clicked_fn)
+
+     def clicked_fn(self):
+        
+        if self.alias is not None:
+            if isinstance(self.alias, list):
+                if self.alias == "gizmos":
+                    pass
+            else:
+                if self.alias == "play":
+                    if self.system_obj.finished_caching != True:
+                        self.system_obj.start_play = True
+                        self.system_obj.stop = False
+                        self.system_obj.update_stored_positions()
+                    else:
+                        self.system_obj.start_playforward = True
+                        self.system_obj.start_playback = False
+                elif self.alias == "stop":
+                    self.system_obj.stop = True
+                    self.system_obj.start_play = False
+                elif self.alias == "backward":
+                    self.system_obj.start_playback = True
+                    self.system_obj.start_playforward = False
+                    self.system_obj.stop = False
 
 class CustomSlider(QSlider):
     
@@ -176,6 +207,7 @@ class CustomSlider(QSlider):
         if self.double_spin_box is not None:
             self.double_spin_box.setValue(self.value()*self.multiplier)
 
+        self.system_obj.finished_caching = False
         self.alias_callback()
 
     def slider_pressed(self):
@@ -326,6 +358,7 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
         if self.slider is not None:
             self.slider.setValue(int(self.value()*self.multiplier))
 
+        self.system_obj.finished_caching = False
         self.alias_callback()
 
     def alias_callback(self):
@@ -467,6 +500,7 @@ class CustomSpinBox(QSpinBox):
         if self.slider is not None:
             self.slider.setValue(self.value()*self.multiplier)
 
+        self.system_obj.finished_caching = False
         self.alias_callback()
 
     def alias_callback(self):
@@ -619,6 +653,87 @@ class CustomLabel(QLabel):
         """
         self.mouse_pressed = False
 
+class CustomAction(QAction):
+
+    def __init__(self,
+                 text= None) -> None:
+
+        super(CustomAction, self).__init__()
+
+        if text is not None:
+            self.setText(text)
+
+        self.trigger_signals()
+
+    def trigger_signals(self):
+
+        self.changed.connect(self.changed_fn)
+        self.checkableChanged.connect(self.checkable_changed)
+
+    def changed_fn(self):
+        pass
+
+    def checkable_changed(self):
+        pass
+
+class CustomComboBox(QComboBox):
+
+    ABOUT_COMBO_BOX = """
+        This is a custom combo box with its own style widgets                        
+        and utility functions overloaded from the QComboBox 
+        widget class
+    """
+
+    def __init__(self, style_sheet : str=None, add_item : bool=None,
+                 add_items : bool=None, item : str=None, items_to_add : list =None,
+                 minimum_size : QSize=None, maximum_size : QSize=None,
+                 width : QSize=None, height : QSize=None, size : QSize=None,
+                 linked_double_spin_box: QDoubleSpinBox=None,
+                 linked_slider : QSlider = None, alias:str = None,
+                 system_obj:FluidSystem = None) -> object:
+        super(CustomComboBox, self).__init__()
+
+        self.all_items_to_add = items_to_add
+        if add_items is True:
+            self.add_items_from_list()
+        if add_item is True:
+            self.addItem(item)
+
+        if alias is not None:
+            self.alias = alias
+        if system_obj is not None:
+            self.system_obj = system_obj  
+
+        if style_sheet is not None:
+            self.setStyleSheet(style_sheet)
+        
+        self.currentIndexChanged.connect(self.index_changed)
+            
+    def add_items_from_list(self):
+        """
+            add items from list helper method
+        """
+        for item in self.all_items_to_add:
+            self.addItem(item)
+
+    def index_changed(self):
+        """
+            slot callback when index item changed
+        """
+        self.alias_callback()
+        self.system_obj.start_playback = False
+
+    def alias_callback(self):
+        if self.alias is not None:
+            if self.alias == "solver type":
+                self.system_obj.simulation_type = self.currentText()
+            elif self.alias == "distribution type":
+                self.system_obj.orientation_type = self.currentText()
+            elif self.alias == "search method":
+                self.system_obj.search_method = self.currentText()
+            elif self.alias == "time integrator":
+                self.system_obj.time_stepping = self.currentText()
+
 class CustomGroupBox(QGroupBox, UtilFuncs):
 
     ABOUT_GROUP_BOX = """
@@ -679,66 +794,7 @@ class CustomGroupBox(QGroupBox, UtilFuncs):
             toggled group box slot
         """
         self.hide_group_box_widgets(self)
-
-class CustomComboBox(QComboBox):
-
-    ABOUT_COMBO_BOX = """
-        This is a custom combo box with its own style widgets                        
-        and utility functions overloaded from the QComboBox 
-        widget class
-    """
-
-    def __init__(self, style_sheet : str=None, add_item : bool=None,
-                 add_items : bool=None, item : str=None, items_to_add : list =None,
-                 minimum_size : QSize=None, maximum_size : QSize=None,
-                 width : QSize=None, height : QSize=None, size : QSize=None,
-                 linked_double_spin_box: QDoubleSpinBox=None,
-                 linked_slider : QSlider = None, alias:str = None,
-                 system_obj:FluidSystem = None) -> object:
-        super(CustomComboBox, self).__init__()
-
-        self.all_items_to_add = items_to_add
-        if add_items is True:
-            self.add_items_from_list()
-        if add_item is True:
-            self.addItem(item)
-
-        if alias is not None:
-            self.alias = alias
-        if system_obj is not None:
-            self.system_obj = system_obj  
-
-        if style_sheet is not None:
-            self.setStyleSheet(style_sheet)
-        
-        self.currentIndexChanged.connect(self.index_changed)
-            
-    def add_items_from_list(self):
-        """
-            add items from list helper method
-        """
-        for item in self.all_items_to_add:
-            self.addItem(item)
-
-    def index_changed(self):
-        """
-            slot callback when index item changed
-        """
-        self.alias_callback()
-
-    def alias_callback(self):
-        if self.alias is not None:
-            if self.alias == "solver type":
-                self.system_obj.simulation_type = self.currentText()
-            elif self.alias == "distribution type":
-                self.system_obj.orientation_type = self.currentText()
-            elif self.alias == "search method":
-                self.system_obj.search_method = self.currentText()
-            elif self.alias == "time integrator":
-                self.system_obj.time_stepping = self.currentText()
-
     
-
 # ----------------------------------------- MENU WIDGETS ----------------------------------
 
 class CustomTabWidget(QTabWidget):
