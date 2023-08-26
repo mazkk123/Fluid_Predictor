@@ -145,9 +145,9 @@ class FluidSystem:
     HASH_MAP = {}
 
     def __init__ (self, parent:QMainWindow=None,
-                  type:str = "DFSPH",
+                  type:str = "SPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 8000,
+                  num_particles:int = 100000,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):
