@@ -26,6 +26,7 @@ sys.path.append("C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\
 
 from distributions import Random, Uniform
 from search_methods import CompactHashing, SpatialHashing
+from exports import ExportUtils
 
 from Particles.particles import Particle
 from Particles.error_handling import *
@@ -86,7 +87,7 @@ class FluidSystem:
         "radius":2.5,
         "height":0.15,
         "grid_separation":0.01,
-        "cell_size":0.3,
+        "cell_size":0.325,
         "mass": 0.1,
         "viscosity": 3.5,
         "mass_density": 998.2,
@@ -136,10 +137,11 @@ class FluidSystem:
 
     USER_ADDITIONAL_ATTRIBUTES = {
         "density_error":0.01*USER_PARAMETERS["mass_density"],
-        "max_iterations":6,
+        "max_iterations":2,
         "max_iterations_div":6,
         "divergence_error":0.6,
-        "alpha_vorticity":0.5
+        "alpha_vorticity":0.5,
+        "relaxation_factor":0.5
     }
 
     HASH_MAP = {}
@@ -147,7 +149,7 @@ class FluidSystem:
     def __init__ (self, parent:QMainWindow=None,
                   type:str = "SPH",
                   search_method:str = "Spatial Hashing",
-                  num_particles:int = 100000,
+                  num_particles:int = 25000,
                   orientation_type:str = "Uniform",
                   shape_type:str = "Box",
                   time_stepping:str = "Euler Cromer"):
@@ -166,6 +168,9 @@ class FluidSystem:
         self.finished_caching = False
         self.parent = parent
 
+        self.parent_dir = "C:\\Users\\Student\\OneDrive - Bournemouth University\\Desktop\\Personal\\Python\\Fluid_Predictor\\"
+        self.export_utility = ExportUtils(self.parent_dir, "Particle", "particle", 4, "geo", 0, self)
+
         self.particle_list = []
         self.search_method = search_method
   
@@ -181,7 +186,11 @@ class FluidSystem:
             for i in range(self.num_frames):
                 self.stored_positions[i] = []
                 self.update()
+
                 print(f"frame {i+1} complete ...")
+                self.export_utility.frame_number = i
+
+                self.export_utility.export_data()
 
             self.finished_caching = True
             self.start_playforward = True
@@ -215,7 +224,7 @@ class FluidSystem:
             when the simulation starts
         """
         for p in range(self.num_particles):
-            particle = Particle(size=1, shape="sphere")
+            particle = Particle(size=0.05, shape="sphere", colour=np.array([255, 255, 255], dtype="int32"))
             self.particle_list.append(particle)
     
         if self.choose_orientation() is not None:

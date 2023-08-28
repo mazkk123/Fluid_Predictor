@@ -120,7 +120,7 @@ class SPH(UtilityCalculations):
         self.normal_field()
         
         self.update_particle_neighbours()
-        self.gravity_const = np.array([0, 0, -9.81], dtype="float64")
+        self.gravity_const = np.array([0, -9.81, 0], dtype="float64")
         self.all_forces = np.array([0, 0, 0], dtype="float64")
 
     # ------------------------------------------------------------------ PARTICLE SEARCHES ------------------------------------------------------------------------

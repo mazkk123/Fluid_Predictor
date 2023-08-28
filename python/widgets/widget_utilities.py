@@ -80,6 +80,7 @@ class CustomPushButton(QPushButton):
                         self.system_obj.stop = False
                         self.system_obj.update_stored_positions()
                     else:
+                        self.system_obj.stop = False
                         self.system_obj.start_playforward = True
                         self.system_obj.start_playback = False
                 elif self.alias == "stop":

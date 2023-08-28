@@ -692,17 +692,23 @@ class MainWindow(QMainWindow, UtilFuncs):
 
         self.density_err_h_layout = QHBoxLayout()
         self.maximum_density_err_lbl = CustomLabel(title="Max density")
-        self.maximum_density_err_double_spin = CustomDoubleSpinBox()
-        self.maximum_density_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.maximum_density_err_spin = CustomSpinBox(minimum=0, maximum=6, value=2)
+        self.maximum_density_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal, minimum=0, maximum=2000,
+                                                                   linked_spin_box=self.maximum_density_err_spin)
+        
+        self.maximum_density_err_spin.slider = self.maximum_density_err_slider
 
         self.density_err_h_layout.addWidget(self.maximum_density_err_lbl)
-        self.density_err_h_layout.addWidget(self.maximum_density_err_double_spin)
+        self.density_err_h_layout.addWidget(self.maximum_density_err_spin)
         self.density_err_h_layout.addWidget(self.maximum_density_err_slider)
 
         self.divergence_err_h_layout = QHBoxLayout()
         self.divergence_err_lbl = CustomLabel(title="Divergence")
-        self.divergence_err_double_spin = CustomDoubleSpinBox()
-        self.divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.divergence_err_double_spin = CustomDoubleSpinBox(minimum=0, maximum=3, value=0.6, increment=0.1)
+        self.divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal, minimum=0, maximum=30,
+                                                  linked_double_spin_box=self.divergence_err_double_spin)
+        
+        self.divergence_err_double_spin.slider = self.divergence_err_slider
 
         self.divergence_err_h_layout.addWidget(self.divergence_err_lbl)
         self.divergence_err_h_layout.addWidget(self.divergence_err_double_spin)
@@ -710,17 +716,24 @@ class MainWindow(QMainWindow, UtilFuncs):
 
         self.maximum_divergence_err_h_layout = QHBoxLayout()
         self.maximum_divergence_err_lbl = CustomLabel(title="Max div.")
-        self.maximum_divergence_err_double_spin = CustomDoubleSpinBox()
-        self.maximum_divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.maximum_divergence_err_spin = CustomDoubleSpinBox(minimum=0, maximum=6, value=4)
+        self.maximum_divergence_err_slider = CustomSlider(orientation=Qt.Orientation.Horizontal, minimum=0, 
+                                                          maximum=6, linked_spin_box=self.maximum_divergence_err_spin)
+
+        self.maximum_divergence_err_spin.slider = self.maximum_divergence_err_slider
 
         self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_lbl)
-        self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_double_spin)
+        self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_spin)
         self.maximum_divergence_err_h_layout.addWidget(self.maximum_divergence_err_slider)
 
         self.relaxation_factor_h_layout = QHBoxLayout()
         self.relaxation_factor_lbl = CustomLabel(title="Relaxation")
-        self.relaxation_factor_double_spin = CustomDoubleSpinBox()
-        self.relaxation_factor_slider = CustomSlider(orientation=Qt.Orientation.Horizontal)
+        self.relaxation_factor_double_spin = CustomDoubleSpinBox(minimum=0.0, maximum=1.5, value=0.5,
+                                                                 increment=0.05)
+        self.relaxation_factor_slider = CustomSlider(orientation=Qt.Orientation.Horizontal, minimum=0, maximum=15,
+                                                    linked_double_spin_box=self.relaxation_factor_double_spin)
+        
+        self.relaxation_factor_double_spin.slider = self.relaxation_factor_slider
 
         self.relaxation_factor_h_layout.addWidget(self.relaxation_factor_lbl)
         self.relaxation_factor_h_layout.addWidget(self.relaxation_factor_double_spin)

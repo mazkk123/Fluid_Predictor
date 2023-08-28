@@ -17,6 +17,7 @@ class VCSPH(DFSPH):
                 all_particles:list = None,
                 hash_value:int = None,
                 time_stepping:str = "Euler Cromer",
+                additional_params:dict = None,
                 time_schemes:dict = None,
                 params:dict = None,
                 collision_types:dict = None,
@@ -31,6 +32,7 @@ class VCSPH(DFSPH):
                          time_schemes=time_schemes,
                          params=params,
                          collision_types=collision_types,
+                         additional_params=additional_params,
                          hash_table=hash_table,
                          hash_value=hash_value,
                          time_stepping=time_stepping,
@@ -127,6 +129,7 @@ class VCSPH(DFSPH):
                 particle.volume = particle.mass / particle.mass_density
         except ZeroDivisionError:
             particle.volume = 0
+    
     # ------------------------------------------------------------------- STREAM RELATED FUNCTIONS ------------------------------------------------------------------------
 
     def update_stream_function(self, particle):

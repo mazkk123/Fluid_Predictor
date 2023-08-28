@@ -23,6 +23,7 @@ class LPSPH(SPH):
                  collision_types:dict = None,
                  params:dict = None,
                  all_particles:list = None,
+                 additional_params:dict = None,
                  tank_attrs:dict = None,
                  delta_time:float = None):
         
@@ -43,7 +44,10 @@ class LPSPH(SPH):
         
         self.ref_radius = self.PARAMETERS["cell_size"] / 4
         self.epsilon = 2/3*self.ref_radius
+        self.additional_params = additional_params
 
+        self.OTHER_PARAMS["max_iterations"] = self.additional_params["max_iterations"]
+        
         self.near_particles = []
         self.far_particles = []
 

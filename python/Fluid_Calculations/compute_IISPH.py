@@ -24,6 +24,7 @@ class IISPH(SPH):
                  hash_table:dict=None,
                  time_stepping:str = "Euler Cromer",
                  tank_attrs:dict = None,
+                 additional_params:dict = None,
                  hash_value:int=None,
                  delta_time:float = None):
         
@@ -39,6 +40,11 @@ class IISPH(SPH):
                         hash_value=hash_value,
                         delta_time=delta_time)
         
+        self.additional_params = additional_params
+
+        self.OTHER_PARAMS["max_iterations"] = self.additional_params["max_iterations"]
+        self.OTHER_PARAMS["relaxation_factor"] = self.additional_params["relaxation_factor"]
+
         self.predict_advection()
         self.iteration = 0
 

@@ -9,10 +9,10 @@ class Particle:
 
     def __init__(self,
                  init_pos : np.array=np.array([0, 0, 0], dtype="float64"),
-                 colour : np.array=np.array([0, 0, 0], dtype="float64"),
+                 colour : np.array=np.array([0, 0, 0], dtype="int32"),
                  velocity : np.array=np.array([0.2, 0.1, 0.5], dtype="float64"),
                  acceleration: np.array=np.array([0, 0, 0], dtype="float64"),
-                 mass: float=0.1, shape : str="circle", size : int=2,
+                 mass: float=0.1, shape : str="circle", size : float=0.01,
                  phase_number: int=7) -> None:
         """
             initialize particle properties 

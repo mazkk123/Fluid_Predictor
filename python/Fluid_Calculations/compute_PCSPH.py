@@ -23,6 +23,7 @@ class PCSPH(SPH):
                  time_schemes:dict = None,
                  params:dict = None,
                  collision_types:dict = None,
+                 additional_params:dict = None,
                  tank_attrs:dict = None,
                  delta_time:float = None,
                  temperature:bool = False):
@@ -44,6 +45,9 @@ class PCSPH(SPH):
         
         self.particle.pressure_force = np.array([0, 0, 0], dtype="float64")
         self.particle.pressure = 0
+        self.additional_params = additional_params
+
+        self.OTHER_PARAMS["max_iterations"] = self.additional_params["max_iterations"]
 
         self.update_predicted_attrs(self.particle, 4)
 
