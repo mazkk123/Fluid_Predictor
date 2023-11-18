@@ -1,8 +1,7 @@
-# Fluid_Predictor
-Using a mixture of CNN (Convolutional Neural Networks)
-and machine learning methodologies, this project aims to 
-predict particle positions, velocities and accelerations
-in multiple SPH approximations of a fluid.
+# Fluid_Engine
+Using a mixture of different Langrangian fluid solver methods,
+this project aims to be a comprehensive fluid solver involving
+9 different fluid solver algorithms. 
 
 ## Weighting Kernels
 In an SPH approximation of fluids, different weighting 
